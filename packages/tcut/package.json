@@ -33,7 +33,7 @@
     ".": "./src/index.ts"
   },
   "bin": {
-    "tcut": "./bin/tcut.mjs"
+    "tcut": "bin/tcut.mjs"
   },
   "files": [
     "bin",

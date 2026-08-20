@@ -44,14 +44,19 @@ jobs:
       - name: Build binaries for all platforms
         run: bun run build:all
 
-      - name: Create GitHub release
+      # Idempotent so a failed npm step can be re-run: upload (overwrite) assets if the release already exists.
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "tcut ${GITHUB_REF_NAME}" \
-            --generate-notes \
-            dist/tcut-* dist/SHA256SUMS
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/tcut-* dist/SHA256SUMS --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "tcut ${GITHUB_REF_NAME}" \
+              --generate-notes \
+              dist/tcut-* dist/SHA256SUMS
+          fi
 
       # Trusted publishing: npm's OIDC trust for AmanVarshney01/tcut → release.yml (configured on npmjs.com).
       # No token anywhere; the job's id-token permission is exchanged for a short-lived publish credential.
