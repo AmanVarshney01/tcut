@@ -59,6 +59,7 @@ Options (override the script's config):
       --name <file>        publish: object name (default: the file's basename)
       --endpoint --bucket --access-key --secret-key --public-url --region   publish --setup values
       --template <name>    for init: basic | tour | test
+      --json               machine-readable result (or { "error" }) on stdout, nothing else
   -q, --quiet
   -h, --help
 `;
@@ -103,11 +104,17 @@ const { values, positionals } = parseArgs({
     region: { type: "string" },
     template: { type: "string" },
     quiet: { type: "boolean", short: "q" },
+    json: { type: "boolean" },
     help: { type: "boolean", short: "h" },
   },
 });
 
-const quiet = values.quiet === true;
+const json = values.json === true;
+const quiet = values.quiet === true || json;
+/** With --json, the only thing on stdout is one JSON document (results or { error }). */
+const emit = (data: unknown) => {
+  if (json) process.stdout.write(JSON.stringify(data, null, 2) + "\n");
+};
 const useColor = process.stdout.isTTY === true && !process.env.NO_COLOR;
 const paint = (code: string) => (s: string) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
 const green = paint("32");
@@ -120,7 +127,8 @@ const log = (msg: string) => {
 };
 
 function fail(message: string): never {
-  console.error(`${red("error:")} ${message}`);
+  if (json) process.stdout.write(JSON.stringify({ error: message }) + "\n");
+  else console.error(`${red("error:")} ${message}`);
   process.exit(1);
 }
 
@@ -211,9 +219,10 @@ async function fileSize(file: string): Promise<string> {
 
 const ok = (what: string, detail = "") => log(`${green("✔")} ${what}${detail ? ` ${dim(detail)}` : ""}`);
 
-async function reportOutputs(outputs: string[], screenshots: string[]): Promise<void> {
+async function reportOutputs(outputs: string[], screenshots: string[]): Promise<Array<{ path: string; bytes: number }>> {
   for (const out of outputs) ok(`wrote ${out}`, await fileSize(out));
   for (const shot of screenshots) ok(`screenshot ${shot}`);
+  return Promise.all([...outputs, ...screenshots].map(async (p) => ({ path: p, bytes: (await Bun.file(p).exists()) ? Bun.file(p).size : 0 })));
 }
 
 const TEMPLATES: Record<string, (name: string) => string> = {
@@ -344,6 +353,7 @@ async function main(): Promise<void> {
       if (!cfg) fail("publish is not configured yet — run `tcut publish --setup` (or set TCUT_S3_ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY)");
       const published = await publishFiles(rest, cfg, { name: values.name, log });
       for (const p of published) ok(p.url, dim(path.basename(p.file)));
+      emit({ published });
       if (values.open && published[0]) {
         const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
         Bun.spawn([opener, published[published.length - 1]!.url], { stdout: "ignore", stderr: "ignore" });
@@ -386,10 +396,14 @@ async function main(): Promise<void> {
         await Bun.write(scriptPath, generateScript(recording, { output: outputs, cleanShell: !command, command, castPath: config.cast }));
         ok(`wrote ${scriptPath}`, "editable script — tweak it, then `tcut " + scriptPath + "`");
       }
-      if (values["record-only"]) return;
+      if (values["record-only"]) {
+        emit({ cast: config.cast, script: values["no-script"] ? null : config.cast.replace(/\.cast$/, "") + ".video.ts", events: recording.events.length, durationSeconds: recording.header.duration ?? 0 });
+        return;
+      }
       const result = await renderOutputs(recording, config, progressReporter());
-      await reportOutputs(result.outputs, result.screenshots);
+      const files = await reportOutputs(result.outputs, result.screenshots);
       log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
+      emit({ cast: config.cast, script: values["no-script"] ? null : config.cast.replace(/\.cast$/, "") + ".video.ts", outputs: files, frames: result.frames, durationSeconds: result.durationSeconds });
       return;
     }
     case "record": {
@@ -397,18 +411,21 @@ async function main(): Promise<void> {
       const video = await loadVideo(rest[0]);
       const rec = await video.record({ log, force: values.force });
       ok(`${rec.cached ? "reused" : "wrote"} ${video.config.cast}`, `${rec.events.length} events, ${(rec.header.duration ?? 0).toFixed(1)}s, ${elapsed()}`);
+      emit({ cast: video.config.cast, cached: rec.cached === true, events: rec.events.length, durationSeconds: rec.header.duration ?? 0 });
       return;
     }
     case "render": {
       if (!rest[0]) fail("render needs a .cast file");
       const result = await renderCast(rest[0], overridesFromFlags(), progressReporter());
-      await reportOutputs(result.outputs, result.screenshots);
+      const files = await reportOutputs(result.outputs, result.screenshots);
       log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
+      emit({ cast: rest[0], outputs: files, frames: result.frames, durationSeconds: result.durationSeconds });
       return;
     }
     case "test": {
       if (rest.length === 0) fail("test needs at least one script file or directory");
-      const summary = await runScriptTests(rest, (line) => console.log(line));
+      const summary = await runScriptTests(rest, json ? () => {} : (line) => console.log(line));
+      emit(summary);
       process.exit(summary.failed > 0 ? 1 : 0);
     }
     // eslint-disable-next-line no-fallthrough -- process.exit above never returns
@@ -416,13 +433,16 @@ async function main(): Promise<void> {
       const video = await loadVideo(first!);
       const result = await video.run({ log, force: values.force, recordOnly: values["record-only"], onProgress: progressReporter() });
       ok(`${result.cached ? "reused" : "wrote"} ${result.cast}`);
-      await reportOutputs(result.outputs, result.screenshots);
+      const files = await reportOutputs(result.outputs, result.screenshots);
       if (!values["record-only"]) log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
+      emit({ cast: result.cast, cached: result.cached, outputs: files, frames: result.frames, durationSeconds: result.durationSeconds });
     }
   }
 }
 
 main().catch((err: unknown) => {
-  console.error(`\nerror: ${err instanceof Error ? err.message : String(err)}`);
+  const message = err instanceof Error ? err.message : String(err);
+  if (json) process.stdout.write(JSON.stringify({ error: message, type: err instanceof Error ? err.name : "Error" }) + "\n");
+  else console.error(`\n${red("error:")} ${message}`);
   process.exit(1);
 });

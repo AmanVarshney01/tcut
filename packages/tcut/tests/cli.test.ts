@@ -91,3 +91,17 @@ describe("init", () => {
     expect((await run(["init", "x", "--template", "nope"], dir)).code).toBe(1);
   });
 });
+
+describe("--json", () => {
+  test("success and error are single JSON documents on stdout", async () => {
+    const cast = path.join(import.meta.dir, "..", "docs", "demo.cast");
+    const okRun = await run(["render", cast, "-o", "/tmp/tcut-json-test/out.svg", "--json"]);
+    expect(okRun.code).toBe(0);
+    const parsed = JSON.parse(okRun.out) as { outputs: Array<{ path: string; bytes: number }>; frames: number };
+    expect(parsed.outputs[0]?.bytes).toBeGreaterThan(0);
+    expect(parsed.frames).toBeGreaterThan(0);
+    const bad = await run(["render", "/tmp/does-not-exist.cast", "--json"]);
+    expect(bad.code).toBe(1);
+    expect(JSON.parse(bad.out)).toMatchObject({ error: expect.stringContaining("not found") });
+  }, 60_000);
+});

@@ -230,18 +230,24 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     }
   };
 
+  // The prompt is whatever sits left of the cursor; text to the right may be residue from a TUI that exited.
+  const promptVisible = (): boolean => promptPattern.test(screen.lineToCursor());
+
   const wait = async (pattern?: RegExp | string, waitOpts: WaitOptions = {}): Promise<void> => {
-    const regex = pattern === undefined ? promptPattern : toRegExp(pattern);
+    const timeout = toMs(waitOpts.timeout, config.waitTimeout);
+    if (pattern === undefined) {
+      await waitFor(`prompt ${promptPattern}`, promptVisible, timeout);
+      return;
+    }
+    const regex = toRegExp(pattern);
     const scope = waitOpts.scope ?? "line";
-    await waitFor(`${regex} on ${scope}`, () => matches(regex, scope), toMs(waitOpts.timeout, config.waitTimeout));
+    await waitFor(`${regex} on ${scope}`, () => matches(regex, scope), timeout);
   };
 
   const waitForPrompt = async (afterLine: number, echoLine: string, timeoutMs: number): Promise<void> => {
     await waitFor(
       `prompt ${promptPattern}`,
-      () =>
-        promptPattern.test(screen.line()) &&
-        (screen.absoluteCursorLine() !== afterLine || screen.line() !== echoLine),
+      () => promptVisible() && (screen.absoluteCursorLine() !== afterLine || screen.lineToCursor() !== echoLine),
       timeoutMs,
     );
   };
@@ -250,7 +256,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     await type(command, runOpts);
     await screen.settle();
     const beforeLine = screen.absoluteCursorLine();
-    const echoLine = screen.line();
+    const echoLine = screen.lineToCursor();
     await raw("\r");
     const timeout = toMs(runOpts.timeout, config.waitTimeout);
     if (runOpts.wait === false) return;
@@ -345,7 +351,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     log(`starting ${Array.isArray(config.shell) ? config.shell.join(" ") : config.shell}`);
     // Named shells get a known prompt; for an arbitrary command there is nothing to wait for — start at once.
     if (!Array.isArray(config.shell)) {
-      await waitFor(`initial prompt ${promptPattern}`, () => promptPattern.test(screen.line()), config.waitTimeout);
+      await waitFor(`initial prompt ${promptPattern}`, promptVisible, config.waitTimeout);
     }
     startedAt = performance.now();
     log("recording");

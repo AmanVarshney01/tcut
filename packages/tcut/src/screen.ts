@@ -114,6 +114,21 @@ export class Screen {
     return this.rowText(this.core.getCursor().row);
   }
 
+  /**
+   * The cursor line up to the cursor column. Prompt detection uses this rather than the whole line: after a
+   * full-screen program exits, the primary screen may still hold stale text to the right of the cursor.
+   */
+  lineToCursor(): string {
+    const { row, col } = this.core.getCursor();
+    let text = "";
+    for (let x = 0; x < col; x++) {
+      const cell = this.core.getCell(row, x);
+      if (cell.width === 0) continue;
+      text += cell.chars ?? (cell.char === 0 ? " " : String.fromCodePoint(cell.char));
+    }
+    return text;
+  }
+
   screen(): string {
     const rows: string[] = [];
     for (let y = 0; y < this.core.getRows(); y++) rows.push(this.rowText(y));

@@ -57,6 +57,7 @@ tcut publish demo.gif       # → https://…/3f9a1c2b7d4e/demo.gif
 
 - [Examples](https://github.com/AmanVarshney01/tcut/tree/main/packages/tcut/examples) — driving an interactive TUI, recording Claude Code / Codex
 - [Reference](https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md) — every CLI flag and script option
+- [llms.txt](https://tcut.amanv.dev/llms.txt) — the same, condensed for coding agents (`--json` gives machine-readable results)
 - [tcut.amanv.dev](https://tcut.amanv.dev)
 
 MIT

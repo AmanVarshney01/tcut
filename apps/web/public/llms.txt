@@ -1,0 +1,44 @@
+# tcut — terminal sessions to video (for agents)
+
+npm package: termcut · command: tcut · requires Bun ≥ 1.4 (or the standalone binary) · ffmpeg only for .mp4/.gif/.webm/.webp
+Docs: https://github.com/AmanVarshney01/tcut · Reference: https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md
+
+## Non-interactive contract
+- Every command exits 0 on success, 1 on failure. No prompts except `tcut publish --setup` without flags.
+- Add `--json` to get exactly one JSON document on stdout (results, or `{ "error": "...", "type": "WaitTimeoutError" | "ExpectationError" | ... }`). Progress/status lines are suppressed.
+- `-q` silences status lines without JSON. Status goes to stdout, errors to stderr (unless --json).
+- Recording is cached: re-running an unchanged script reuses its .cast; `--force` re-records.
+- `tcut rec` needs a TTY to pass keystrokes through; agents should prefer scripts or `tcut rec -- <command>` for non-interactive commands.
+
+## Commands
+tcut <script.ts> [-o out…] [--theme t] [--width px --height px] [--json]   record + render
+tcut record <script.ts>                                                  cast only
+tcut render <file.cast> [-o out…] [--theme t] [--speed x] [--json]       re-render (no shell is run)
+tcut rec [-- command…] [-o out…]                                         live session (TTY); writes .cast + editable .video.ts
+tcut test <files|dirs…> [--json]                                         run scripts fast (no sleeps/typing delay), exit 1 if any expect() fails
+tcut publish <files…> [--json] · tcut publish --setup --endpoint U --bucket B --access-key K --secret-key S   S3-compatible upload
+tcut init [name] [--template basic|tour|test] · tcut themes [query]
+Outputs by extension: .mp4 .webm .gif .webp (ffmpeg) · .svg .html (no deps) · .png .jpg (final frame) · dir/ (PNG frames)
+
+## Script shape
+import { defineVideo } from "tcut";
+export default defineVideo(
+  { output: ["demo.mp4", "demo.gif"], cols: 80, rows: 24, theme: "catppuccin-mocha", typingSpeed: "40ms" },
+  async (t) => {
+    await t.run("ls -la");            // type + Enter + wait for the prompt to return (screen-aware)
+    await t.expect(/total \d+/);      // assert on the rendered screen; throws ExpectationError with a dump
+    await t.type("vim x"); await t.enter(); await t.wait(/~/, { scope: "screen" });   // TUIs: wait on screen text
+    await t.escape(); await t.type(":q!\n"); await t.wait();
+    await t.hide(async () => { await t.run("rm x"); });   // runs, but is cut from the video
+    await t.sleep("1s");
+  },
+);
+t methods: run type paste enter tab backspace delete escape space up down left right home end pageUp pageDown ctrl("c") alt("b") shift("tab") scrollUp scrollDown key("f5") raw sleep wait expect hide screenshot(path) marker resize clear screen() line() cursor()
+Config: output shell prompt cols rows width height fps typingSpeed typingJitter seed playbackSpeed waitTimeout endPause quantize core cache font{family,size,lineHeight,letterSpacing} theme cursor{blink,period} padding margin marginFill borderRadius windowBar title loopOffset cast
+
+## Writing robust scripts for TUIs
+- Wait for what you will react to: `await t.wait(/Choose a framework/, { scope: "screen" })` before pressing keys.
+- Select by reading: `while (!/●\s+Cloudflare/.test(t.screen())) await t.up();` then `await t.enter()`.
+- Agents in TUIs (claude, codex): wait for their trust prompt, press Enter, wait for the input box, type, then wait for a completion marker (e.g. /✻ \w+ for \d+s/ for Claude Code; absence of "esc to interrupt" for Codex), then `/exit` or `/quit` and `await t.wait()`.
+- After a full-screen program exits the primary screen may hold stale text; prompt detection is cursor-relative, so `run()`/`wait()` still work. Use `t.hide(() => t.clear())` to tidy the video.
+- Failures print the whole screen — read it; it tells you which prompt you are actually on.

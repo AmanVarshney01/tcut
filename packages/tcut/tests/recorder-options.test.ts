@@ -37,3 +37,16 @@ describe("recorder options", () => {
     expect(performance.now() - started).toBeLessThan(5000);
   });
 });
+
+describe("prompt detection after screen residue", () => {
+  test("prompt printed over stale text (as after a TUI exits) is still detected", async () => {
+    const rec = await record(resolveConfig({ ...base, waitTimeout: 5000 }), async (t) => {
+      // Leave text on the line and put the cursor back at column 0; the next prompt overwrites only "> ".
+      await t.run("printf 'STALE TEXT AFTER CURSOR\\r'");
+      expect(t.line()).toContain("ALE TEXT AFTER CURSOR"); // "> " overwrote the first two stale chars
+      await t.run("echo after-residue");
+      await t.expect(/after-residue/);
+    });
+    expect(rec.events.length).toBeGreaterThan(0);
+  });
+});
