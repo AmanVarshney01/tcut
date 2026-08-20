@@ -30,7 +30,21 @@ const ogImage = Astro.site ? new URL(`${base}/og.png`, Astro.site).href : `${bas
     <meta property="og:type" content="website" />
     <meta property="og:image" content={ogImage} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#e8ebee" />
+    <meta name="theme-color" content="#e8ebee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
+    <script is:inline>
+      // Runs before first paint: honour a saved choice, else the OS preference. Kept in sync by the header toggle.
+      (() => {
+        const saved = localStorage.getItem("tcut-theme");
+        const system = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = saved === "light" || saved === "dark" ? saved : system;
+        if (!saved) {
+          matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+            if (!localStorage.getItem("tcut-theme")) document.documentElement.dataset.theme = e.matches ? "dark" : "light";
+          });
+        }
+      })();
+    </script>
   </head>
   <body class="min-h-screen">
     <slot />

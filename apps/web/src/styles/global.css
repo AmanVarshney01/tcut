@@ -20,8 +20,21 @@
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
+/* Light is the default set in @theme; dark re-points the same tokens, so every utility follows. */
 :root {
   color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-desk: #0b0d12;
+  --color-desk-2: #141720;
+  --color-desk-3: #1d2129;
+  --color-line: #262b35;
+  --color-ink: #e6e9ee;
+  --color-ink-2: #a3acb7;
+  --color-ink-3: #6b7580;
+  --color-amber: #f2a900;
+  --color-amber-deep: #ffc23d;
 }
 
 html {
@@ -30,6 +43,31 @@ html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
+}
+html,
+body,
+.card,
+.copy-cmd {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  .card,
+  .copy-cmd {
+    transition: none;
+  }
+}
+
+/* Theme toggle: shows the icon for the mode you'd switch to. */
+.theme-toggle .icon-moon { display: inline; }
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
+
+/* Dark desk: the demo terminal needs a hairline so it doesn't dissolve into the background. */
+:root[data-theme="dark"] .demo-svg {
+  outline: 1px solid var(--color-line);
 }
 
 body {
