@@ -24,7 +24,8 @@
     "media": "bun run --cwd apps/web media",
     "deploy": "turbo run deploy -F @tcut/infra --",
     "deploy:prod": "turbo run deploy:prod -F @tcut/infra --",
-    "destroy": "turbo run destroy -F @tcut/infra --"
+    "destroy": "turbo run destroy -F @tcut/infra --",
+    "sync:readme": "cp README.md packages/tcut/README.md"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
