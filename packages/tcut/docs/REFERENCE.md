@@ -53,6 +53,7 @@ tcut themes
 - Wait: `sleep("500ms")` · `wait(/re/, { scope: "line" | "screen" })` — default waits for the prompt
 - Assert: `expect(/re/)` — throws with a screen dump
 - Shape the video: `hide(async () => …)` cuts a section · `screenshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`
+- Captions: `print(markdown)` renders Markdown to ANSI (via @wterm/markdown) straight into the recording, not the shell: headings, bold, lists, code, links. `title(text, { pause })` is a heading + rule + pause. Use at a prompt, not inside a TUI.
 - Look: `screen()` · `line()` · `cursor()` · `cols` · `rows`
 - Browser pane (when `browser` is configured): `browser.goto(url)` (waits for the page, retries while a dev server starts) · `browser.waitFor(/text/)` · `browser.click(selector)` · `browser.reload()` · `browser.evaluate(js)` · `focus("terminal" | "browser")` (overlay layout: which window is in front; recorded as a marker)
 

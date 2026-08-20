@@ -98,7 +98,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
     await Promise.race([exitedPromise, proc.exited]);
     push("m", MARKER.end);
   } finally {
-    process.off("SIGWINCH", onResize);
+    (process as unknown as { off(event: string, fn: () => void): void }).off("SIGWINCH", onResize); // newer @types/bun drop the signal overload on off()
     if (stdin) {
       stdin.off("data", onData);
       if (isTTY) stdin.setRawMode(false);

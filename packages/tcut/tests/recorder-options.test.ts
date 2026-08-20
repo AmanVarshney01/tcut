@@ -50,3 +50,22 @@ describe("prompt detection after screen residue", () => {
     expect(rec.events.length).toBeGreaterThan(0);
   });
 });
+
+describe("print() and title()", () => {
+  test("captions land in the cast and on screen, never in the shell, and the prompt comes back", async () => {
+    const rec = await record(resolveConfig({ ...base, cols: 60, rows: 16 }), async (t) => {
+      await t.title("Shipping", { pause: 0 });
+      await t.print("## Step 1\nSome **bold** and `code`.");
+      expect(t.screen()).toContain("Shipping");
+      expect(t.screen()).toContain("Step 1");
+      expect(t.line()).toMatch(/^>\s*$/);
+      await t.run("echo after-caption");
+      await t.expect(/after-caption/);
+    });
+    const inputs = rec.events.filter((e) => e[1] === "i").map((e) => e[2]).join("");
+    expect(inputs).not.toContain("Step 1"); // nothing typed into the shell
+    const outputs = rec.events.filter((e) => e[1] === "o").map((e) => e[2]).join("");
+    expect(outputs).toContain("\x1b[1m\x1b[97mShipping\x1b[0m");
+    expect(outputs).toContain("\x1b[1mbold\x1b[0m");
+  });
+});

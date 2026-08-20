@@ -103,3 +103,9 @@ When `browser` is configured, recording SHALL capture screenshots of a WebView o
 - **WHEN** a script starts a server, calls `t.browser.goto(url)`, edits a file and calls `t.browser.reload()`
 - **THEN** the rendered mp4 shows the terminal on the left and the page before/after on the right
 
+### Requirement: Captions
+`t.print(markdown)` SHALL render Markdown to ANSI and write it into the recording and the screen model without sending anything to the PTY, then obtain a fresh prompt; `t.title(text)` SHALL render a heading and rule followed by a pause. Captions SHALL appear in every output format because they are ordinary terminal output in the cast.
+#### Scenario: caption then command
+- **WHEN** a script calls `t.print("## Step 1")` and then `t.run("ls")`
+- **THEN** the video shows the bold heading above the command, the shell never receives "Step 1", and `ls` runs at a normal prompt
+

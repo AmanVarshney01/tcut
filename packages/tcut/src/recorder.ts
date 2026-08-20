@@ -1,3 +1,4 @@
+import { MarkdownRenderer } from "@wterm/markdown";
 import { MARKER } from "./cast";
 import { WINDOW_BAR_HEIGHT, estimateCell } from "./config";
 import { formatMs, toMs } from "./duration";
@@ -269,6 +270,30 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     push("i", typeof data === "string" ? data : decoder.decode(data));
   };
 
+  /** Put text on screen as if the terminal had printed it: into the cast and the screen model, not the PTY. */
+  const inject = (data: string): void => {
+    push("o", data);
+    screen.write(data);
+  };
+
+  const renderMarkdown = (markdown: string): string => {
+    const renderer = new MarkdownRenderer({ width: Math.max(20, cols - 2) });
+    return renderer.push(markdown.endsWith("\n") ? markdown : markdown + "\n") + renderer.flush();
+  };
+
+  const print = async (markdown: string): Promise<void> => {
+    await screen.settle();
+    // Clear the prompt line, show the caption, then ask the shell for a fresh prompt on the next line.
+    inject(`\r\x1b[K${renderMarkdown(markdown)}`);
+    await raw("\r");
+    await waitFor(`prompt ${promptPattern} after print()`, promptVisible, config.waitTimeout);
+  };
+
+  const title = async (text: string, titleOpts: { pause?: Duration } = {}): Promise<void> => {
+    await print(`# ${text}\n\n---`);
+    await sleep(titleOpts.pause ?? "1.5s");
+  };
+
   const typingDelay = (base: number): number => {
     if (config.typingJitter === 0) return base;
     const factor = 1 + (rand() * 2 - 1) * config.typingJitter;
@@ -435,6 +460,8 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
       await screen.settle();
     },
     clear: () => run("clear"),
+    print,
+    title,
     get browser(): BrowserSession {
       if (!browserSession) throw new Error("t.browser needs `browser: { url }` in the video config.");
       return browserSession;

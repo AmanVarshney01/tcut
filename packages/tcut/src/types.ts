@@ -278,6 +278,14 @@ export interface TerminalSession {
   resize(cols: number, rows: number): Promise<void>;
   /** Shorthand for `run("clear")`. */
   clear(): Promise<void>;
+  /**
+   * Show Markdown in the terminal as a caption (rendered to ANSI by @wterm/markdown). It is written into the
+   * recording and the screen model only, never sent to the shell; afterwards the shell is asked for a fresh prompt.
+   * Use at a shell prompt, not inside a full-screen program.
+   */
+  print(markdown: string): Promise<void>;
+  /** A title card: big heading + rule, then a pause (default "1.5s"). */
+  title(text: string, opts?: { pause?: Duration }): Promise<void>;
   /** The recorded browser window; throws if `browser` is not configured. */
   readonly browser: BrowserSession;
   /** Overlay layout: bring the terminal or the browser window to the front (recorded as a marker). */
