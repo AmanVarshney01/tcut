@@ -7,7 +7,7 @@
 
 - [x] 2.1 `scripts/build-binaries.ts` (5 targets + SHA256SUMS)
 - [x] 2.2 `.github/workflows/release.yml` (tag check, binaries, GitHub Release, optional npm)
-- [ ] 2.3 Repo public; tag `v0.1.0`; release workflow green with assets attached
+- [x] 2.3 Repo public; tag `v0.1.0`; release workflow green with assets attached
 
 ## 3. Docs
 
