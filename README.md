@@ -1,5 +1,9 @@
 # tcut
 
+[![CI](https://github.com/AmanVarshney01/tcut/actions/workflows/ci.yml/badge.svg)](https://github.com/AmanVarshney01/tcut/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/tcut)](https://www.npmjs.com/package/tcut)
+[![license](https://img.shields.io/github/license/AmanVarshney01/tcut)](LICENSE)
+
 Script terminal sessions in **TypeScript**, render them to **reproducible** MP4 / GIF / WebM / SVG / HTML / PNG.
 
 Built on Bun 1.4 — `Bun.Terminal` for the PTY, `Bun.WebView` for pixels, `Bun.build` for the renderer,
@@ -35,10 +39,49 @@ export default defineVideo(
 );
 ```
 
+## Install
+
+**With Bun (recommended)** — Bun ≥ 1.4:
+
 ```sh
-bun install
-bun src/cli.ts demo.video.ts     # or: bun link && tcut demo.video.ts
+bun add -g tcut          # then: tcut demo.video.ts
+bunx tcut init demo      # or run it without installing
 ```
+
+**Standalone binary** — no Bun required; download from
+[Releases](https://github.com/AmanVarshney01/tcut/releases) (`tcut-<version>-<platform>`, checksums in `SHA256SUMS`):
+
+```sh
+curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-0.1.0-darwin-arm64 -o tcut
+chmod +x tcut && ./tcut init demo
+```
+
+Scripts `import { defineVideo } from "tcut"` — the binary and the global install both resolve that import
+themselves, so no `node_modules` is needed next to your script.
+
+**From source**
+
+```sh
+git clone https://github.com/AmanVarshney01/tcut && cd tcut && bun install
+bun src/cli.ts examples/demo.ts
+```
+
+## Requirements
+
+| To… | You need |
+|---|---|
+| run tcut | **Bun ≥ 1.4** (`bun add -g tcut`), or the standalone binary (Bun is embedded) |
+| record / `tcut test` | a shell — `bash` (default), `zsh`, `fish` or `sh` — plus whatever CLI tools your script runs. No browser, no ffmpeg |
+| render `.svg` / `.html` | nothing else — pure Bun |
+| render `.png` / `.jpg` / `frames/` | a WebView: **macOS → nothing** (system WebKit). **Linux / Windows → Chrome, Chromium, Edge or Brave** installed (Windows ships Edge) |
+| render `.mp4` / `.gif` / `.webm` | the WebView above **+ ffmpeg** — `brew install ffmpeg` · `apt install ffmpeg` · `winget install ffmpeg` |
+| render `.webp` | an ffmpeg with libwebp — Homebrew: `brew install ffmpeg-full` (tcut finds it automatically; see below) |
+| your chosen font | `font.family` must be installed (default stack: JetBrains Mono → Menlo → monospace). SVG output uses the *viewer's* fonts |
+
+Notes
+- tcut looks for ffmpeg in this order: `$TCUT_FFMPEG`, `ffmpeg` on PATH, Homebrew's keg-only `ffmpeg-full`. It picks the first one that has the encoder a given output needs.
+- Verified on macOS (Apple Silicon, CI on GitHub's macOS runners). Linux and Windows binaries are cross-compiled but not yet exercised in CI; recording should work everywhere, rendering depends on the WebView backend above.
+- Rendering throughput is ~30 output frames/s; idle stretches are free (unchanged frames are reused). A 60 fps, 10 s clip renders in a few seconds.
 
 ## Why not VHS?
 
@@ -51,14 +94,6 @@ bun src/cli.ts demo.video.ts     # or: bun link && tcut demo.video.ts
 | Outputs | mp4 / gif / webm / png frames | + **animated SVG**, **single-file HTML player**, PNG/JPG stills — SVG/HTML need no ffmpeg or browser |
 | As tests | — | `tcut test` runs scripts in fast mode, exit code reflects `expect()` |
 | Stack | ttyd + Chrome + ffmpeg | Bun + wterm (JS/WASM) + ffmpeg (only for video containers) |
-
-## Requirements
-
-- Bun ≥ 1.4
-- `ffmpeg` for `.mp4` / `.gif` / `.webm` / `.webp` (SVG, HTML, PNG/JPG and PNG sequences don't need it).
-  tcut checks `$TCUT_FFMPEG`, then `ffmpeg` on PATH, then Homebrew's keg-only `ffmpeg-full` — the regular
-  Homebrew `ffmpeg` 9.x formula has no libwebp, so for `.webp` run `brew install ffmpeg-full`.
-- macOS renders with the system WebKit. Linux/Windows need Chrome or Edge installed for `Bun.WebView`.
 
 ## How it works
 
@@ -138,7 +173,12 @@ bun test                          # recorder, renderer, exporters, CLI (spawns r
 bun run typecheck
 bun src/cli.ts examples/demo.ts
 bun run build                     # dist/tcut single binary with embedded renderer assets
+bun run build:all                 # cross-compile all platforms into dist/ + SHA256SUMS
 ```
+
+Releasing: bump `version` in `package.json`, commit, `git tag v<version> && git push --tags`. The release
+workflow builds the binaries, publishes the GitHub Release and, when an `NPM_TOKEN` secret is configured,
+publishes to npm.
 
 Specs and tasks are tracked with [OpenSpec](https://github.com/Fission-AI/OpenSpec) under `openspec/`; the roadmap
 and measurements are in `PLAN.md`.

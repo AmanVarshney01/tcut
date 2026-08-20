@@ -1,7 +1,31 @@
 {
   "name": "tcut",
   "version": "0.1.0",
-  "description": "Script terminal sessions in TypeScript, render them to reproducible MP4/GIF/WebM/SVG with Bun.",
+  "description": "Script terminal sessions in TypeScript, render them to reproducible MP4/GIF/WebM/SVG/HTML with Bun.",
+  "license": "MIT",
+  "author": "Aman Varshney",
+  "homepage": "https://github.com/AmanVarshney01/tcut#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AmanVarshney01/tcut.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AmanVarshney01/tcut/issues"
+  },
+  "keywords": [
+    "terminal",
+    "recording",
+    "gif",
+    "mp4",
+    "svg",
+    "asciicast",
+    "asciinema",
+    "vhs",
+    "pty",
+    "demo",
+    "screencast",
+    "bun"
+  ],
   "type": "module",
   "module": "src/index.ts",
   "exports": {
@@ -10,13 +34,22 @@
   "bin": {
     "tcut": "./src/cli.ts"
   },
+  "files": [
+    "src",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "bun": ">=1.4.0"
+  },
   "scripts": {
     "demo": "bun src/cli.ts examples/demo.ts",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
     "build:assets": "bun scripts/build-assets.ts",
     "build": "bun run build:assets && bun build --compile --minify src/cli.ts --outfile dist/tcut",
-    "prepare": "bun scripts/build-assets.ts"
+    "build:all": "bun run build:assets && bun scripts/build-binaries.ts"
   },
   "dependencies": {
     "@wterm/core": "^0.3.4",
