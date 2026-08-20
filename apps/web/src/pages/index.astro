@@ -7,7 +7,7 @@ import facts from "../assets/facts.json";
 import btsGif from "../assets/examples/better-t-stack.gif";
 import claudeGif from "../assets/examples/claude-code.gif";
 import lazygitGif from "../assets/examples/lazygit.gif";
-import aiGif from "../assets/examples/ai-agents.gif";
+import nvimGif from "../assets/examples/nvim-hmr.gif";
 
 const GITHUB = "https://github.com/AmanVarshney01/tcut";
 const NPM = "https://www.npmjs.com/package/termcut";
@@ -27,7 +27,7 @@ const examples = [
   { src: btsGif, alt: "bun create better-t-stack answered with arrow keys", label: "bun create better-t-stack, driven with arrow keys" },
   { src: claudeGif, alt: "Claude Code's interactive TUI editing a file", label: "Claude Code, the interactive TUI, end to end" },
   { src: lazygitGif, alt: "lazygit navigated with the keyboard", label: "lazygit" },
-  { src: aiGif, alt: "claude -p answering, codex exec editing a file", label: "claude -p and codex exec" },
+  { src: nvimGif, alt: "Neovim editing App.tsx with a browser window overlaid showing the page update", label: "nvim + a real browser window (overlay), Vite HMR" },
 ];
 ---
 
@@ -76,6 +76,7 @@ const examples = [
         <div>
           <p class="text-ink-2">
             Scripted. Plain TypeScript, so loops, helpers and imports work. <code>run()</code> waits for your prompt to come back, not for a timer; <code>expect()</code> makes the demo a test.
+            <code>print()</code> renders Markdown captions into the terminal without typing anything, and <code>browser: {"{ position: \"overlay\" }"}</code> records a real browser window beside or over the terminal, for dev-server demos.
           </p>
           <div class="mt-3"><Code code={script} lang="ts" theme="catppuccin-mocha" /></div>
           <div class="mt-3"><Code code={`tcut demo.video.ts`} lang="sh" theme="catppuccin-mocha" /></div>
