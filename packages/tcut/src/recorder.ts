@@ -327,7 +327,10 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
   try {
     // Everything that happens before the first prompt is stamped at t=0.
     log(`starting ${Array.isArray(config.shell) ? config.shell.join(" ") : config.shell}`);
-    await waitFor(`initial prompt ${promptPattern}`, () => promptPattern.test(screen.line()), config.waitTimeout);
+    // Named shells get a known prompt; for an arbitrary command there is nothing to wait for — start at once.
+    if (!Array.isArray(config.shell)) {
+      await waitFor(`initial prompt ${promptPattern}`, () => promptPattern.test(screen.line()), config.waitTimeout);
+    }
     startedAt = performance.now();
     log("recording");
     await script(session);

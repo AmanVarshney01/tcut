@@ -6,9 +6,11 @@ import { writeCast } from "./cast";
 import { resolveConfig } from "./config";
 import * as api from "./index";
 import { recordLive } from "./live";
+import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig } from "./publish";
 import { renderOutputs } from "./render";
+import { generateScript } from "./scriptgen";
 import { runScriptTests } from "./testing";
-import { themeNames } from "./themes";
+import { findThemes, themeNames } from "./themes";
 import type { CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
 import { Video, isVideo, renderCast } from "./video";
 
@@ -32,8 +34,10 @@ Usage:
   tcut record <script.ts> [options]   record only (writes the .cast)
   tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
   tcut test <path...>                 run scripts in fast mode as tests (no video)
+  tcut publish <files...> [--open]    upload to your S3-compatible bucket and print share links
+  tcut publish --setup                configure the bucket (RustFS, MinIO, R2, S3 …) — once
   tcut init [name] [--template t]     scaffold a new script (basic | tour | test)
-  tcut themes                         list built-in themes
+  tcut themes [query]                 list the ~600 bundled themes (Ghostty collection)
 
 Options (override the script's config):
   -o, --output <path>      .mp4 .webm .gif .webp .svg .html .png .jpg or dir/ for PNG frames — repeatable
@@ -47,7 +51,11 @@ Options (override the script's config):
       --cols <n> --rows <n>  terminal size (rec: defaults to your terminal's size)
       --cast <path>        where to read/write the .cast
       --record-only        stop after writing the cast
+      --no-script          rec: don't write the editable <name>.video.ts next to the cast
       --force              ignore the cast cache and re-record
+      --open               publish: open the first link in the browser
+      --name <file>        publish: object name (default: the file's basename)
+      --endpoint --bucket --access-key --secret-key --public-url --region   publish --setup values
       --template <name>    for init: basic | tour | test
   -q, --quiet
   -h, --help
@@ -77,7 +85,17 @@ const { values, positionals } = parseArgs({
     rows: { type: "string" },
     cast: { type: "string" },
     "record-only": { type: "boolean" },
+    "no-script": { type: "boolean" },
     force: { type: "boolean" },
+    setup: { type: "boolean" },
+    open: { type: "boolean" },
+    name: { type: "string" },
+    endpoint: { type: "string" },
+    bucket: { type: "string" },
+    "access-key": { type: "string" },
+    "secret-key": { type: "string" },
+    "public-url": { type: "string" },
+    region: { type: "string" },
     template: { type: "string" },
     quiet: { type: "boolean", short: "q" },
     help: { type: "boolean", short: "h" },
@@ -281,7 +299,47 @@ async function main(): Promise<void> {
 
   switch (first) {
     case "themes": {
-      for (const name of themeNames) console.log(name);
+      const names = rest[0] ? findThemes(rest[0]) : themeNames;
+      if (names.length === 0) fail(`No theme matches "${rest[0]}"`);
+      for (const name of names) console.log(name);
+      if (!rest[0]) log(dim(`${names.length} themes · use any name with --theme, e.g. --theme "Gruvbox Dark"`));
+      return;
+    }
+    case "publish": {
+      if (values.setup) {
+        const ask = async (label: string, flag: string | undefined, fallback: string, secret = false): Promise<string> => {
+          if (flag) return flag;
+          if (!process.stdin.isTTY) return fallback;
+          const answer = prompt(`${label}${fallback ? ` [${fallback}]` : ""}:`) ?? "";
+          return answer.trim() || fallback;
+        };
+        const existing = await loadPublishConfig().catch(() => null);
+        const cfg: PublishConfig = {
+          endpoint: await ask("S3 endpoint", values.endpoint, existing?.endpoint ?? "https://s3.amanv.cloud"),
+          bucket: await ask("Bucket", values.bucket, existing?.bucket ?? "tcut"),
+          accessKeyId: await ask("Access key", values["access-key"], existing?.accessKeyId ?? ""),
+          secretAccessKey: await ask("Secret key", values["secret-key"], existing?.secretAccessKey ?? "", true),
+          region: values.region ?? existing?.region ?? "us-east-1",
+          ...(values["public-url"] || existing?.publicUrl ? { publicUrl: values["public-url"] ?? existing?.publicUrl } : {}),
+        };
+        if (!cfg.accessKeyId || !cfg.secretAccessKey) fail("publish --setup needs --access-key and --secret-key (or run it in a terminal to be prompted)");
+        const result = await ensurePublicBucket(cfg, log);
+        const file = await savePublishConfig(cfg);
+        ok(`saved ${file}`, "mode 600");
+        ok(`bucket ${cfg.bucket} on ${cfg.endpoint}`, result.bucketCreated ? "created" : "exists");
+        if (result.publicReadOk) ok("public read verified", `links will look like ${publicUrlFor(cfg, "x").replace(/\/x$/, "/<hash>/demo.gif")}`);
+        else log(`${red("✘")} anonymous read failed — set a public-read policy on the bucket or pass --public-url for a CDN/proxy in front of it`);
+        return;
+      }
+      if (rest.length === 0) fail("publish needs at least one file (or --setup)");
+      const cfg = await loadPublishConfig();
+      if (!cfg) fail("publish is not configured yet — run `tcut publish --setup` (or set TCUT_S3_ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY)");
+      const published = await publishFiles(rest, cfg, { name: values.name, log });
+      for (const p of published) ok(p.url, dim(path.basename(p.file)));
+      if (values.open && published[0]) {
+        const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+        Bun.spawn([opener, published[published.length - 1]!.url], { stdout: "ignore", stderr: "ignore" });
+      }
       return;
     }
     case "init": {
@@ -299,7 +357,8 @@ async function main(): Promise<void> {
     case "rec": {
       // Live mode: the user (or a pipe) drives the PTY; everything after `--` is the command to run.
       const overrides = overridesFromFlags();
-      const outputs = overrides.output ?? ["rec.mp4"];
+      const rawOutputs = overrides.output ?? ["rec.mp4"];
+      const outputs = Array.isArray(rawOutputs) ? rawOutputs : [rawOutputs];
       const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast });
       const command = rest.length > 0 ? rest : undefined;
       // Size: --cols/--rows if given, else the terminal tcut runs in.
@@ -308,6 +367,11 @@ async function main(): Promise<void> {
       await writeCast(config.cast, recording);
       log("");
       ok(`wrote ${config.cast}`, `${recording.events.length} events, ${(recording.header.duration ?? 0).toFixed(1)}s`);
+      if (!values["no-script"]) {
+        const scriptPath = config.cast.replace(/\.cast$/, "") + ".video.ts";
+        await Bun.write(scriptPath, generateScript(recording, { output: outputs, cleanShell: !command, command, castPath: config.cast }));
+        ok(`wrote ${scriptPath}`, "editable script — tweak it, then `tcut " + scriptPath + "`");
+      }
       if (values["record-only"]) return;
       const result = await renderOutputs(recording, config, progressReporter());
       await reportOutputs(result.outputs, result.screenshots);

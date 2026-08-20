@@ -11,6 +11,7 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "strict": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,

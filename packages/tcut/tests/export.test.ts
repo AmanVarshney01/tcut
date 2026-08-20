@@ -6,7 +6,7 @@ import { replayFrames, resolveColor } from "../src/export/frames";
 import { buildHtml } from "../src/export/html";
 import { buildSvg, svgGeometry } from "../src/export/svg";
 import { renderOutputs } from "../src/render";
-import { themes } from "../src/themes";
+import { builtinThemes as themes } from "../src/themes";
 import type { Recording } from "../src/types";
 
 const dir = "/tmp/tcut-export-test";

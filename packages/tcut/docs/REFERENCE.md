@@ -10,15 +10,18 @@ tcut rec [-- command…]            record a live session, then render
 tcut record <script.ts>           record only (.cast)
 tcut render <file.cast>           render a cast (tcut's or asciinema's)
 tcut test <paths…>                run scripts as tests
+tcut publish <files…> [--open]    upload to your S3-compatible bucket, print links
+tcut publish --setup              configure endpoint/bucket/keys (~/.config/tcut/publish.json)
 tcut init [name] [--template basic|tour|test]
 tcut themes
 
 -o, --output <path>   repeatable: .mp4 .webm .gif .webp .svg .html .png .jpg or a directory/
---theme <name>        catppuccin-mocha · dracula · github-dark · tokyo-night · one-dark
+--theme <name>        any of ~600 names (`tcut themes [query]`), matched loosely: "Gruvbox Dark" = gruvbox-dark
 --font <family>  --font-size <px>  --line-height <x>  --letter-spacing <px>
 --fps <n>  --speed <x>  --padding <px>  --margin <px>  --margin-fill <color>  --radius <px>
 --window-bar <none|colorful|colorfulRight|rings|ringsRight>  --title <text>  --no-blink
---core <ghostty|lite>  --cols <n>  --rows <n>  --cast <path>  --record-only  --force  -q
+--core <ghostty|lite>  --cols <n>  --rows <n>  --cast <path>  --record-only  --no-script  --force  -q
+--open  --name <file>  --endpoint --bucket --access-key --secret-key --public-url --region   (publish)
 ```
 
 ## Script reference
@@ -34,7 +37,7 @@ tcut themes
 | `prompt` | `"> "` | prompt of the clean shell; `run()` waits for it |
 | `cols` · `rows` · `fps` | 80 · 24 · 60 | |
 | `typingSpeed` · `typingJitter` · `seed` | `"50ms"` · 0 · 1 | jitter is seeded, so it's reproducible |
-| `theme` | `"catppuccin-mocha"` | a name or a full theme object |
+| `theme` | `"catppuccin-mocha"` | any bundled theme name (~600, loose matching) or a full theme object |
 | `font` | JetBrains Mono 20 px | `{ family, size, lineHeight, letterSpacing }` |
 | `windowBar` · `title` · `padding` · `margin` · `marginFill` · `borderRadius` | `"none"` · `""` · 24 · 0 · bg · 0 | window chrome |
 | `cursor` | `{ blink: true, period: 1000 }` | |

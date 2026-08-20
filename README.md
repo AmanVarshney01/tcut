@@ -21,6 +21,8 @@ tcut rec -o demo.gif                    # opens a shell, records until you `exit
 tcut rec -o demo.mp4 -- npm create vite # or just one command
 ```
 
+You get `demo.gif`, the exact recording (`demo.cast`) and an editable script (`demo.video.ts`) of what you typed.
+
 Or script it:
 
 ```ts
@@ -38,10 +40,17 @@ export default defineVideo({ output: "demo.gif" }, async (t) => {
 tcut demo.video.ts
 ```
 
-Re-render any recording without re-running it:
+Re-render any recording without re-running it — ~600 themes ([Ghostty's collection](https://github.com/mbadolato/iTerm2-Color-Schemes)), `tcut themes` lists them:
 
 ```sh
-tcut render demo.cast --theme dracula -o demo.svg
+tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg
+```
+
+Share it:
+
+```sh
+tcut publish --setup        # once: your S3-compatible bucket (RustFS, MinIO, R2, S3)
+tcut publish demo.gif       # → https://…/3f9a1c2b7d4e/demo.gif
 ```
 
 ## More

@@ -23,12 +23,11 @@ export interface Theme {
   brightWhite: string;
 }
 
-export type ThemeName =
-  | "catppuccin-mocha"
-  | "dracula"
-  | "github-dark"
-  | "tokyo-night"
-  | "one-dark";
+/**
+ * A theme name: one of the built-ins (autocompleted) or any of the ~600 Ghostty themes, matched case- and
+ * punctuation-insensitively ("Catppuccin Mocha", "catppuccin-mocha", "GitHub Dark" …). `tcut themes` lists them.
+ */
+export type ThemeName = "catppuccin-mocha" | "dracula" | "github-dark" | "tokyo-night" | "one-dark" | (string & {});
 
 export type ShellName = "bash" | "zsh" | "fish" | "sh";
 /** Terminal emulator core: libghostty (full VT, answers queries) or wterm's lite Zig core (faster, fewer features). */
