@@ -32,11 +32,15 @@ A GitHub Actions workflow on `macos-latest` SHALL run typecheck, `bun test`, ren
 - **THEN** all steps succeed and the demo outputs are uploaded as artifacts
 
 ### Requirement: npm package contents
-The published npm package SHALL contain only `src/`, `scripts/`, `README.md` and `LICENSE`, SHALL declare `engines.bun >= 1.4.0`, and SHALL expose the `tcut` bin and the `"tcut"` module entry. Installing it with `bun add -g tcut` SHALL make `tcut` runnable without a build step (renderer assets are built at runtime when the prebuilt ones are absent).
+The published npm package SHALL be named `termcut`, SHALL contain only `src/`, `scripts/`, `README.md` and `LICENSE`, SHALL declare `engines.bun >= 1.4.0`, and SHALL expose the `tcut` bin and the `"termcut"` module entry. Installing it with `bun add -g termcut` SHALL make `tcut` runnable without a build step. The CLI SHALL resolve both `"tcut"` and `"termcut"` import specifiers in user scripts to its own API.
 
 #### Scenario: dry run
 - **WHEN** `bun publish --dry-run` is executed
-- **THEN** the file list contains no `out/`, `dist/`, `node_modules/` or `generated/` entries
+- **THEN** the package name is `termcut` and the file list contains no `out/`, `dist/`, `node_modules/` entries
+
+#### Scenario: either specifier works under the CLI
+- **WHEN** a script imports from `"tcut"` or from `"termcut"` and is run with `tcut <script>`
+- **THEN** `defineVideo` resolves without a `node_modules` directory
 
 ### Requirement: Tagged releases
 Pushing a `v<version>` tag SHALL run a workflow that fails if the tag does not match `package.json`, builds binaries for darwin-arm64, darwin-x64, linux-x64, linux-arm64 and windows-x64 with SHA-256 checksums, and publishes a GitHub Release with generated notes. npm publishing SHALL run only when an `NPM_TOKEN` secret is present.
