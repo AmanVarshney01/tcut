@@ -2,10 +2,10 @@
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, passthroughImageService } from "astro/config";
 
-// Deployed to GitHub Pages at https://amanvarshney01.github.io/tcut/ by .github/workflows/pages.yml.
-// Set SITE / BASE_PATH to deploy elsewhere (e.g. BASE_PATH=/ for a custom domain).
-const site = process.env.SITE ?? "https://amanvarshney01.github.io";
-const base = process.env.BASE_PATH ?? "/tcut";
+// Deployed to Cloudflare Workers (static assets) with Alchemy — see packages/infra/alchemy.run.ts.
+// SITE is the public origin used for canonical/OG URLs; BASE_PATH only matters for sub-path hosting.
+const site = process.env.SITE ?? "https://tcut-web-production-dybtqf7ubu6k5hel.amanvarshney.workers.dev";
+const base = process.env.BASE_PATH ?? "/";
 
 export default defineConfig({
   site,

@@ -17,6 +17,18 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "deploy": {
+      "cache": false,
+      "interactive": true
+    },
+    "deploy:prod": {
+      "cache": false,
+      "interactive": true
+    },
+    "destroy": {
+      "cache": false,
+      "interactive": true
     }
   }
 }
