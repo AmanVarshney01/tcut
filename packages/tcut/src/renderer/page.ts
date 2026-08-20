@@ -77,7 +77,16 @@ export function renderHtml(config: ResolvedConfig): string {
     position: absolute;
     left: ${config.margin}px; top: ${config.margin}px;
     display: flex; align-items: stretch; gap: ${BROWSER_GAP}px;
-    flex-direction: ${{ right: "row", left: "row-reverse", bottom: "column", top: "column-reverse" }[config.browser?.position ?? "right"]};
+    flex-direction: ${{ right: "row", left: "row-reverse", bottom: "column", top: "column-reverse", overlay: "row" }[config.browser?.position ?? "right"]};
+  }
+  ${
+    config.browser?.position === "overlay"
+      ? `#stage { display: block; }
+  #frame { position: absolute; left: 0; top: 0; z-index: 2; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
+  #browser { position: absolute; z-index: 1; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
+  #stage.front-browser #browser { z-index: 3; }
+  #stage.front-browser #frame { z-index: 1; }`
+      : ""
   }
   #browser {
     width: ${config.browser && (config.browser.position === "top" || config.browser.position === "bottom") ? "auto" : `${config.browser?.width ?? 0}px`};

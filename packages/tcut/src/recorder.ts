@@ -164,7 +164,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     const termFrameW = Math.round(config.cols * est.w + config.padding * 2);
     const stacked = bcfg.position === "top" || bcfg.position === "bottom";
     const paneW = stacked ? termFrameW : bcfg.width;
-    const paneH = bcfg.height || (stacked ? 480 : termFrameH);
+    const paneH = bcfg.height || (stacked || bcfg.position === "overlay" ? 480 : termFrameH);
     const view = new Bun.WebView({ width: paneW, height: paneH });
     const frames: BrowserFrame[] = [];
     // WebView calls can stall (page never fires load, evaluate on a navigating page); never let them hang a recording.
@@ -438,6 +438,10 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     get browser(): BrowserSession {
       if (!browserSession) throw new Error("t.browser needs `browser: { url }` in the video config.");
       return browserSession;
+    },
+    focus: async (target) => {
+      await screen.settle();
+      push("m", `${MARKER.focus}${target}`);
     },
     screen: () => screen.screen(),
     line: () => screen.line(),

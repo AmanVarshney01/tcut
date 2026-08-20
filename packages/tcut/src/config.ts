@@ -84,6 +84,7 @@ export function resolveConfig(config: VideoConfig): ResolvedConfig {
         height: config.browser.height ?? 0,
         fps: config.browser.fps ?? 10,
         position: config.browser.position ?? "right",
+        ...(config.browser.offset && { offset: config.browser.offset }),
       },
     }),
     padding,

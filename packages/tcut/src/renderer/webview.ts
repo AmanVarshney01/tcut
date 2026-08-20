@@ -100,11 +100,26 @@ export async function render(
     const { frameW, frameH, padX, padY } = fit;
     // The browser pane extends the canvas sideways (left/right) or vertically (top/bottom).
     const even = (n: number) => (n % 2 === 0 ? n : n + 1);
-    const stacked = config.browser?.position === "top" || config.browser?.position === "bottom";
-    const extraW = hasBrowser && config.browser && !stacked ? BROWSER_GAP + config.browser.width : 0;
-    const extraH = hasBrowser && config.browser && stacked ? BROWSER_GAP + (config.browser.height || 480) : 0;
-    const width = even(fit.width + extraW);
-    const height = even(fit.height + extraH);
+    const position = config.browser?.position ?? "right";
+    const stacked = position === "top" || position === "bottom";
+    const overlay = position === "overlay";
+    let width = fit.width;
+    let height = fit.height;
+    if (hasBrowser && config.browser) {
+      if (overlay) {
+        const paneW = config.browser.width;
+        const paneH = config.browser.height || 480;
+        const ox = config.browser.offset?.x ?? Math.round(frameW * 0.42);
+        const oy = config.browser.offset?.y ?? Math.round(frameH * 0.18);
+        width = even(config.margin * 2 + Math.max(frameW, ox + paneW));
+        height = even(config.margin * 2 + Math.max(frameH, oy + paneH));
+        await view.evaluate(`window.__vt.browserOffset(${ox}, ${oy}, ${paneW}, ${paneH})`);
+      } else if (stacked) {
+        height = even(fit.height + BROWSER_GAP + (config.browser.height || 480));
+      } else {
+        width = even(fit.width + BROWSER_GAP + config.browser.width);
+      }
+    }
     await view.evaluate(`window.__vt.layout(${frameW}, ${frameH}, ${termW}, ${termH}, ${padX}, ${padY})`);
     await view.resize(width, height);
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
@@ -130,7 +145,8 @@ export async function render(
       const drawable = batch.filter((e) => e.type === "o" || e.type === "r");
       const shots = batch.filter((e) => e.type === "m" && e.data.startsWith(MARKER.screenshot));
       const browserFrame = hasBrowser ? batch.filter((e) => e.type === "b").at(-1) : undefined;
-      const dirty = lastPng === null || drawable.length > 0 || blinkOn !== lastBlink || browserFrame !== undefined;
+      const focusChanged = hasBrowser && batch.some((e) => e.type === "m" && e.data.startsWith(MARKER.focus));
+      const dirty = lastPng === null || drawable.length > 0 || blinkOn !== lastBlink || browserFrame !== undefined || focusChanged;
 
       if (drawable.length > 0) {
         const id = ++batchId;
@@ -139,6 +155,10 @@ export async function render(
       }
       if (browserFrame) {
         await view.evaluate(`window.__vt.browserFrame(${JSON.stringify(`/bframe/${encodeURIComponent(browserFrame.data)}`)})`);
+      }
+      const focus = hasBrowser ? batch.filter((e) => e.type === "m" && e.data.startsWith(MARKER.focus)).at(-1) : undefined;
+      if (focus) {
+        await view.evaluate(`window.__vt.focus(${JSON.stringify(focus.data.slice(MARKER.focus.length))})`);
       }
       if (blinkOn !== lastBlink) {
         await view.evaluate(`window.__vt.cursor(${blinkOn})`);

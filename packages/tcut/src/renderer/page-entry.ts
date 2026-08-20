@@ -75,13 +75,31 @@ const api = {
     const browser = document.getElementById("browser");
     const stage = document.getElementById("stage");
     const stacked = stage ? /column/.test(getComputedStyle(stage).flexDirection) : false;
-    if (browser) {
+    const overlay = getComputedStyle(frame).position === "absolute"; // overlay: size comes from browserOffset()
+    if (browser && !overlay) {
       if (stacked) browser.style.width = `${frameW}px`;
       else browser.style.height = `${frameH}px`;
     }
     const el = document.getElementById("term")!;
     el.style.width = `${termW}px`;
     el.style.height = `${termH}px`;
+    return true;
+  },
+
+  /** Overlay layout: place the browser window at an offset from the terminal window. */
+  browserOffset(x: number, y: number, w: number, h: number): boolean {
+    const browser = document.getElementById("browser");
+    if (!browser) return false;
+    browser.style.left = `${x}px`;
+    browser.style.top = `${y}px`;
+    browser.style.width = `${w}px`;
+    browser.style.height = `${h}px`;
+    return true;
+  },
+
+  /** Overlay layout: which window is in front. */
+  focus(target: "terminal" | "browser"): boolean {
+    document.getElementById("stage")?.classList.toggle("front-browser", target === "browser");
     return true;
   },
 

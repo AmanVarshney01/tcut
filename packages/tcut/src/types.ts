@@ -59,8 +59,13 @@ export interface BrowserConfig {
   fps?: number;
   /** Text shown in the browser window's address bar. Default: the current URL. */
   title?: string;
-  /** Where the browser window sits relative to the terminal. Default "right". */
-  position?: "right" | "left" | "top" | "bottom";
+  /**
+   * Where the browser window sits: beside/above/below the terminal, or "overlay" — overlapping it like two desktop
+   * windows, with `t.focus()` deciding which one is in front. Default "right".
+   */
+  position?: "right" | "left" | "top" | "bottom" | "overlay";
+  /** Overlay only: browser window offset from the terminal window's top-left corner, px. Default ~40%/18% of it. */
+  offset?: { x: number; y: number };
 }
 
 /** Control of the recorded browser window. */
@@ -177,7 +182,7 @@ export interface ResolvedConfig {
   font: Required<FontConfig>;
   theme: Theme;
   cursor: Required<CursorConfig>;
-  browser?: Required<Omit<BrowserConfig, "url" | "title">> & Pick<BrowserConfig, "url" | "title">;
+  browser?: Required<Omit<BrowserConfig, "url" | "title" | "offset">> & Pick<BrowserConfig, "url" | "title" | "offset">;
   padding: number;
   margin: number;
   marginFill: string;
@@ -275,6 +280,8 @@ export interface TerminalSession {
   clear(): Promise<void>;
   /** The recorded browser window; throws if `browser` is not configured. */
   readonly browser: BrowserSession;
+  /** Overlay layout: bring the terminal or the browser window to the front (recorded as a marker). */
+  focus(target: "terminal" | "browser"): Promise<void>;
 
   /** Current visible screen as text (rows joined by "\n"). */
   screen(): string;
