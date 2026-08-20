@@ -114,10 +114,28 @@ script.ts ─▶ record (Bun.Terminal PTY) ─▶ demo.cast ─▶ render (virtu
 - **Cache**: re-running an unchanged script reuses the cast (`--force` to re-record). `quantize: true` snaps
   timestamps to the frame grid for byte-stable casts.
 
+## Two ways to record
+
+**Scripted** — a TypeScript file drives the session. Best for demos you'll re-record as your tool changes, and for
+anything you want to run as a test. Everything on screen is still the real program's output; the script only supplies
+the key presses.
+
+**Live** — `tcut rec` opens a recorded shell in your terminal; you type, tcut captures the real session
+(keystrokes, timing, resizes) and renders it when you exit. No script, nothing to learn:
+
+```sh
+tcut rec -o demo.gif                       # records a clean shell until you type `exit`
+tcut rec -o demo.mp4 -- bun create better-t-stack   # records just that command
+tcut rec --record-only --cast session.cast          # keep the cast, render later with `tcut render`
+```
+
+The cast is the same either way, so `tcut render` (re-theme, other formats) works on both.
+
 ## CLI
 
 ```
 tcut <script.ts> [options]          record + render
+tcut rec [options] [-- command…]    record a live session you drive yourself, then render
 tcut record <script.ts>             record only (writes the .cast)
 tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
 tcut test <path...>                 run scripts in fast mode as tests (no video)

@@ -1,7 +1,9 @@
 import { defineVideo } from "tcut";
 
 // Drives an interactive TUI: `bun create better-t-stack` with arrow keys and Enter.
-// Shows wait() against the rendered screen — tcut presses keys only once the prompt is actually visible.
+// Everything on screen is the real program's output; the script only supplies the key presses a person would
+// make, and wait() makes sure each key is sent once the prompt is actually visible.
+// (Prefer to type the answers yourself? `tcut rec -o demo.gif` records a live session with no script at all.)
 export default defineVideo(
   {
     output: ["out/better-t-stack.mp4", "out/better-t-stack.gif", "out/better-t-stack.svg"],
@@ -61,20 +63,12 @@ export default defineVideo(
     await t.sleep("500ms");
     await t.enter(); // Cloudflare
 
-    // Whatever remains (editor prompt, summary…) — accept defaults until the shell prompt is back.
-    for (let i = 0; i < 6; i++) {
-      const done = await Promise.race([
-        t.wait(undefined, { timeout: "2s" }).then(() => true, () => false),
-        t.wait(/enter\s+choose|enter\s+select|Y\/n|y\/N/i, { ...screen, timeout: "2s" }).then(() => false, () => null),
-      ]);
-      if (done === true) break;
-      if (done === false) {
-        await t.sleep("500ms");
-        await t.enter();
-      }
-    }
-    await t.wait(undefined, { timeout: "120s" });
-    await t.expect(/Project ready|Next steps|cd my-app/i);
+    await t.wait(/●\s+Not now/, screen); // "open in editor?" — keep the default
+    await t.sleep("600ms");
+    await t.enter();
+
+    await t.wait(); // scaffolding runs; returns when the shell prompt is back
+    await t.expect(/Project ready/i);
     await t.sleep("1s");
 
     await t.run("cat my-app/bts.jsonc");

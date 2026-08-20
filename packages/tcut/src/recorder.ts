@@ -42,12 +42,13 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-interface ShellSetup {
+export interface ShellSetup {
   cmd: string[];
   env: Record<string, string>;
 }
 
-function shellSetup(config: ResolvedConfig): ShellSetup {
+/** Command + environment for a clean, rc-free shell with the configured prompt. */
+export function shellSetup(config: ResolvedConfig): ShellSetup {
   const { shell, prompt } = config;
   if (Array.isArray(shell)) return { cmd: shell, env: {} };
   switch (shell) {

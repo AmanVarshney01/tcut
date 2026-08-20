@@ -1,6 +1,8 @@
 export { defineVideo, Video, renderCast, isVideo } from "./video";
 export type { RunOptions as VideoRunOptions, RunResult, VideoRecordOptions } from "./video";
 export { renderOutputs } from "./render";
+export { recordLive } from "./live";
+export type { LiveOptions } from "./live";
 export { buildSvg } from "./export/svg";
 export { buildHtml } from "./export/html";
 export { replayFrames } from "./export/frames";

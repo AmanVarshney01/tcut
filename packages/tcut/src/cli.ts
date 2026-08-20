@@ -1,7 +1,12 @@
 #!/usr/bin/env bun
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { writeCast } from "./cast";
+import { resolveConfig } from "./config";
 import * as api from "./index";
+import { recordLive } from "./live";
+import { renderOutputs } from "./render";
 import { runScriptTests } from "./testing";
 import { themeNames } from "./themes";
 import type { CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
@@ -23,6 +28,7 @@ const HELP = `tcut — script terminal sessions in TypeScript, render them to vi
 
 Usage:
   tcut <script.ts> [options]          record + render
+  tcut rec [options] [-- command…]    record a LIVE session you drive yourself (no script), then render
   tcut record <script.ts> [options]   record only (writes the .cast)
   tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
   tcut test <path...>                 run scripts in fast mode as tests (no video)
@@ -274,6 +280,22 @@ async function main(): Promise<void> {
       if (await Bun.file(file).exists()) fail(`${file} already exists`);
       await Bun.write(file, make(path.basename(base)));
       console.log(`created ${file}\n\nrun it with:\n  ${template === "test" ? `tcut test ${file}` : `tcut ${file}`}`);
+      return;
+    }
+    case "rec": {
+      // Live mode: the user (or a pipe) drives the PTY; everything after `--` is the command to run.
+      const overrides = overridesFromFlags();
+      const outputs = overrides.output ?? ["rec.mp4"];
+      const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast });
+      const command = rest.length > 0 ? rest : undefined;
+      const recording = await recordLive(config, { command, log });
+      await mkdir(path.dirname(path.resolve(config.cast)), { recursive: true });
+      await writeCast(config.cast, recording);
+      log(`\n✔ wrote ${config.cast} (${recording.events.length} events, ${(recording.header.duration ?? 0).toFixed(1)}s)`);
+      if (values["record-only"]) return;
+      const result = await renderOutputs(recording, config, progressReporter());
+      await reportOutputs(result.outputs, result.screenshots);
+      log(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`);
       return;
     }
     case "record": {
