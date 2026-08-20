@@ -40,6 +40,17 @@ export default defineVideo({ output: "demo.gif" }, async (t) => {
 tcut demo.video.ts
 ```
 
+Record a real browser next to (or over) the terminal, for dev-server demos:
+
+```ts
+defineVideo({ output: "demo.mp4", browser: { position: "overlay" } }, async (t) => {
+  await t.run("bun run dev </dev/null >/tmp/dev.log 2>&1 &");
+  await t.browser.goto("http://localhost:5173");
+  await t.run("sed -i '' 's/Hello/Hi/' src/App.tsx");   // HMR updates the page
+  await t.focus("browser");
+});
+```
+
 Re-render any recording without re-running it — ~600 themes ([Ghostty's collection](https://github.com/mbadolato/iTerm2-Color-Schemes)), `tcut themes` lists them:
 
 ```sh

@@ -38,6 +38,7 @@ tcut themes
 | `cols` · `rows` · `fps` | 80 · 24 · 60 | |
 | `width` · `height` | — | video size in px; grid is derived and centred inside |
 | `loopOffset` | — | where GIF/WebP loops start: frames or `"50%"` |
+| `browser` | — | record a real browser window (Bun.WebView) with the terminal: `{ url?, width?, height?, fps?, title?, position?: "right" \| "left" \| "top" \| "bottom" \| "overlay", offset?: { x, y } }`. Frames are stored beside the cast (`<name>.browser/`) and composited in mp4/gif/png output; svg/html show the terminal only |
 | `typingSpeed` · `typingJitter` · `seed` | `"50ms"` · 0 · 1 | jitter is seeded, so it's reproducible |
 | `theme` | `"catppuccin-mocha"` | any bundled theme name (~600, loose matching) or a full theme object |
 | `font` | JetBrains Mono 20 px | `{ family, size, lineHeight, letterSpacing }` |
@@ -53,6 +54,9 @@ tcut themes
 - Assert: `expect(/re/)` — throws with a screen dump
 - Shape the video: `hide(async () => …)` cuts a section · `screenshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`
 - Look: `screen()` · `line()` · `cursor()` · `cols` · `rows`
+- Browser pane (when `browser` is configured): `browser.goto(url)` (waits for the page, retries while a dev server starts) · `browser.waitFor(/text/)` · `browser.click(selector)` · `browser.reload()` · `browser.evaluate(js)` · `focus("terminal" | "browser")` (overlay layout: which window is in front; recorded as a marker)
+
+Tip for dev servers: start them with output redirected (`bun run dev </dev/null >/tmp/dev.log 2>&1 &`) so their logs don't repaint over a TUI, and detach stdin so the background job isn't stopped.
 
 Durations accept `500`, `"500ms"`, `"1.5s"`, `"2m"`.
 
