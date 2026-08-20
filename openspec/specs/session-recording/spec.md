@@ -45,3 +45,28 @@ After the script resolves the recorder SHALL wait `endPause`, emit the `end` mar
 - **WHEN** the script throws
 - **THEN** the shell process is killed and the error propagates with its message intact
 
+### Requirement: Quantized timestamps
+When `quantize` is true the recorder SHALL round every event timestamp up to the next `1/fps` boundary before writing the cast.
+
+#### Scenario: quantized cast
+- **WHEN** `quantize: true` and `fps: 60`
+- **THEN** every event time × 60 is an integer (within floating-point tolerance)
+
+### Requirement: Core selection for the screen model
+The recorder's headless screen model SHALL use Ghostty by default and wterm's lite core when `core: "lite"`.
+
+#### Scenario: lite recording
+- **WHEN** `core: "lite"` is configured
+- **THEN** `run()`, `wait()` and `expect()` still operate on the rendered screen
+
+### Requirement: Cast caching
+When `cache` is enabled (default) and a cast exists at the configured path whose header `scriptHash` equals the SHA-256 (via `Bun.CryptoHasher`) of the script source plus the record-relevant config, `run()` SHALL skip recording and reuse the cast. `--force` / `{ force: true }` SHALL bypass the cache. The hash SHALL be written into the header on every recording.
+
+#### Scenario: cache hit
+- **WHEN** a script is run twice without changes
+- **THEN** the second run does not spawn a shell and reports the cast as reused
+
+#### Scenario: cache miss after edit
+- **WHEN** the script file changes
+- **THEN** the next run re-records
+

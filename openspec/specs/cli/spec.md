@@ -4,7 +4,7 @@
 TBD - created by archiving change tcut-m1-pipeline. Update Purpose after archive.
 ## Requirements
 ### Requirement: Commands
-The `tcut` binary SHALL provide: `tcut <script.ts>` (record + render), `tcut record <script.ts>`, `tcut render <file.cast>`, `tcut init [name]`, `tcut themes`, and `-h/--help`.
+The `tcut` binary SHALL provide: `tcut <script.ts>` (record + render), `tcut record <script.ts>`, `tcut render <file.cast>`, `tcut test <path…>`, `tcut init [name]`, `tcut themes`, and `-h/--help`. `--force` SHALL bypass the cast cache.
 
 #### Scenario: run a script
 - **WHEN** `tcut examples/demo.ts` is executed
@@ -14,12 +14,20 @@ The `tcut` binary SHALL provide: `tcut <script.ts>` (record + render), `tcut rec
 - **WHEN** `tcut render demo.cast --theme dracula -o demo.gif` is executed
 - **THEN** a GIF is produced from the cast with the Dracula theme without re-running the shell
 
+#### Scenario: test command
+- **WHEN** `tcut test examples/` is executed
+- **THEN** each script is run in fast mode and a summary with exit status is produced
+
 ### Requirement: Overrides
-Flags `-o/--output` (repeatable), `--theme`, `--font`, `--font-size`, `--fps`, `--speed`, `--padding`, `--margin`, `--radius`, `--window-bar`, `--title`, `--no-blink`, `-q/--quiet` SHALL override the script's render config without modifying the script.
+Flags `-o/--output` (repeatable), `--theme`, `--font`, `--font-size`, `--line-height`, `--letter-spacing`, `--fps`, `--speed`, `--padding`, `--margin`, `--margin-fill`, `--radius`, `--window-bar`, `--title`, `--no-blink`, `--core`, `--cast`, `-q/--quiet` SHALL override the script's config without modifying the script. `--record-only` SHALL stop after writing the cast.
 
 #### Scenario: theme override
 - **WHEN** a script specifies `theme: "catppuccin-mocha"` and `--theme dracula` is passed
 - **THEN** the output uses Dracula colours
+
+#### Scenario: record only
+- **WHEN** `tcut demo.ts --record-only` is run
+- **THEN** the cast is written and no video outputs are produced
 
 ### Requirement: Progress and errors
 The CLI SHALL print recording/rendering progress to stderr (suppressed with `--quiet`), SHALL exit non-zero on any error, and SHALL include the screen dump for wait/expect failures.

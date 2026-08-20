@@ -12,4 +12,4 @@
 ## 3. CI and repo
 
 - [x] 3.1 `.github/workflows/ci.yml` (macos-latest)
-- [ ] 3.2 `git init`, first commit, private GitHub repo, push
+- [x] 3.2 `git init`, first commit, private GitHub repo, push
