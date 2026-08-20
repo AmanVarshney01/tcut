@@ -1,5 +1,5 @@
 {
-  "name": "tcut",
+  "name": "termcut",
   "version": "0.1.0",
   "description": "Script terminal sessions in TypeScript, render them to reproducible MP4/GIF/WebM/SVG/HTML with Bun.",
   "license": "MIT",

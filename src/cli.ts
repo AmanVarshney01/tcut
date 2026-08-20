@@ -7,12 +7,15 @@ import { themeNames } from "./themes";
 import type { CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
 import { Video, isVideo, renderCast } from "./video";
 
-// Let user scripts `import { defineVideo } from "tcut"` regardless of where they live or whether this is the
-// compiled binary (no node_modules there): resolve the bare specifier to this very module graph.
+// Let user scripts `import { defineVideo } from "tcut"` (or "termcut", the npm package name) regardless of
+// where they live or whether this is the compiled binary (no node_modules there): resolve the bare specifier
+// to this very module graph.
 Bun.plugin({
   name: "tcut-self",
   setup(build) {
-    build.module("tcut", () => ({ exports: { ...api }, loader: "object" }));
+    for (const specifier of ["tcut", "termcut"]) {
+      build.module(specifier, () => ({ exports: { ...api }, loader: "object" }));
+    }
   },
 });
 

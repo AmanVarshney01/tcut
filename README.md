@@ -1,7 +1,7 @@
 # tcut
 
 [![CI](https://github.com/AmanVarshney01/tcut/actions/workflows/ci.yml/badge.svg)](https://github.com/AmanVarshney01/tcut/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/tcut)](https://www.npmjs.com/package/tcut)
+[![npm](https://img.shields.io/npm/v/termcut)](https://www.npmjs.com/package/termcut)
 [![license](https://img.shields.io/github/license/AmanVarshney01/tcut)](LICENSE)
 
 Script terminal sessions in **TypeScript**, render them to **reproducible** MP4 / GIF / WebM / SVG / HTML / PNG.
@@ -41,11 +41,12 @@ export default defineVideo(
 
 ## Install
 
-**With Bun (recommended)** — Bun ≥ 1.4:
+**With Bun (recommended)** — Bun ≥ 1.4. The npm package is **`termcut`** (npm's typosquat filter blocks the
+4-letter name); the command it installs is `tcut`:
 
 ```sh
-bun add -g tcut          # then: tcut demo.video.ts
-bunx tcut init demo      # or run it without installing
+bun add -g termcut        # then: tcut demo.video.ts
+bunx termcut init demo    # or run it without installing
 ```
 
 **Standalone binary** — no Bun required; download from
@@ -56,8 +57,9 @@ curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-
 chmod +x tcut && ./tcut init demo
 ```
 
-Scripts `import { defineVideo } from "tcut"` — the binary and the global install both resolve that import
-themselves, so no `node_modules` is needed next to your script.
+Scripts `import { defineVideo } from "tcut"` — the CLI (binary or global install) resolves that import itself,
+so no `node_modules` is needed next to your script. If you add `termcut` to a project, `import … from "termcut"`
+also works and gives your editor the types.
 
 **From source**
 
@@ -70,7 +72,7 @@ bun src/cli.ts examples/demo.ts
 
 | To… | You need |
 |---|---|
-| run tcut | **Bun ≥ 1.4** (`bun add -g tcut`), or the standalone binary (Bun is embedded) |
+| run tcut | **Bun ≥ 1.4** (`bun add -g termcut`), or the standalone binary (Bun is embedded) |
 | record / `tcut test` | a shell — `bash` (default), `zsh`, `fish` or `sh` — plus whatever CLI tools your script runs. No browser, no ffmpeg |
 | render `.svg` / `.html` | nothing else — pure Bun |
 | render `.png` / `.jpg` / `frames/` | a WebView: **macOS → nothing** (system WebKit). **Linux / Windows → Chrome, Chromium, Edge or Brave** installed (Windows ships Edge) |
