@@ -114,6 +114,27 @@ const examples = [
       </section>
 
       <section>
+        <h2 class="text-xl">Compared with VHS</h2>
+        <p class="mt-3 text-ink-2">
+          <a href="https://github.com/charmbracelet/vhs">VHS</a> is Go, a <code>.tape</code> DSL, ttyd, Chrome and ffmpeg. tcut is TypeScript, Bun and
+          Ghostty's terminal core (libghostty in WASM). What that changes:
+        </p>
+        <ul class="mt-4 space-y-2 text-ink-2">
+          <li>Scripts are TypeScript: loops, imports, shared scenes, autocomplete.</li>
+          <li><code>run()</code> waits for your actual prompt instead of a <code>Sleep</code>; <code>wait()</code> matches the rendered screen, not raw bytes.</li>
+          <li><code>expect()</code> asserts on the screen, and <code>tcut test</code> runs your demos as tests.</li>
+          <li>Record once to a <code>.cast</code>, render forever: new theme, size or format without re-running a shell. VHS screenshots Chrome live, so output depends on machine speed.</li>
+          <li><code>tcut rec</code> keeps the exact recording and writes an editable script of what you typed.</li>
+          <li>Outputs add animated SVG and a single-file HTML player, neither needs ffmpeg or a browser.</li>
+          <li>607 themes from Ghostty's collection; the same colours as your terminal, because the emulator is the same.</li>
+          <li>A real browser window beside or over the terminal, for dev-server demos.</li>
+          <li>Publish to your own S3-compatible bucket; there is no hosted service.</li>
+          <li>Agent-ready: <code>--json</code>, exit codes, no prompts, <a href="/llms.txt">llms.txt</a>.</li>
+        </ul>
+        <p class="mt-4 text-ink-2">VHS still wins on Linux and Windows polish, a Docker image, a GitHub Action and package managers. For now.</p>
+      </section>
+
+      <section>
         <h2 class="text-xl">How it works</h2>
         <p class="mt-3 text-ink-2">
           <code>Bun.Terminal</code> runs your shell in a PTY. Output is timestamped into the cast and fed to a headless <a href="https://ghostty.org">Ghostty</a> terminal (via <a href="https://github.com/vercel-labs/wterm">wterm</a>); that is how <code>run()</code> knows the prompt is back and <code>expect()</code> sees what you see.
