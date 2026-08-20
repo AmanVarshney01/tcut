@@ -55,7 +55,9 @@ bun src/cli.ts demo.video.ts     # or: bun link && tcut demo.video.ts
 ## Requirements
 
 - Bun ≥ 1.4
-- `ffmpeg` on PATH for `.mp4` / `.gif` / `.webm` / `.webp` (SVG, HTML, PNG/JPG and PNG sequences don't need it)
+- `ffmpeg` for `.mp4` / `.gif` / `.webm` / `.webp` (SVG, HTML, PNG/JPG and PNG sequences don't need it).
+  tcut checks `$TCUT_FFMPEG`, then `ffmpeg` on PATH, then Homebrew's keg-only `ffmpeg-full` — the regular
+  Homebrew `ffmpeg` 9.x formula has no libwebp, so for `.webp` run `brew install ffmpeg-full`.
 - macOS renders with the system WebKit. Linux/Windows need Chrome or Edge installed for `Bun.WebView`.
 
 ## How it works

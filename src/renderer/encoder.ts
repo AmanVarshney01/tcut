@@ -57,27 +57,63 @@ class StillSink implements FrameSink {
   }
 }
 
-let encoderList: Promise<Set<string>> | null = null;
+/**
+ * ffmpeg binaries to try, in order: an explicit override, whatever is on PATH, then Homebrew's keg-only
+ * `ffmpeg-full` (the regular Homebrew formula dropped libwebp and friends in 9.x).
+ */
+function ffmpegCandidates(): string[] {
+  const list = [
+    process.env.TCUT_FFMPEG,
+    Bun.which("ffmpeg"),
+    "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg",
+    "/usr/local/opt/ffmpeg-full/bin/ffmpeg",
+  ].filter((p): p is string => typeof p === "string" && p.length > 0);
+  return [...new Set(list)];
+}
 
-/** Names of encoders this ffmpeg build supports (cached per process). */
-export function ffmpegEncoders(): Promise<Set<string>> {
-  encoderList ??= (async () => {
-    const proc = Bun.spawn(["ffmpeg", "-hide_banner", "-encoders"], { stdout: "pipe", stderr: "ignore" });
-    const text = await new Response(proc.stdout).text();
-    const names = new Set<string>();
-    for (const line of text.split("\n")) {
-      const m = /^\s*[A-Z.]{6}\s+(\S+)/.exec(line);
-      if (m) names.add(m[1]!);
-    }
-    return names;
-  })();
-  return encoderList;
+const encoderLists = new Map<string, Promise<Set<string>>>();
+
+/** Names of encoders a given ffmpeg binary supports (cached per process). Empty set if it can't be run. */
+export function ffmpegEncoders(binary: string): Promise<Set<string>> {
+  let cached = encoderLists.get(binary);
+  if (!cached) {
+    cached = (async () => {
+      const names = new Set<string>();
+      try {
+        const proc = Bun.spawn([binary, "-hide_banner", "-encoders"], { stdout: "pipe", stderr: "ignore" });
+        const text = await new Response(proc.stdout).text();
+        for (const line of text.split("\n")) {
+          const m = /^\s*[A-Z.]{6}\s+(\S+)/.exec(line);
+          if (m) names.add(m[1]!);
+        }
+      } catch {
+        /* not runnable */
+      }
+      return names;
+    })();
+    encoderLists.set(binary, cached);
+  }
+  return cached;
+}
+
+export interface EncoderMatch {
+  binary: string;
+  encoder: string;
+}
+
+/** First ffmpeg binary (see `ffmpegCandidates`) that has one of the candidate encoders. */
+export async function findEncoder(...candidates: string[]): Promise<EncoderMatch | null> {
+  for (const binary of ffmpegCandidates()) {
+    if (!(await Bun.file(binary).exists())) continue;
+    const available = await ffmpegEncoders(binary);
+    const encoder = candidates.find((c) => available.has(c));
+    if (encoder) return { binary, encoder };
+  }
+  return null;
 }
 
 export async function hasEncoder(...candidates: string[]): Promise<string | null> {
-  if (!Bun.which("ffmpeg")) return null;
-  const available = await ffmpegEncoders();
-  return candidates.find((c) => available.has(c)) ?? null;
+  return (await findEncoder(...candidates))?.encoder ?? null;
 }
 
 type FfmpegFormat = Exclude<Format, "png-sequence" | "png" | "jpeg">;
@@ -86,13 +122,17 @@ const REQUIRED_ENCODERS: Record<FfmpegFormat, { candidates: string[]; hint: stri
   mp4: { candidates: ["libx264"], hint: "an ffmpeg build with libx264" },
   webm: { candidates: ["libvpx-vp9"], hint: "an ffmpeg build with libvpx" },
   gif: { candidates: ["gif"], hint: "an ffmpeg build with the gif encoder" },
-  webp: { candidates: ["libwebp_anim", "libwebp"], hint: "an ffmpeg build with libwebp (e.g. `brew install ffmpeg` full build)" },
+  webp: { candidates: ["libwebp_anim", "libwebp"], hint: "an ffmpeg build with libwebp (Homebrew: `brew install ffmpeg-full`)" },
 };
 
-async function requireEncoder(format: FfmpegFormat, output: string): Promise<string> {
+async function requireEncoder(format: FfmpegFormat, output: string): Promise<EncoderMatch> {
   const { candidates, hint } = REQUIRED_ENCODERS[format];
-  const found = await hasEncoder(...candidates);
-  if (!found) throw new Error(`Cannot write ${output}: this ffmpeg has no ${candidates.join("/")} encoder. Install ${hint}.`);
+  const found = await findEncoder(...candidates);
+  if (!found) {
+    throw new Error(
+      `Cannot write ${output}: no ffmpeg with a ${candidates.join("/")} encoder was found (looked at ${ffmpegCandidates().join(", ")}). Install ${hint}, or point TCUT_FFMPEG at a suitable binary.`,
+    );
+  }
   return found;
 }
 
@@ -139,9 +179,9 @@ class FfmpegSink implements FrameSink {
     readonly target: string,
     format: Format,
     fps: number,
-    encoder: string,
+    match: EncoderMatch,
   ) {
-    this.proc = Bun.spawn(["ffmpeg", ...ffmpegArgs(format, fps, target, encoder)], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
+    this.proc = Bun.spawn([match.binary, ...ffmpegArgs(format, fps, target, match.encoder)], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
     this.stdin = this.proc.stdin;
     this.stderr = new Response(this.proc.stderr).text();
   }
@@ -182,11 +222,12 @@ class PngSequenceSink implements FrameSink {
 }
 
 export async function ensureFfmpeg(): Promise<void> {
-  if (!Bun.which("ffmpeg")) {
-    throw new Error(
-      "ffmpeg not found on PATH. Install it (brew install ffmpeg / apt install ffmpeg) or render to a PNG sequence (output: \"frames/\").",
-    );
+  for (const binary of ffmpegCandidates()) {
+    if (await Bun.file(binary).exists()) return;
   }
+  throw new Error(
+    "ffmpeg not found. Install it (brew install ffmpeg / apt install ffmpeg), set TCUT_FFMPEG, or use an output that needs no ffmpeg (.svg, .html, .png, or a frames/ directory).",
+  );
 }
 
 export async function createSinks(outputs: string[], fps: number): Promise<FrameSink[]> {
@@ -204,9 +245,9 @@ export async function createSinks(outputs: string[], fps: number): Promise<Frame
       continue;
     }
     await ensureFfmpeg();
-    const encoder = await requireEncoder(format as FfmpegFormat, output);
+    const match = await requireEncoder(format as FfmpegFormat, output);
     await mkdir(path.dirname(path.resolve(output)), { recursive: true });
-    sinks.push(new FfmpegSink(output, format, fps, encoder));
+    sinks.push(new FfmpegSink(output, format, fps, match));
   }
   return sinks;
 }
