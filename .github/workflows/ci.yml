@@ -6,9 +6,12 @@ on:
   pull_request:
 
 jobs:
-  macos:
+  tcut:
     runs-on: macos-latest
     timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: packages/tcut
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        working-directory: .
 
       - name: Typecheck
         run: bun run typecheck
@@ -37,15 +41,27 @@ jobs:
       - name: Smoke-test binary from an empty directory
         run: |
           mkdir -p /tmp/empty && cp out/demo.cast /tmp/empty/demo.cast
-          cd /tmp/empty && "$GITHUB_WORKSPACE/dist/tcut" render demo.cast -o demo.svg -o demo.mp4
+          cd /tmp/empty && "$GITHUB_WORKSPACE/packages/tcut/dist/tcut" render demo.cast -o demo.svg -o demo.mp4
           ls -la /tmp/empty
 
       - uses: actions/upload-artifact@v4
         with:
           name: demo-outputs
           path: |
-            out/demo.mp4
-            out/demo.gif
-            out/demo.svg
-            out/demo.html
-            dist/tcut
+            packages/tcut/out/demo.mp4
+            packages/tcut/out/demo.gif
+            packages/tcut/out/demo.svg
+            packages/tcut/out/demo.html
+            packages/tcut/dist/tcut
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd apps/web typecheck
+      - run: bun run --cwd apps/web build

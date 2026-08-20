@@ -1,0 +1,138 @@
+@import "tailwindcss";
+@import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+
+@theme {
+  --color-desk: #e8ebee;
+  --color-desk-2: #dde2e7;
+  --color-desk-3: #cfd6dd;
+  --color-line: #c3cad2;
+  --color-ink: #14181d;
+  --color-ink-2: #4b555f;
+  --color-ink-3: #7a848e;
+  --color-amber: #f2a900;
+  --color-amber-deep: #b77d00;
+  --color-mocha: #1e1e2e;
+  --color-mocha-2: #11111b;
+  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-desk);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+::selection {
+  background: var(--color-amber);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-amber-deep);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+
+.display {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.link {
+  text-decoration: underline;
+  text-decoration-color: var(--color-amber);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.link:hover {
+  color: var(--color-amber-deep);
+}
+
+.card {
+  background: var(--color-desk-2);
+  border: 1px solid var(--color-line);
+}
+
+.hairline {
+  border-top: 1px solid var(--color-line);
+}
+
+/* Astro's <Code> block */
+.astro-code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding: 1.1rem 1.25rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  background: var(--color-mocha) !important;
+}
+.astro-code code {
+  counter-reset: line;
+}
+
+/* The hero demo is tcut's own animated SVG; honour reduced motion by freezing it on its first frame. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .demo-svg svg .strip {
+    animation-play-state: paused !important;
+  }
+}
+
+.demo-svg svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.rise-2 {
+  animation-delay: 0.12s;
+}
+.rise-3 {
+  animation-delay: 0.24s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}

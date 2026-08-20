@@ -15,6 +15,9 @@ jobs:
     env:
       # Empty unless the NPM_TOKEN repository secret is configured (Settings → Secrets → Actions).
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    defaults:
+      run:
+        working-directory: packages/tcut
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        working-directory: .
 
       - name: Check tag matches package.json version
         run: |

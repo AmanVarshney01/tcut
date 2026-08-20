@@ -1,0 +1,299 @@
+---
+import { Code } from "astro:components";
+import { Image } from "astro:assets";
+import Layout from "../layouts/Layout.astro";
+import CopyCommand from "../components/CopyCommand.astro";
+import FilmStrip from "../components/FilmStrip.astro";
+import demoSvg from "../assets/demo.svg?raw";
+import demoPng from "../assets/demo.png";
+import facts from "../assets/facts.json";
+import readmeScript from "../../../../packages/tcut/examples/readme.ts?raw";
+
+const GITHUB = "https://github.com/AmanVarshney01/tcut";
+const NPM = "https://www.npmjs.com/package/termcut";
+const README = `${GITHUB}#readme`;
+const RELEASES = `${GITHUB}/releases`;
+
+const kb = (n: number) => `${Math.round(n / 1024)} KB`;
+
+// Strip the "Produces the media…" comment; the page says that itself.
+const script = readmeScript.replace(/^\/\/ Produces.*\n/m, "");
+
+const outputs = [
+  { ext: ".mp4 .webm", via: "ffmpeg", note: "H.264 / VP9, even dimensions, faststart" },
+  { ext: ".gif .webp", via: "ffmpeg", note: "palette-optimised GIF, animated WebP" },
+  { ext: ".svg", via: "nothing", note: "animated vector, built from the cell grid — crisp at any size, tiny" },
+  { ext: ".html", via: "nothing", note: "single-file player with play / pause / loop" },
+  { ext: ".png .jpg", via: "WebView", note: "the final frame; screenshot() for any moment" },
+  { ext: "frames/", via: "WebView", note: "one PNG per frame" },
+  { ext: ".cast", via: "always", note: "asciicast v2 — plays in asciinema, re-renders forever" },
+];
+
+const compare = [
+  ["Script format", "a .tape DSL", "TypeScript — loops, imports, shared scenes, assertions"],
+  ["Waiting for output", "regex on raw bytes", "run() / wait() / expect() read the rendered screen of a headless Ghostty terminal"],
+  ["Determinism", "live screenshots; depends on machine speed", "record once to .cast, render on a virtual clock — identical frames anywhere"],
+  ["Re-theme a demo", "run everything again", "tcut render demo.cast --theme dracula — no shell is spawned"],
+  ["Outputs", "mp4 · gif · webm · png frames", "+ animated SVG · HTML player · PNG/JPG stills; SVG and HTML need no ffmpeg or browser"],
+  ["As tests", "—", "tcut test runs scripts fast; exit code follows expect()"],
+  ["Under the hood", "ttyd + Chrome + ffmpeg", "Bun.Terminal + Ghostty (WASM) + Bun.WebView; ffmpeg only for video containers"],
+];
+
+const requirements = [
+  ["run tcut", "Bun ≥ 1.4 (bun add -g termcut), or the standalone binary — Bun is embedded"],
+  ["record · tcut test", "a shell (bash, zsh, fish or sh) and the tools your script runs. No browser, no ffmpeg"],
+  ["render .svg · .html", "nothing else"],
+  ["render .png · .jpg · frames/", "a WebView — macOS: built in. Linux / Windows: Chrome, Chromium, Edge or Brave installed"],
+  ["render .mp4 · .gif · .webm", "the WebView above + ffmpeg"],
+  ["render .webp", "an ffmpeg with libwebp — Homebrew: brew install ffmpeg-full (found automatically)"],
+];
+---
+
+<Layout>
+  <header class="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+    <a href={import.meta.env.BASE_URL} class="display text-xl" aria-label="tcut home">tcut<span class="text-amber">_</span></a>
+    <nav class="flex items-center gap-5 font-mono text-sm text-ink-2" aria-label="Primary">
+      <a class="hover:text-ink" href={README}>README</a>
+      <a class="hover:text-ink" href={NPM}>npm</a>
+      <a class="hover:text-ink" href={GITHUB}>GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero: the thesis is the output itself -->
+    <section class="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-8 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-14 lg:pt-14">
+      <div>
+        <p class="eyebrow rise">termcut 0.1.0 · Bun ≥ 1.4 · MIT</p>
+        <h1 class="display rise rise-2 mt-4 text-[2.6rem] sm:text-[3.4rem] lg:text-[3.6rem]">
+          Terminal videos,<br />written in TypeScript.
+        </h1>
+        <p class="rise rise-3 mt-6 max-w-[34ch] text-lg text-ink-2">
+          Script a session. Record it once. Render it anywhere — MP4, GIF, WebM, SVG, HTML — byte-for-byte the same every time.
+        </p>
+        <div class="rise rise-3 mt-8 flex flex-col gap-3">
+          <CopyCommand command="bunx termcut init demo" primary />
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
+            <span class="font-mono">bun add -g termcut</span>
+            <span aria-hidden="true">·</span>
+            <a class="link" href={RELEASES}>standalone binaries</a>
+            <span aria-hidden="true">·</span>
+            <a class="link" href={GITHUB}>source</a>
+          </div>
+        </div>
+      </div>
+
+      <figure class="rise rise-2 min-w-0">
+        <div class="demo-svg overflow-hidden rounded-xl shadow-[0_24px_60px_-20px_rgba(20,24,29,0.45)]" set:html={demoSvg} />
+        <figcaption class="mt-3 flex flex-wrap justify-between gap-2 font-mono text-xs text-ink-3">
+          <span>docs/demo.svg · {kb(facts.svgBytes)} · no JavaScript, no fonts embedded</span>
+          <span>rendered by tcut from the script below</span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- Signature: real frames, real cut -->
+    <section class="mx-auto max-w-6xl px-5 sm:px-8" aria-labelledby="strip-title">
+      <div class="hairline pt-10">
+        <p class="eyebrow">record ≠ render</p>
+        <h2 id="strip-title" class="display mt-3 max-w-[24ch] text-2xl sm:text-3xl">One recording. Every frame decided by a clock, not by how fast your laptop is.</h2>
+        <p class="mt-4 max-w-[60ch] text-ink-2">
+          tcut writes a standard asciicast while it drives the shell, then replays it on a virtual clock: frame <em>N</em> is the screen at <em>N</em>&nbsp;÷&nbsp;fps. Hidden setup is cut out of the timeline, unchanged frames are reused, and the same cast re-renders to any format or
+          theme without running a single command again.
+        </p>
+      </div>
+      <div class="mt-8">
+        <FilmStrip />
+      </div>
+    </section>
+
+    <!-- Script ↔ output -->
+    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="script-title">
+      <p class="eyebrow">the whole script</p>
+      <h2 id="script-title" class="display mt-3 text-2xl sm:text-3xl">This is everything that made the demo above.</h2>
+      <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div class="min-w-0">
+          <Code code={script} lang="ts" theme="catppuccin-mocha" />
+        </div>
+        <div class="flex flex-col gap-6">
+          <div class="card rounded-xl p-5">
+            <p class="eyebrow">what the calls do</p>
+            <dl class="mt-4 space-y-4 text-[0.95rem]">
+              <div>
+                <dt class="font-mono text-ink">t.run(cmd)</dt>
+                <dd class="text-ink-2">types it, presses Enter, and returns when the prompt is back — it watches the actual screen, not a timer.</dd>
+              </div>
+              <div>
+                <dt class="font-mono text-ink">t.expect(/re/)</dt>
+                <dd class="text-ink-2">asserts against the screen. Fails loudly with a screen dump, so the demo is also an integration test.</dd>
+              </div>
+              <div>
+                <dt class="font-mono text-ink">t.hide(fn)</dt>
+                <dd class="text-ink-2">runs setup that keeps its effects but never appears in the video.</dd>
+              </div>
+              <div>
+                <dt class="font-mono text-ink">typingJitter + seed</dt>
+                <dd class="text-ink-2">human-looking typing from a seeded generator — reproducible, like everything else.</dd>
+              </div>
+            </dl>
+          </div>
+          <figure class="card overflow-hidden rounded-xl">
+            <Image src={demoPng} alt="Final frame of the demo as a PNG still" width={demoPng.width / 2} loading="lazy" />
+            <figcaption class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 font-mono text-xs text-ink-3">
+              <span>demo.png {kb(facts.pngBytes)}</span>
+              <span>demo.gif {kb(facts.gifBytes)}</span>
+              <span>demo.svg {kb(facts.svgBytes)}</span>
+              <span>{facts.durationSeconds}s</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Outputs -->
+    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="out-title">
+      <div class="hairline pt-10">
+        <p class="eyebrow">outputs</p>
+        <h2 id="out-title" class="display mt-3 text-2xl sm:text-3xl">Pick by extension. Mix them in one run.</h2>
+      </div>
+      <ul class="mt-8 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+        {
+          outputs.map((o) => (
+            <li class="flex flex-col gap-1 bg-desk-2 p-5">
+              <span class="font-mono text-lg text-ink">{o.ext}</span>
+              <span class="eyebrow">needs {o.via}</span>
+              <span class="mt-1 text-[0.95rem] text-ink-2">{o.note}</span>
+            </li>
+          ))
+        }
+        <li aria-hidden="true" class="hidden bg-desk-2 sm:block"></li>
+        <li aria-hidden="true" class="hidden bg-desk-2 lg:block"></li>
+      </ul>
+      <p class="mt-5 font-mono text-sm text-ink-2">
+        output: ["demo.mp4", "demo.gif", "demo.svg", "demo.html"] <span class="text-ink-3">— or</span> tcut render demo.cast -o demo.svg --theme dracula
+      </p>
+    </section>
+
+    <!-- Tests -->
+    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="test-title">
+      <div class="grid gap-8 lg:grid-cols-2 lg:items-start">
+        <div class="hairline pt-10">
+          <p class="eyebrow">tcut test</p>
+          <h2 id="test-title" class="display mt-3 text-2xl sm:text-3xl">Your demos are already integration tests.</h2>
+          <p class="mt-4 max-w-[56ch] text-ink-2">
+            <span class="font-mono text-ink">tcut test examples/</span> runs every script in fast mode — no typing delay, no sleeps — with no video
+            and no browser. Each <span class="font-mono text-ink">expect()</span> becomes an assertion against the real screen; the exit code tells CI
+            whether your README still works.
+          </p>
+        </div>
+        <div class="hairline pt-10 lg:pt-10">
+          <Code
+            code={`$ tcut test examples/
+TAP version 14
+1..2
+ok 1 - examples/demo.ts (412ms)
+not ok 2 - examples/release.ts (1803ms)
+  ---
+  Expected /v0\\.2\\.0/ on screen to match.
+  --- screen ---
+  > bun --version
+  1.4.0
+  >
+  ...
+
+# 1 passed, 1 failed`}
+            lang="text"
+            theme="catppuccin-mocha"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Compared with VHS -->
+    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="vhs-title">
+      <div class="hairline pt-10">
+        <p class="eyebrow">compared with VHS</p>
+        <h2 id="vhs-title" class="display mt-3 text-2xl sm:text-3xl">Same idea. Different answers.</h2>
+        <p class="mt-4 max-w-[60ch] text-ink-2">
+          <a class="link" href="https://github.com/charmbracelet/vhs">VHS</a> showed that terminal GIFs should be code. tcut keeps that and changes what the code
+          is, what it waits on, and what it produces.
+        </p>
+      </div>
+      <div class="mt-8 overflow-x-auto">
+        <table class="w-full min-w-[640px] border-collapse text-[0.95rem]">
+          <thead>
+            <tr class="eyebrow text-left">
+              <th class="border-b border-line py-3 pr-4 font-normal"> </th>
+              <th class="border-b border-line py-3 pr-4 font-normal">VHS</th>
+              <th class="border-b border-line py-3 font-normal text-ink">tcut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              compare.map(([k, vhs, us]) => (
+                <tr class="align-top">
+                  <th scope="row" class="border-b border-line py-3 pr-4 text-left font-mono text-sm font-normal text-ink">{k}</th>
+                  <td class="border-b border-line py-3 pr-4 text-ink-2">{vhs}</td>
+                  <td class="border-b border-line py-3 text-ink">{us}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Requirements + install -->
+    <section class="mx-auto max-w-6xl px-5 pb-24 pt-20 sm:px-8" aria-labelledby="req-title">
+      <div class="grid gap-10 lg:grid-cols-2">
+        <div class="hairline pt-10">
+          <p class="eyebrow">what your machine needs</p>
+          <h2 id="req-title" class="display mt-3 text-2xl sm:text-3xl">Only as much as the output you ask for.</h2>
+          <dl class="mt-6 divide-y divide-line border-y border-line">
+            {
+              requirements.map(([to, need]) => (
+                <div class="grid gap-1 py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
+                  <dt class="font-mono text-sm text-ink">{to}</dt>
+                  <dd class="text-[0.95rem] text-ink-2">{need}</dd>
+                </div>
+              ))
+            }
+          </dl>
+          <p class="mt-4 text-sm text-ink-3">Verified on macOS. Linux and Windows binaries are cross-compiled and not yet exercised in CI.</p>
+        </div>
+        <div class="hairline pt-10">
+          <p class="eyebrow">install</p>
+          <h2 class="display mt-3 text-2xl sm:text-3xl">Three ways in.</h2>
+          <div class="mt-6 flex flex-col gap-4">
+            <div>
+              <p class="mb-2 text-sm text-ink-2">With Bun — the package is <span class="font-mono text-ink">termcut</span>, the command is <span class="font-mono text-ink">tcut</span>.</p>
+              <CopyCommand command="bun add -g termcut" />
+            </div>
+            <div>
+              <p class="mb-2 text-sm text-ink-2">Without installing anything.</p>
+              <CopyCommand command="bunx termcut init demo" />
+            </div>
+            <div>
+              <p class="mb-2 text-sm text-ink-2">Without Bun — a single binary for macOS, Linux or Windows from <a class="link" href={RELEASES}>Releases</a>.</p>
+              <CopyCommand command="curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-0.1.0-darwin-arm64 -o tcut && chmod +x tcut" />
+            </div>
+          </div>
+          <p class="mt-6 text-[0.95rem] text-ink-2">
+            Then <span class="font-mono text-ink">tcut demo.video.ts</span>. The full API — every option of <span class="font-mono text-ink">defineVideo</span> and
+            the <span class="font-mono text-ink">t</span> object — is in the <a class="link" href={README}>README</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hairline">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8 font-mono text-xs text-ink-3 sm:px-8">
+      <span>tcut · MIT · made with Bun, wterm and libghostty</span>
+      <span class="flex gap-5">
+        <a class="hover:text-ink" href={GITHUB}>GitHub</a>
+        <a class="hover:text-ink" href={NPM}>npm</a>
+        <a class="hover:text-ink" href={`${GITHUB}/issues`}>Issues</a>
+      </span>
+    </div>
+  </footer>
+</Layout>

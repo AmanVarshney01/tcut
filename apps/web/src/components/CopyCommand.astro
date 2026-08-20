@@ -1,0 +1,37 @@
+---
+interface Props {
+  command: string;
+  label?: string;
+  primary?: boolean;
+}
+const { command, label, primary = false } = Astro.props;
+---
+
+<div class:list={["copy-cmd flex items-stretch overflow-hidden rounded-lg border", primary ? "border-ink bg-mocha text-[#cdd6f4]" : "border-line bg-desk-2 text-ink"]}>
+  {label && <span class="eyebrow hidden items-center border-r border-white/10 px-3 sm:flex">{label}</span>}
+  <code class="flex-1 truncate px-4 py-3 font-mono text-[0.95rem]">
+    <span class:list={[primary ? "text-[#a6adc8]" : "text-ink-3"]} aria-hidden="true">$ </span>{command}
+  </code>
+  <button
+    type="button"
+    class:list={["copy-btn shrink-0 border-l px-3 font-mono text-xs tracking-wide", primary ? "border-white/10 text-[#a6adc8] hover:bg-white/5 hover:text-white" : "border-line text-ink-2 hover:bg-desk-3"]}
+    data-command={command}
+    aria-label={`Copy “${command}”`}
+  >
+    copy
+  </button>
+</div>
+
+<script>
+  for (const btn of document.querySelectorAll<HTMLButtonElement>(".copy-btn")) {
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.command ?? "");
+        btn.textContent = "copied";
+      } catch {
+        btn.textContent = "select";
+      }
+      setTimeout(() => (btn.textContent = "copy"), 1400);
+    });
+  }
+</script>

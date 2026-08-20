@@ -1,0 +1,27 @@
+{
+  "name": "web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "typecheck": "astro check",
+    "preview": "astro preview",
+    "media": "bun scripts/media.ts",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "^5.2.6",
+    "@fontsource/ibm-plex-mono": "^5.2.6",
+    "astro": "^7.1.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tcut/config": "workspace:*",
+    "tailwindcss": "^4.3.3",
+    "termcut": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

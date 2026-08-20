@@ -1,0 +1,20 @@
+// Created with create-better-t-stack (apps/web + turborepo); the tcut package predates it.
+{
+  "$schema": "https://r2.better-t-stack.dev/schema.json",
+  "version": "3.2.1",
+  "createdAt": "2026-08-20T17:40:00.000Z",
+  "database": "none",
+  "orm": "none",
+  "backend": "none",
+  "runtime": "none",
+  "frontend": ["astro"],
+  "addons": ["turborepo"],
+  "examples": [],
+  "auth": "none",
+  "payments": "none",
+  "packageManager": "bun",
+  "dbSetup": "none",
+  "api": "none",
+  "webDeploy": "none",
+  "serverDeploy": "none"
+}
