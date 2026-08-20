@@ -1,0 +1,72 @@
+# tcut reference
+
+Full options for the CLI and the script API. For getting started see the [README](../README.md).
+
+## CLI
+
+```
+tcut <script.ts>                  record + render
+tcut rec [-- command…]            record a live session, then render
+tcut record <script.ts>           record only (.cast)
+tcut render <file.cast>           render a cast (tcut's or asciinema's)
+tcut test <paths…>                run scripts as tests
+tcut init [name] [--template basic|tour|test]
+tcut themes
+
+-o, --output <path>   repeatable: .mp4 .webm .gif .webp .svg .html .png .jpg or a directory/
+--theme <name>        catppuccin-mocha · dracula · github-dark · tokyo-night · one-dark
+--font <family>  --font-size <px>  --line-height <x>  --letter-spacing <px>
+--fps <n>  --speed <x>  --padding <px>  --margin <px>  --margin-fill <color>  --radius <px>
+--window-bar <none|colorful|colorfulRight|rings|ringsRight>  --title <text>  --no-blink
+--core <ghostty|lite>  --cast <path>  --record-only  --force  -q
+```
+
+## Script reference
+
+`defineVideo(config, async (t) => { … })`
+
+**Config** (all optional except `output`)
+
+| | default | |
+|---|---|---|
+| `output` | — | string or array; extension picks the format |
+| `shell` | `"bash"` | `bash` · `zsh` · `fish` · `sh` · or a `string[]` command |
+| `prompt` | `"> "` | prompt of the clean shell; `run()` waits for it |
+| `cols` · `rows` · `fps` | 80 · 24 · 60 | |
+| `typingSpeed` · `typingJitter` · `seed` | `"50ms"` · 0 · 1 | jitter is seeded, so it's reproducible |
+| `theme` | `"catppuccin-mocha"` | a name or a full theme object |
+| `font` | JetBrains Mono 20 px | `{ family, size, lineHeight, letterSpacing }` |
+| `windowBar` · `title` · `padding` · `margin` · `marginFill` · `borderRadius` | `"none"` · `""` · 24 · 0 · bg · 0 | window chrome |
+| `cursor` | `{ blink: true, period: 1000 }` | |
+| `playbackSpeed` · `waitTimeout` · `endPause` | 1 · `"15s"` · `"1s"` | |
+| `cache` · `quantize` · `core` | true · false · `"ghostty"` | skip re-recording when unchanged · frame-grid timestamps · emulator |
+
+**`t`**
+
+- Type: `run(cmd)` · `type(text)` · `paste(text)` · `enter()` `tab()` `backspace()` `escape()` `space()` `up()` `down()` `left()` `right()` `home()` `end()` `pageUp()` `pageDown()` (all take a count) · `ctrl("c")` · `alt("b")` · `key("f5")` · `raw(bytes)`
+- Wait: `sleep("500ms")` · `wait(/re/, { scope: "line" | "screen" })` — default waits for the prompt
+- Assert: `expect(/re/)` — throws with a screen dump
+- Shape the video: `hide(async () => …)` cuts a section · `screenshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`
+- Look: `screen()` · `line()` · `cursor()` · `cols` · `rows`
+
+Durations accept `500`, `"500ms"`, `"1.5s"`, `"2m"`.
+
+## Requirements
+
+| To… | You need |
+|---|---|
+| run tcut | Bun ≥ 1.4, or the standalone binary |
+| record (`rec`, scripts, `test`) | a shell — nothing else |
+| render `.svg` / `.html` | nothing else |
+| render `.png` / `frames/` | macOS: nothing (built-in WebKit) · Linux / Windows: Chrome, Chromium, Edge or Brave |
+| render `.mp4` / `.gif` / `.webm` | the above + ffmpeg |
+| render `.webp` | ffmpeg with libwebp (`brew install ffmpeg-full`; found automatically) |
+
+Verified on macOS. Linux and Windows binaries are cross-compiled and not yet exercised in CI.
+
+## How it works, briefly
+
+`Bun.Terminal` runs your shell in a PTY. Output is timestamped into the cast and also fed to a headless
+[Ghostty](https://ghostty.org) terminal (via [wterm](https://github.com/vercel-labs/wterm)), which is how `run()` knows the prompt is back and
+`expect()` sees what you see. Rendering replays the cast into that terminal inside `Bun.WebView` one frame at a time and hands the
+frames to ffmpeg; SVG and HTML are built straight from the terminal grid. Inspired by [VHS](https://github.com/charmbracelet/vhs).
