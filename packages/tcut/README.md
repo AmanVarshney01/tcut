@@ -168,6 +168,23 @@ Durations accept milliseconds or `"500ms" | "1.5s" | "2m"`.
 Programmatic use: `const v = defineVideo(...); await v.record(); await v.render(undefined, { overrides: { theme: "dracula" } })`,
 `renderCast(file, { output })`, `buildSvg(rec, config)`, `runScriptTests(paths)`.
 
+## Examples
+
+All in [`examples/`](examples); run one with `bun src/cli.ts examples/<name>.ts` (or `tcut examples/<name>.ts`).
+
+| Script | What it shows |
+|---|---|
+| [`readme.ts`](examples/readme.ts) | the README media: `hide()`, `run()`, `expect()`, multi-format output |
+| [`demo.ts`](examples/demo.ts) | window chrome, `screenshot()`, `wait()` after manual typing |
+| [`better-t-stack.ts`](examples/better-t-stack.ts) | **driving an interactive TUI** — `bun create better-t-stack` answered with arrow keys and Enter; the deployment option is picked by reading the screen (`t.screen()` in a loop) so it survives option-order changes |
+| [`ai-agents.ts`](examples/ai-agents.ts) | **recording AI coding agents** — `claude -p` answers a question, `codex exec` edits a file. Needs `claude` / `codex` installed and logged in; the model output varies per recording, the rendered video never does |
+
+![better-t-stack](docs/examples/better-t-stack.gif)
+
+![claude and codex](docs/examples/ai-agents.gif)
+
+`tcut test examples/` runs them all in fast mode — the last two need network access and spend a few tokens.
+
 ## Development
 
 ```sh

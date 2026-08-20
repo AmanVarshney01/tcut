@@ -7,6 +7,8 @@ import FilmStrip from "../components/FilmStrip.astro";
 import demoSvg from "../assets/demo.svg?raw";
 import demoPng from "../assets/demo.png";
 import facts from "../assets/facts.json";
+import btsGif from "../assets/examples/better-t-stack.gif";
+import aiGif from "../assets/examples/ai-agents.gif";
 import readmeScript from "../../../../packages/tcut/examples/readme.ts?raw";
 
 const GITHUB = "https://github.com/AmanVarshney01/tcut";
@@ -146,6 +148,36 @@ const requirements = [
             </figcaption>
           </figure>
         </div>
+      </div>
+    </section>
+
+    <!-- Examples: TUIs and AI agents -->
+    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="ex-title">
+      <div class="hairline pt-10">
+        <p class="eyebrow">examples</p>
+        <h2 id="ex-title" class="display mt-3 text-2xl sm:text-3xl">Interactive tools and AI agents, not just echo.</h2>
+        <p class="mt-4 max-w-[60ch] text-ink-2">
+          Because tcut waits on the rendered screen, it can drive anything a human can: menus, prompts, agents that take
+          ten seconds to think. Both recordings below are in the repo under
+          <a class="link" href={`${GITHUB}/tree/main/packages/tcut/examples`}>packages/tcut/examples</a>.
+        </p>
+      </div>
+      <div class="mt-8 grid gap-8 lg:grid-cols-2">
+        <figure class="card overflow-hidden rounded-xl">
+          <img src={btsGif.src} width={btsGif.width} height={btsGif.height} alt="Recording of bun create better-t-stack being answered with arrow keys and Enter" loading="lazy" class="block h-auto w-full" />
+          <figcaption class="px-5 py-4 text-[0.95rem] text-ink-2">
+            <span class="font-mono text-ink">better-t-stack.ts</span> — answers the <span class="font-mono text-ink">bun create better-t-stack</span>
+            prompts with <span class="font-mono text-ink">down()</span> / <span class="font-mono text-ink">enter()</span>, and picks the deployment by
+            reading the screen until the highlighted row says Cloudflare.
+          </figcaption>
+        </figure>
+        <figure class="card overflow-hidden rounded-xl">
+          <img src={aiGif.src} width={aiGif.width} height={aiGif.height} alt="Recording of Claude Code answering a question and Codex editing a file" loading="lazy" class="block h-auto w-full" />
+          <figcaption class="px-5 py-4 text-[0.95rem] text-ink-2">
+            <span class="font-mono text-ink">ai-agents.ts</span> — <span class="font-mono text-ink">claude -p</span> explains a file,
+            <span class="font-mono text-ink">codex exec</span> edits it. The model's words differ every recording; the rendered video never does.
+          </figcaption>
+        </figure>
       </div>
     </section>
 
