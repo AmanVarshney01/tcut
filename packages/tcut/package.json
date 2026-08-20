@@ -1,6 +1,6 @@
 {
   "name": "termcut",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Script terminal sessions in TypeScript, render them to reproducible MP4/GIF/WebM/SVG/HTML with Bun.",
   "license": "MIT",
   "author": "Aman Varshney",
@@ -33,9 +33,10 @@
     ".": "./src/index.ts"
   },
   "bin": {
-    "tcut": "./src/cli.ts"
+    "tcut": "./bin/tcut.mjs"
   },
   "files": [
+    "bin",
     "src",
     "scripts",
     "README.md",

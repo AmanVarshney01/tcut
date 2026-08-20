@@ -23,10 +23,11 @@ jobs:
           bun-version: latest
 
       # npm ≥ 11.5 is needed for trusted publishing (OIDC); Node 24 ships it.
+      # No registry-url here on purpose: it would write an .npmrc with a placeholder token that npm then
+      # sends instead of performing the OIDC exchange (the registry answers 404 on PUT).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
