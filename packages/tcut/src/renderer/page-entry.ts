@@ -67,10 +67,11 @@ const api = {
     return { w, h };
   },
 
-  layout(frameW: number, frameH: number, termW: number, termH: number): boolean {
+  layout(frameW: number, frameH: number, termW: number, termH: number, padX?: number, padY?: number): boolean {
     const frame = document.getElementById("frame")!;
     frame.style.width = `${frameW}px`;
     frame.style.height = `${frameH}px`;
+    if (padX !== undefined && padY !== undefined) frame.style.padding = `${padY}px ${padX}px`;
     const el = document.getElementById("term")!;
     el.style.width = `${termW}px`;
     el.style.height = `${termH}px`;

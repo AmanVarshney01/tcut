@@ -1,3 +1,4 @@
+import { fitFrame } from "../loop";
 import { barHeight } from "../renderer/page";
 import type { Recording, ResolvedConfig } from "../types";
 import { FLAG, replayFrames, type GridCell, type GridFrame } from "./frames";
@@ -28,8 +29,15 @@ export function svgGeometry(config: ResolvedConfig, cols: number, rows: number):
   const termW = cols * cellW;
   const termH = rows * cellH;
   const bar = barHeight(config);
-  const frameW = termW + config.padding * 2;
-  const frameH = termH + config.padding * 2 + bar;
+  const fit = fitFrame({
+    termW: Math.ceil(termW),
+    termH,
+    padding: config.padding,
+    margin: config.margin,
+    bar,
+    width: config.width,
+    height: config.height,
+  });
   return {
     cellW,
     cellH,
@@ -37,12 +45,12 @@ export function svgGeometry(config: ResolvedConfig, cols: number, rows: number):
     termH,
     frameX: config.margin,
     frameY: config.margin,
-    frameW,
-    frameH,
-    termX: config.margin + config.padding,
-    termY: config.margin + config.padding + bar,
-    width: Math.ceil(frameW + config.margin * 2),
-    height: Math.ceil(frameH + config.margin * 2),
+    frameW: fit.frameW,
+    frameH: fit.frameH,
+    termX: config.margin + fit.padX,
+    termY: config.margin + fit.padY + bar,
+    width: fit.width,
+    height: fit.height,
   };
 }
 

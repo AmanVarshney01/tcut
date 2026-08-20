@@ -48,7 +48,9 @@ Options (override the script's config):
       --window-bar <type>  none | colorful | colorfulRight | rings | ringsRight
       --title <text>       --no-blink
       --core <name>        ghostty | lite
-      --cols <n> --rows <n>  terminal size (rec: defaults to your terminal's size)
+      --cols <n> --rows <n>  terminal grid (rec: defaults to your terminal's size)
+      --width <px> --height <px>  video size; the grid is derived and centred inside
+      --loop-offset <n|N%> where GIF/WebP loops start
       --cast <path>        where to read/write the .cast
       --record-only        stop after writing the cast
       --no-script          rec: don't write the editable <name>.video.ts next to the cast
@@ -83,6 +85,9 @@ const { values, positionals } = parseArgs({
     core: { type: "string" },
     cols: { type: "string" },
     rows: { type: "string" },
+    width: { type: "string" },
+    height: { type: "string" },
+    "loop-offset": { type: "string" },
     cast: { type: "string" },
     "record-only": { type: "boolean" },
     "no-script": { type: "boolean" },
@@ -153,6 +158,9 @@ function overridesFromFlags(): Partial<VideoConfig> {
   if (values.cast) o.cast = values.cast;
   if (values.cols !== undefined) o.cols = num("cols");
   if (values.rows !== undefined) o.rows = num("rows");
+  if (values.width !== undefined) o.width = num("width");
+  if (values.height !== undefined) o.height = num("height");
+  if (values["loop-offset"] !== undefined) o.loopOffset = values["loop-offset"];
   return o;
 }
 
@@ -361,8 +369,14 @@ async function main(): Promise<void> {
       const outputs = Array.isArray(rawOutputs) ? rawOutputs : [rawOutputs];
       const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast });
       const command = rest.length > 0 ? rest : undefined;
-      // Size: --cols/--rows if given, else the terminal tcut runs in.
-      const recording = await recordLive(config, { command, log, cols: overrides.cols, rows: overrides.rows });
+      // Size: --cols/--rows if given, else derived from --width/--height, else the terminal tcut runs in.
+      const sized = overrides.width !== undefined || overrides.height !== undefined;
+      const recording = await recordLive(config, {
+        command,
+        log,
+        cols: overrides.cols ?? (sized ? config.cols : undefined),
+        rows: overrides.rows ?? (sized ? config.rows : undefined),
+      });
       await mkdir(path.dirname(path.resolve(config.cast)), { recursive: true });
       await writeCast(config.cast, recording);
       log("");

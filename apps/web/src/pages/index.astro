@@ -38,6 +38,9 @@ const compare = [
   ["Re-theme a demo", "run everything again", "tcut render demo.cast --theme dracula — no shell is spawned"],
   ["Outputs", "mp4 · gif · webm · png frames", "+ animated SVG · HTML player · PNG/JPG stills; SVG and HTML need no ffmpeg or browser"],
   ["As tests", "—", "tcut test runs scripts fast; exit code follows expect()"],
+  ["Record live", "vhs record → editable .tape", "tcut rec → exact .cast + editable .video.ts"],
+  ["Themes", "~300 named + JSON", "607 from Ghostty's collection, loose name matching, or your own object"],
+  ["Sharing", "vhs publish → vhs.charm.sh", "tcut publish → your own S3-compatible bucket (RustFS, MinIO, R2, S3); no hosted service"],
   ["Under the hood", "ttyd + Chrome + ffmpeg", "Bun.Terminal + Ghostty (WASM) + Bun.WebView; ffmpeg only for video containers"],
 ];
 
@@ -78,17 +81,17 @@ const requirements = [
     <!-- Hero: the thesis is the output itself -->
     <section class="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-8 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-14 lg:pt-14">
       <div>
-        <p class="eyebrow rise">termcut 0.3.0 · Bun ≥ 1.4 · MIT</p>
+        <p class="eyebrow rise">termcut 0.4.0 · Bun ≥ 1.4 · MIT</p>
         <h1 class="display rise rise-2 mt-4 text-[2.6rem] sm:text-[3.4rem] lg:text-[3.6rem]">
           Terminal videos,<br />written in TypeScript.
         </h1>
         <p class="rise rise-3 mt-6 max-w-[34ch] text-lg text-ink-2">
-          Script a session. Record it once. Render it anywhere — MP4, GIF, WebM, SVG, HTML — byte-for-byte the same every time.
+          Record a session live, or script it. Render it anywhere — MP4, GIF, WebM, SVG, HTML — byte-for-byte the same every time.
         </p>
         <div class="rise rise-3 mt-8 flex flex-col gap-3">
-          <CopyCommand command="bunx termcut init demo" primary />
+          <CopyCommand command="bun add -g termcut" primary />
           <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
-            <span class="font-mono">bun add -g termcut</span>
+            <span class="font-mono">tcut rec -o demo.gif</span>
             <span aria-hidden="true">·</span>
             <a class="link" href={RELEASES}>standalone binaries</a>
             <span aria-hidden="true">·</span>
@@ -214,7 +217,7 @@ const requirements = [
         <li aria-hidden="true" class="hidden bg-desk-2 lg:block"></li>
       </ul>
       <p class="mt-5 font-mono text-sm text-ink-2">
-        output: ["demo.mp4", "demo.gif", "demo.svg", "demo.html"] <span class="text-ink-3">— or</span> tcut render demo.cast -o demo.svg --theme dracula
+        output: ["demo.mp4", "demo.gif", "demo.svg", "demo.html"] <span class="text-ink-3">— or</span> tcut render demo.cast -o demo.svg --theme "Gruvbox Dark" <span class="text-ink-3">— then</span> tcut publish demo.svg
       </p>
     </section>
 
@@ -319,7 +322,7 @@ not ok 2 - examples/release.ts (1803ms)
             </div>
             <div>
               <p class="mb-2 text-sm text-ink-2">Without Bun — a single binary for macOS, Linux or Windows from <a class="link" href={RELEASES}>Releases</a>.</p>
-              <CopyCommand command="curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-0.3.0-darwin-arm64 -o tcut && chmod +x tcut" />
+              <CopyCommand command="curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-0.4.0-darwin-arm64 -o tcut && chmod +x tcut" />
             </div>
           </div>
           <p class="mt-6 text-[0.95rem] text-ink-2">

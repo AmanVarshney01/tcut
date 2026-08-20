@@ -73,9 +73,17 @@ export interface VideoConfig {
   cwd?: string;
   env?: Record<string, string>;
 
-  /** Terminal grid. Default 80 × 24. */
+  /** Terminal grid. Default 80 × 24 — or derived from `width`/`height` when those are given. */
   cols?: number;
   rows?: number;
+  /**
+   * Video size in pixels (including margin). When set, the output is exactly this size and the terminal is
+   * centred inside; `cols`/`rows` default to what fits.
+   */
+  width?: number;
+  height?: number;
+  /** Where looping outputs (GIF, WebP) start: a frame number or a percentage like "50%". */
+  loopOffset?: number | string;
 
   /** Frames per second of the output. Default 60. */
   fps?: number;
@@ -125,6 +133,9 @@ export interface ResolvedConfig {
   env: Record<string, string>;
   cols: number;
   rows: number;
+  width?: number;
+  height?: number;
+  loopOffset?: number | string;
   fps: number;
   typingSpeed: number;
   typingJitter: number;
@@ -209,6 +220,11 @@ export interface TerminalSession {
   ctrl(letter: string, times?: number): Promise<void>;
   /** Alt/Meta+<key>. */
   alt(key: string, times?: number): Promise<void>;
+  /** Shift+<key>: "tab" (back-tab), arrows/home/end/pageUp/pageDown/delete, or a letter (sent uppercase). */
+  shift(key: KeyName | string, times?: number): Promise<void>;
+  /** Mouse-wheel up/down at the cursor. Only programs with mouse tracking (vim, less --mouse, TUIs) react. */
+  scrollUp(times?: number): Promise<void>;
+  scrollDown(times?: number): Promise<void>;
   /** Send raw bytes to the PTY. */
   raw(data: string | Uint8Array): Promise<void>;
 

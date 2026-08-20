@@ -124,6 +124,11 @@ export class Screen {
     return this.core.usingAltScreen();
   }
 
+  /** 0 when the program has not enabled mouse tracking (so wheel events would be typed as garbage). */
+  mouseTracking(): number {
+    return this.core.mouseTracking?.() ?? 0;
+  }
+
   dispose(): void {
     this.listeners.clear();
   }

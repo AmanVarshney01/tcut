@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { MARKER } from "../cast";
 import type { Recording, RenderProgress, ResolvedConfig } from "../types";
+import { fitFrame, loopOffsetFrames, rotateFrames } from "../loop";
 import { buildTimeline, withReinjection, type TimedEvent } from "../timeline";
 import { pageAssets } from "./bundle";
 import { createSinks } from "./encoder";
@@ -80,16 +81,24 @@ export async function render(
 
     const termW = Math.ceil(rec.header.width * cell.w);
     const termH = Math.ceil(rec.header.height * cell.h);
-    const frameW = termW + config.padding * 2;
-    const frameH = termH + config.padding * 2 + barHeight(config);
-    const even = (n: number) => (n % 2 === 0 ? n : n + 1);
-    const width = even(frameW + config.margin * 2);
-    const height = even(frameH + config.margin * 2);
-    await view.evaluate(`window.__vt.layout(${frameW}, ${frameH}, ${termW}, ${termH})`);
+    const { frameW, frameH, padX, padY, width, height } = fitFrame({
+      termW,
+      termH,
+      padding: config.padding,
+      margin: config.margin,
+      bar: barHeight(config),
+      width: config.width,
+      height: config.height,
+    });
+    await view.evaluate(`window.__vt.layout(${frameW}, ${frameH}, ${termW}, ${termH}, ${padX}, ${padY})`);
     await view.resize(width, height);
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
 
     const sinks = await createSinks(config.output, fps);
+    // loopOffset rotates the frame order for looping outputs; those frames are buffered and flushed at the end.
+    const loopSinks = config.loopOffset ? sinks.filter((s) => s.loops) : [];
+    const streamSinks = sinks.filter((s) => !loopSinks.includes(s));
+    const buffered: Uint8Array[] = [];
     let pointer = 0;
     let lastPng: Uint8Array | null = null;
     let lastBlink: boolean | null = null;
@@ -127,10 +136,15 @@ export async function render(
         screenshots.push(file);
       }
 
-      for (const sink of sinks) await sink.frame(lastPng!);
+      for (const sink of streamSinks) await sink.frame(lastPng!);
+      if (loopSinks.length) buffered.push(lastPng!);
       onProgress?.({ frame: frame + 1, total: totalFrames });
     }
 
+    if (loopSinks.length) {
+      const rotated = rotateFrames(buffered, loopOffsetFrames(buffered.length, config.loopOffset));
+      for (const png of rotated) for (const sink of loopSinks) await sink.frame(png);
+    }
     for (const sink of sinks) await sink.finish();
     return { outputs: sinks.map((s) => s.target), frames: totalFrames, screenshots, durationSeconds: timeline.duration };
   } finally {

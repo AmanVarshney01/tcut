@@ -6,6 +6,8 @@ export interface FrameSink {
   frame(png: Uint8Array): Promise<void>;
   finish(): Promise<void>;
   readonly target: string;
+  /** True for outputs that loop (GIF, WebP) — `loopOffset` applies to these. */
+  readonly loops?: boolean;
 }
 
 type Format = "mp4" | "webm" | "gif" | "webp" | "png-sequence" | "png" | "jpeg";
@@ -174,6 +176,7 @@ class FfmpegSink implements FrameSink {
   private proc: Subprocess<"pipe", "ignore", "pipe">;
   private stdin: FileSink;
   private stderr: Promise<string>;
+  readonly loops: boolean;
 
   constructor(
     readonly target: string,
@@ -181,6 +184,7 @@ class FfmpegSink implements FrameSink {
     fps: number,
     match: EncoderMatch,
   ) {
+    this.loops = format === "gif" || format === "webp";
     this.proc = Bun.spawn([match.binary, ...ffmpegArgs(format, fps, target, match.encoder)], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
     this.stdin = this.proc.stdin;
     this.stderr = new Response(this.proc.stderr).text();

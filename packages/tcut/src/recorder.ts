@@ -1,6 +1,6 @@
 import { MARKER } from "./cast";
 import { formatMs, toMs } from "./duration";
-import { altSequence, ctrlSequence, keySequence } from "./keys";
+import { altSequence, ctrlSequence, keySequence, shiftSequence, wheelSequence } from "./keys";
 import { Screen } from "./screen";
 import type {
   CastEvent,
@@ -191,6 +191,19 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
 
   const key = (name: KeyName, times = 1): Promise<void> => pressKey(keySequence(name), times);
 
+  const scroll = async (direction: "up" | "down", times: number): Promise<void> => {
+    await screen.settle();
+    if (screen.mouseTracking() === 0) {
+      log(`scroll${direction === "up" ? "Up" : "Down"}: the program has not enabled mouse tracking, so there is nothing to scroll — skipped`);
+      return;
+    }
+    const { x, y } = screen.cursor();
+    for (let i = 0; i < times; i++) {
+      await raw(wheelSequence(direction, x + 1, y + 1));
+      if (!fast && times > 1) await Bun.sleep(40);
+    }
+  };
+
   const matches = (pattern: RegExp, scope: "line" | "screen"): boolean =>
     pattern.test(scope === "screen" ? screen.screen() : screen.line());
 
@@ -290,6 +303,9 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     pageDown: (n) => key("pageDown", n),
     ctrl: (letter, n) => pressKey(ctrlSequence(letter), n),
     alt: (k, n) => pressKey(altSequence(k), n),
+    shift: (k, n) => pressKey(shiftSequence(k), n),
+    scrollUp: (n) => scroll("up", n ?? 1),
+    scrollDown: (n) => scroll("down", n ?? 1),
     raw,
     sleep,
     wait,

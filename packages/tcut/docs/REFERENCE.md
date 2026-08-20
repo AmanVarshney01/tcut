@@ -20,7 +20,7 @@ tcut themes
 --font <family>  --font-size <px>  --line-height <x>  --letter-spacing <px>
 --fps <n>  --speed <x>  --padding <px>  --margin <px>  --margin-fill <color>  --radius <px>
 --window-bar <none|colorful|colorfulRight|rings|ringsRight>  --title <text>  --no-blink
---core <ghostty|lite>  --cols <n>  --rows <n>  --cast <path>  --record-only  --no-script  --force  -q
+--core <ghostty|lite>  --cols <n>  --rows <n>  --width <px>  --height <px>  --loop-offset <n|N%>  --cast <path>  --record-only  --no-script  --force  -q
 --open  --name <file>  --endpoint --bucket --access-key --secret-key --public-url --region   (publish)
 ```
 
@@ -36,6 +36,8 @@ tcut themes
 | `shell` | `"bash"` | `bash` · `zsh` · `fish` · `sh` · or a `string[]` command |
 | `prompt` | `"> "` | prompt of the clean shell; `run()` waits for it |
 | `cols` · `rows` · `fps` | 80 · 24 · 60 | |
+| `width` · `height` | — | video size in px; grid is derived and centred inside |
+| `loopOffset` | — | where GIF/WebP loops start: frames or `"50%"` |
 | `typingSpeed` · `typingJitter` · `seed` | `"50ms"` · 0 · 1 | jitter is seeded, so it's reproducible |
 | `theme` | `"catppuccin-mocha"` | any bundled theme name (~600, loose matching) or a full theme object |
 | `font` | JetBrains Mono 20 px | `{ family, size, lineHeight, letterSpacing }` |
@@ -46,7 +48,7 @@ tcut themes
 
 **`t`**
 
-- Type: `run(cmd)` · `type(text)` · `paste(text)` · `enter()` `tab()` `backspace()` `escape()` `space()` `up()` `down()` `left()` `right()` `home()` `end()` `pageUp()` `pageDown()` (all take a count) · `ctrl("c")` · `alt("b")` · `key("f5")` · `raw(bytes)`
+- Type: `run(cmd)` · `type(text)` · `paste(text)` · `enter()` `tab()` `backspace()` `escape()` `space()` `up()` `down()` `left()` `right()` `home()` `end()` `pageUp()` `pageDown()` (all take a count) · `ctrl("c")` · `alt("b")` · `shift("tab")` · `scrollUp(n)` `scrollDown(n)` (mouse wheel; needs a program with mouse tracking) · `key("f5")` · `raw(bytes)`
 - Wait: `sleep("500ms")` · `wait(/re/, { scope: "line" | "screen" })` — default waits for the prompt
 - Assert: `expect(/re/)` — throws with a screen dump
 - Shape the video: `hide(async () => …)` cuts a section · `screenshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`

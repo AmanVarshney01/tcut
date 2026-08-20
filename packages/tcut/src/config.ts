@@ -14,12 +14,34 @@ export function defaultPromptPattern(prompt: string): RegExp {
   return new RegExp(`${escapeRegExp(prompt.trimEnd())}\\s*$`);
 }
 
+/** Approximate cell size before anything is measured (JetBrains Mono / Menlo are ~0.6em wide). */
+export function estimateCell(font: { size: number; lineHeight: number; letterSpacing: number }): { w: number; h: number } {
+  return { w: Math.round(font.size * 0.6 * 100) / 100 + font.letterSpacing, h: Math.ceil(font.size * font.lineHeight) };
+}
+
+export const WINDOW_BAR_HEIGHT = 36;
+
 export function resolveConfig(config: VideoConfig): ResolvedConfig {
   const outputs = Array.isArray(config.output) ? config.output : [config.output];
   if (outputs.length === 0) throw new Error("config.output must name at least one output");
 
   const prompt = config.prompt ?? "> ";
   const theme = resolveTheme(config.theme);
+
+  const font = {
+    family: config.font?.family ?? DEFAULT_FONT_FAMILY,
+    size: config.font?.size ?? 20,
+    lineHeight: config.font?.lineHeight ?? 1.2,
+    letterSpacing: config.font?.letterSpacing ?? 0,
+  };
+  const padding = config.padding ?? 24;
+  const margin = config.margin ?? 0;
+  const bar = (config.windowBar ?? "none") === "none" ? 0 : WINDOW_BAR_HEIGHT;
+  const cell = estimateCell(font);
+  let cols = config.cols;
+  let rows = config.rows;
+  if (config.width !== undefined && cols === undefined) cols = Math.max(10, Math.floor((config.width - 2 * margin - 2 * padding) / cell.w));
+  if (config.height !== undefined && rows === undefined) rows = Math.max(3, Math.floor((config.height - 2 * margin - 2 * padding - bar) / cell.h));
   const first = outputs[0]!;
   const castDefault = first.endsWith("/")
     ? path.join(first, "session.cast")
@@ -33,8 +55,11 @@ export function resolveConfig(config: VideoConfig): ResolvedConfig {
     promptPattern: (config.promptPattern ?? defaultPromptPattern(prompt)).source,
     cwd: config.cwd ?? process.cwd(),
     env: config.env ?? {},
-    cols: config.cols ?? 80,
-    rows: config.rows ?? 24,
+    cols: cols ?? 80,
+    rows: rows ?? 24,
+    ...(config.width !== undefined && { width: config.width }),
+    ...(config.height !== undefined && { height: config.height }),
+    ...(config.loopOffset !== undefined && { loopOffset: config.loopOffset }),
     fps: config.fps ?? 60,
     typingSpeed: toMs(config.typingSpeed, 50),
     typingJitter: Math.min(1, Math.max(0, config.typingJitter ?? 0)),
@@ -45,19 +70,14 @@ export function resolveConfig(config: VideoConfig): ResolvedConfig {
     quantize: config.quantize ?? false,
     core: config.core ?? "ghostty",
     cache: config.cache ?? true,
-    font: {
-      family: config.font?.family ?? DEFAULT_FONT_FAMILY,
-      size: config.font?.size ?? 20,
-      lineHeight: config.font?.lineHeight ?? 1.2,
-      letterSpacing: config.font?.letterSpacing ?? 0,
-    },
+    font,
     theme,
     cursor: {
       blink: config.cursor?.blink ?? true,
       period: config.cursor?.period ?? 1000,
     },
-    padding: config.padding ?? 24,
-    margin: config.margin ?? 0,
+    padding,
+    margin,
     marginFill: config.marginFill ?? theme.background,
     borderRadius: config.borderRadius ?? 0,
     windowBar: config.windowBar ?? "none",
