@@ -12,9 +12,6 @@ jobs:
   release:
     runs-on: macos-latest
     timeout-minutes: 30
-    env:
-      # Empty unless the NPM_TOKEN repository secret is configured (Settings → Secrets → Actions).
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     defaults:
       run:
         working-directory: packages/tcut
@@ -24,6 +21,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      # npm ≥ 11.5 is needed for trusted publishing (OIDC); Node 24 ships it.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -49,8 +52,9 @@ jobs:
             --generate-notes \
             dist/tcut-* dist/SHA256SUMS
 
-      - name: Publish to npm
-        if: ${{ env.NPM_TOKEN != '' }}
-        env:
-          NPM_CONFIG_TOKEN: ${{ env.NPM_TOKEN }}
-        run: bun publish --access public
+      # Trusted publishing: npm's OIDC trust for AmanVarshney01/tcut → release.yml (configured on npmjs.com).
+      # No token anywhere; the job's id-token permission is exchanged for a short-lived publish credential.
+      - name: Publish to npm (trusted publishing, with provenance)
+        run: |
+          npm --version
+          npm publish --provenance --access public

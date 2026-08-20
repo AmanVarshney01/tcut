@@ -24,6 +24,6 @@ bun run sync:readme          # copy the root README into packages/tcut (npm show
 ```
 
 Releasing: bump `version` in `packages/tcut/package.json`, run `bun run sync:readme`, commit, `git tag vX.Y.Z && git push --tags`.
-The release workflow builds binaries for every platform and publishes to npm when an `NPM_TOKEN` secret exists.
+The release workflow builds binaries for every platform and publishes to npm via trusted publishing (OIDC — no token).
 
 The root `README.md` is the product README and the single source of truth; `packages/tcut/README.md` is a copy.
