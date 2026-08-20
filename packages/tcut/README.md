@@ -20,7 +20,7 @@ bunx termcut --help       # or run it without installing
 No Bun? Grab a standalone binary from [Releases](https://github.com/AmanVarshney01/tcut/releases) (macOS, Linux, Windows):
 
 ```sh
-curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-0.1.0-darwin-arm64 -o tcut && chmod +x tcut
+curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-0.2.0-darwin-arm64 -o tcut && chmod +x tcut
 ```
 
 For `.mp4` / `.gif` / `.webm` you also need `ffmpeg` (`brew install ffmpeg`, `apt install ffmpeg`). SVG, HTML and PNG need nothing else.
