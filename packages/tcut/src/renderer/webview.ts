@@ -6,7 +6,7 @@ import { fitFrame, loopOffsetFrames, rotateFrames } from "../loop";
 import { buildTimeline, withReinjection, type TimedEvent } from "../timeline";
 import { pageAssets } from "./bundle";
 import { createSinks } from "./encoder";
-import { barHeight, renderHtml, themeOsc } from "./page";
+import { BROWSER_GAP, barHeight, renderHtml, themeOsc } from "./page";
 
 export interface RenderResult {
   outputs: string[];
@@ -27,6 +27,8 @@ export async function render(
   const assets = await pageAssets();
   const html = renderHtml(config);
   const osc = themeOsc(config.theme);
+  const castDir = rec.source ? path.dirname(rec.source) : process.cwd();
+  const hasBrowser = Boolean(config.browser) && rec.events.some((e) => e[1] === "b");
   const batches = new Map<number, string>();
   let batchId = 0;
 
@@ -39,6 +41,11 @@ export async function render(
       if (pathname === "/wterm.css") return new Response(assets.css, { headers: { "content-type": "text/css" } });
       if (pathname === "/ghostty-vt.wasm") return new Response(Bun.file(assets.wasmPath), { headers: { "content-type": "application/wasm" } });
       if (pathname === "/theme") return new Response(osc, { headers: { "content-type": "text/plain; charset=utf-8" } });
+      if (pathname.startsWith("/bframe/")) {
+        const rel = decodeURIComponent(pathname.slice("/bframe/".length));
+        if (rel.includes("..")) return new Response("forbidden", { status: 403 });
+        return new Response(Bun.file(path.join(castDir, rel)), { headers: { "content-type": "image/png" } });
+      }
       if (pathname.startsWith("/batch/")) {
         const id = Number(pathname.slice("/batch/".length));
         const body = batches.get(id);
@@ -81,7 +88,7 @@ export async function render(
 
     const termW = Math.ceil(rec.header.width * cell.w);
     const termH = Math.ceil(rec.header.height * cell.h);
-    const { frameW, frameH, padX, padY, width, height } = fitFrame({
+    const fit = fitFrame({
       termW,
       termH,
       padding: config.padding,
@@ -90,6 +97,10 @@ export async function render(
       width: config.width,
       height: config.height,
     });
+    const { frameW, frameH, padX, padY, height } = fit;
+    // A browser pane sits to the right of the terminal window and adds to the canvas width.
+    const paneW = hasBrowser && config.browser ? BROWSER_GAP + config.browser.width : 0;
+    const width = paneW ? (fit.width + paneW) % 2 === 0 ? fit.width + paneW : fit.width + paneW + 1 : fit.width;
     await view.evaluate(`window.__vt.layout(${frameW}, ${frameH}, ${termW}, ${termH}, ${padX}, ${padY})`);
     await view.resize(width, height);
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
@@ -114,12 +125,16 @@ export async function render(
       const blinkOn = !config.cursor.blink || Math.floor((time / blinkPeriod) * 2) % 2 === 0;
       const drawable = batch.filter((e) => e.type === "o" || e.type === "r");
       const shots = batch.filter((e) => e.type === "m" && e.data.startsWith(MARKER.screenshot));
-      const dirty = lastPng === null || drawable.length > 0 || blinkOn !== lastBlink;
+      const browserFrame = hasBrowser ? batch.filter((e) => e.type === "b").at(-1) : undefined;
+      const dirty = lastPng === null || drawable.length > 0 || blinkOn !== lastBlink || browserFrame !== undefined;
 
       if (drawable.length > 0) {
         const id = ++batchId;
         batches.set(id, JSON.stringify(drawable.map(({ type, data }) => ({ type, data }))));
         await view.evaluate(`window.__vt.applyUrl('/batch/${id}')`);
+      }
+      if (browserFrame) {
+        await view.evaluate(`window.__vt.browserFrame(${JSON.stringify(`/bframe/${encodeURIComponent(browserFrame.data)}`)})`);
       }
       if (blinkOn !== lastBlink) {
         await view.evaluate(`window.__vt.cursor(${blinkOn})`);

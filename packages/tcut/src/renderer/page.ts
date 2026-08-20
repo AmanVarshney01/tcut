@@ -1,6 +1,10 @@
 import type { ResolvedConfig, Theme } from "../types";
 
 const BAR_HEIGHT = 36;
+/** Gap between the terminal window and the browser window. */
+export const BROWSER_GAP = 16;
+/** Height of the browser window's chrome bar. */
+export const BROWSER_BAR = 34;
 
 export function barHeight(config: ResolvedConfig): number {
   return config.windowBar === "none" ? 0 : BAR_HEIGHT;
@@ -69,9 +73,33 @@ export function renderHtml(config: ResolvedConfig): string {
 <link rel="stylesheet" href="/wterm.css">
 <style>
   html, body { margin: 0; padding: 0; background: ${config.marginFill}; overflow: hidden; }
-  #frame {
+  #stage {
     position: absolute;
     left: ${config.margin}px; top: ${config.margin}px;
+    display: flex; align-items: stretch; gap: ${BROWSER_GAP}px;
+  }
+  #browser {
+    width: ${config.browser?.width ?? 0}px;
+    background: #ffffff;
+    border-radius: ${config.borderRadius}px;
+    overflow: hidden;
+    display: ${config.browser ? "flex" : "none"};
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  #browser-bar {
+    height: ${BROWSER_BAR}px; flex: none;
+    display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    background: #e9e9ec; color: #444; font: 12px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  #browser-bar .bdot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  #browser-url {
+    flex: 1; margin-left: 8px; background: #fff; border-radius: 6px; padding: 3px 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; color: #333;
+  }
+  #bframe { display: block; width: 100%; flex: 1; object-fit: cover; object-position: top; background: #fff; }
+  #frame {
+    position: relative;
     background: ${theme.background};
     border-radius: ${config.borderRadius}px;
     padding: ${config.padding}px;
@@ -104,9 +132,22 @@ export function renderHtml(config: ResolvedConfig): string {
 <style id="blink"></style>
 </head>
 <body>
+<div id="stage">
 <div id="frame">
   ${windowBarHtml(config)}
   <div id="term"></div>
+</div>
+${
+  config.browser
+    ? `<div id="browser">
+  <div id="browser-bar">
+    <span class="bdot" style="background:#ff5f57"></span><span class="bdot" style="background:#febc2e"></span><span class="bdot" style="background:#28c840"></span>
+    <span id="browser-url">${escapeHtml(config.browser.title ?? config.browser.url ?? "")}</span>
+  </div>
+  <img id="bframe" alt="" />
+</div>`
+    : ""
+}
 </div>
 <script type="module" src="/app.js"></script>
 </body>

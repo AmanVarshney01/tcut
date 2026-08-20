@@ -76,6 +76,15 @@ export function resolveConfig(config: VideoConfig): ResolvedConfig {
       blink: config.cursor?.blink ?? true,
       period: config.cursor?.period ?? 1000,
     },
+    ...(config.browser && {
+      browser: {
+        url: config.browser.url,
+        title: config.browser.title,
+        width: config.browser.width ?? 720,
+        height: config.browser.height ?? 0,
+        fps: config.browser.fps ?? 10,
+      },
+    }),
     padding,
     margin,
     marginFill: config.marginFill ?? theme.background,

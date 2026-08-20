@@ -1,10 +1,10 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { readCast, writeCast } from "./cast";
 import { applyOverrides, resolveConfig } from "./config";
 import { record } from "./recorder";
 import { renderOutputs, type RenderResult } from "./render";
-import type { RecordOptions, Recording, RenderOptions, ResolvedConfig, Script, VideoConfig } from "./types";
+import type { CastEvent, RecordOptions, Recording, RenderOptions, ResolvedConfig, Script, VideoConfig } from "./types";
 
 export interface VideoRecordOptions extends RecordOptions {
   /** Re-record even if a cached cast matches. */
@@ -28,6 +28,27 @@ const RECORD_KEYS: (keyof ResolvedConfig)[] = [
   "shell", "prompt", "promptPattern", "cwd", "env", "cols", "rows", "fps",
   "typingSpeed", "typingJitter", "seed", "waitTimeout", "endPause", "quantize", "core",
 ];
+
+/**
+ * Write captured browser frames beside the cast (`<name>.browser/0001.png`) and merge them into the event
+ * stream as `b` events whose data is the path relative to the cast file.
+ */
+export async function attachBrowserFrames(recording: Recording, castPath: string): Promise<void> {
+  const frames = recording.browserFrames;
+  if (!frames || frames.length === 0) return;
+  const dirName = `${path.basename(castPath).replace(/\.cast$/, "")}.browser`;
+  const dir = path.join(path.dirname(castPath), dirName);
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+  const events: CastEvent[] = [];
+  for (const [i, frame] of frames.entries()) {
+    const name = `${String(i).padStart(4, "0")}.png`;
+    await Bun.write(path.join(dir, name), frame.png);
+    events.push([frame.time, "b", `${dirName}/${name}`]);
+  }
+  recording.events = [...recording.events, ...events].sort((a, b) => a[0] - b[0]);
+  delete recording.browserFrames;
+}
 
 export class Video {
   readonly config: ResolvedConfig;
@@ -80,8 +101,11 @@ export class Video {
     }
     const recording = await record(this.config, this.script, opts);
     recording.header.scriptHash = await this.scriptHash();
-    await mkdir(path.dirname(path.resolve(this.config.cast)), { recursive: true });
+    const castPath = path.resolve(this.config.cast);
+    await mkdir(path.dirname(castPath), { recursive: true });
+    await attachBrowserFrames(recording, castPath);
     await writeCast(this.config.cast, recording);
+    recording.source = castPath;
     return recording;
   }
 

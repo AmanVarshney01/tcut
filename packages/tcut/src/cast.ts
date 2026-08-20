@@ -17,7 +17,9 @@ export function parseCast(text: string): Recording {
   for (let i = 1; i < lines.length; i++) {
     const parsed = JSON.parse(lines[i]!) as unknown;
     if (!Array.isArray(parsed) || parsed.length < 3) throw new Error(`Malformed cast event on line ${i + 1}`);
-    events.push([Number(parsed[0]), parsed[1] as CastEvent[1], String(parsed[2])]);
+    const type = parsed[1] as CastEvent[1];
+    if (!["o", "i", "r", "m", "b"].includes(type)) continue; // tolerate unknown asciicast event types
+    events.push([Number(parsed[0]), type, String(parsed[2])]);
   }
   return { header, events };
 }
@@ -27,9 +29,12 @@ export async function writeCast(file: string, rec: Recording): Promise<void> {
 }
 
 export async function readCast(file: string): Promise<Recording> {
-  const f = Bun.file(path.resolve(file));
+  const abs = path.resolve(file);
+  const f = Bun.file(abs);
   if (!(await f.exists())) throw new Error(`Cast file not found: ${file}`);
-  return parseCast(await f.text());
+  const rec = parseCast(await f.text());
+  rec.source = abs;
+  return rec;
 }
 
 export const MARKER = {

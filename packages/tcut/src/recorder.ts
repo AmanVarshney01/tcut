@@ -1,8 +1,11 @@
 import { MARKER } from "./cast";
+import { WINDOW_BAR_HEIGHT, estimateCell } from "./config";
 import { formatMs, toMs } from "./duration";
 import { altSequence, ctrlSequence, keySequence, shiftSequence, wheelSequence } from "./keys";
 import { Screen } from "./screen";
 import type {
+  BrowserFrame,
+  BrowserSession,
   CastEvent,
   Duration,
   KeyName,
@@ -149,6 +152,80 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
   screen.onResponse = (response) => {
     if (!exited && !terminal.closed) terminal.write(response);
   };
+
+  // Optional browser pane: a WebView sampled on the recording clock; only changed frames are kept.
+  let browserSession: (BrowserSession & { frames: BrowserFrame[]; stop(): Promise<void> }) | null = null;
+  if (config.browser) {
+    if (typeof Bun.WebView !== "function") throw new Error("The browser pane needs Bun.WebView (Bun >= 1.4).");
+    const bcfg = config.browser;
+    // Default pane height: what the terminal window will measure (estimated from the font metrics).
+    const est = estimateCell(config.font);
+    const paneH = bcfg.height || Math.round(config.rows * est.h + config.padding * 2 + (config.windowBar === "none" ? 0 : WINDOW_BAR_HEIGHT));
+    const view = new Bun.WebView({ width: bcfg.width, height: paneH });
+    const frames: BrowserFrame[] = [];
+    let currentUrl = bcfg.url ?? "about:blank";
+    let lastHash = "";
+    let running = true;
+    const sampler = (async () => {
+      while (running) {
+        try {
+          const png = (await view.screenshot({ encoding: "buffer" })) as Uint8Array;
+          const hash = Bun.hash(png).toString(16);
+          if (hash !== lastHash) {
+            lastHash = hash;
+            frames.push({ time: stamp(), png });
+          }
+        } catch {
+          /* view busy or closed */
+        }
+        await Bun.sleep(1000 / bcfg.fps);
+      }
+    })();
+    const goto = async (url: string): Promise<void> => {
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 20; attempt++) {
+        try {
+          await view.navigate(url);
+          currentUrl = url;
+          return;
+        } catch (err) {
+          lastError = err;
+          await Bun.sleep(250); // the server may still be starting
+        }
+      }
+      throw new Error(`browser.goto(${url}) failed: ${String(lastError)}`);
+    };
+    browserSession = {
+      frames,
+      get url() {
+        return currentUrl;
+      },
+      goto,
+      async waitFor(pattern, waitOpts = {}) {
+        const regex = toRegExp(pattern);
+        const deadline = performance.now() + toMs(waitOpts.timeout, config.waitTimeout);
+        for (;;) {
+          const text = String((await view.evaluate("document.body ? document.body.innerText : ''").catch(() => "")) ?? "");
+          if (regex.test(text)) return;
+          if (performance.now() > deadline) throw new WaitTimeoutError(`${regex} in the browser page`, toMs(waitOpts.timeout, config.waitTimeout), text.slice(0, 2000));
+          await Bun.sleep(150);
+        }
+      },
+      click: (selector) => view.click(selector),
+      reload: () => view.reload(),
+      evaluate: (js) => view.evaluate(js),
+      async stop() {
+        running = false;
+        await sampler;
+        try {
+          view.close();
+        } catch {
+          /* closed */
+        }
+      },
+    };
+    if (bcfg.url) await goto(bcfg.url).catch((err) => log(String(err)));
+  }
 
   const sleep = async (duration: Duration): Promise<void> => {
     const ms = toMs(duration);
@@ -334,6 +411,10 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
       await screen.settle();
     },
     clear: () => run("clear"),
+    get browser(): BrowserSession {
+      if (!browserSession) throw new Error("t.browser needs `browser: { url }` in the video config.");
+      return browserSession;
+    },
     screen: () => screen.screen(),
     line: () => screen.line(),
     cursor: () => screen.cursor(),
@@ -361,6 +442,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     if (config.endPause > 0 && !fast) await Bun.sleep(config.endPause);
     push("m", MARKER.end);
   } finally {
+    await browserSession?.stop();
     try {
       terminal.close();
     } catch {
@@ -384,5 +466,6 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
       bunVideo: config,
     },
     events,
+    ...(browserSession && { browserFrames: browserSession.frames }),
   };
 }

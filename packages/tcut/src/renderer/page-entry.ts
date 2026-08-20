@@ -72,10 +72,27 @@ const api = {
     frame.style.width = `${frameW}px`;
     frame.style.height = `${frameH}px`;
     if (padX !== undefined && padY !== undefined) frame.style.padding = `${padY}px ${padX}px`;
+    const browser = document.getElementById("browser");
+    if (browser) browser.style.height = `${frameH}px`;
     const el = document.getElementById("term")!;
     el.style.width = `${termW}px`;
     el.style.height = `${termH}px`;
     return true;
+  },
+
+  /** Show a captured browser frame (served by the renderer) and wait until it has loaded and painted. */
+  browserFrame(url: string, label?: string): Promise<boolean> {
+    const img = document.getElementById("bframe") as HTMLImageElement | null;
+    if (!img) return Promise.resolve(false);
+    if (label !== undefined) {
+      const bar = document.getElementById("browser-url");
+      if (bar) bar.textContent = label;
+    }
+    return new Promise((resolve) => {
+      img.onload = () => paint().then(() => resolve(true));
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
   },
 
   /** Fetch a JSON array of events from `url` and apply them, then wait for a paint. */

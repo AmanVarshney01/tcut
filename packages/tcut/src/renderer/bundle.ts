@@ -43,9 +43,15 @@ async function embeddedAssets(): Promise<PageAssets | null> {
   }
 }
 
-/** Prebuilt assets (embedded in the compiled binary) when present, otherwise built at runtime with Bun.build. */
+/** True inside a `bun build --compile` binary, where sources live on the virtual /$bunfs filesystem. */
+const isCompiled = import.meta.dir.startsWith("/$bunfs");
+
+/**
+ * Prebuilt assets in the compiled binary; otherwise built at runtime with Bun.build so edits to the page entries
+ * take effect immediately (prebuilt files in src/renderer/generated/ could be stale during development).
+ */
 async function loadAssets(): Promise<PageAssets> {
-  const embedded = await embeddedAssets();
+  const embedded = isCompiled ? await embeddedAssets() : null;
   if (embedded) return embedded;
   const [js, playerJs] = await Promise.all([bundle("page-entry.ts"), bundle("player-entry.ts")]);
   return {

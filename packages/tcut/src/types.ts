@@ -48,6 +48,30 @@ export interface FontConfig {
   letterSpacing?: number;
 }
 
+/** A browser window recorded next to the terminal (Bun.WebView). */
+export interface BrowserConfig {
+  /** Page to open when recording starts (may also be opened later with `t.browser.goto`). */
+  url?: string;
+  /** Pane size in px. Default 720 × the terminal frame height. */
+  width?: number;
+  height?: number;
+  /** How often the page is sampled while recording. Default 10. */
+  fps?: number;
+  /** Text shown in the browser window's address bar. Default: the current URL. */
+  title?: string;
+}
+
+/** Control of the recorded browser window. */
+export interface BrowserSession {
+  goto(url: string): Promise<void>;
+  /** Wait until the page's visible text matches. */
+  waitFor(pattern: RegExp | string, opts?: { timeout?: Duration }): Promise<void>;
+  click(selector: string): Promise<void>;
+  reload(): Promise<void>;
+  evaluate(script: string): Promise<unknown>;
+  readonly url: string;
+}
+
 export interface CursorConfig {
   /** Default true. Blink is driven by the render clock, so it is deterministic. */
   blink?: boolean;
@@ -109,6 +133,8 @@ export interface VideoConfig {
   font?: FontConfig;
   theme?: ThemeName | Theme;
   cursor?: CursorConfig;
+  /** Record a browser window beside the terminal. */
+  browser?: BrowserConfig;
   /** Padding inside the window, px. Default 24. */
   padding?: number;
   /** Space around the window, px. Default 0. */
@@ -149,6 +175,7 @@ export interface ResolvedConfig {
   font: Required<FontConfig>;
   theme: Theme;
   cursor: Required<CursorConfig>;
+  browser?: Required<Omit<BrowserConfig, "url" | "title">> & Pick<BrowserConfig, "url" | "title">;
   padding: number;
   margin: number;
   marginFill: string;
@@ -244,6 +271,8 @@ export interface TerminalSession {
   resize(cols: number, rows: number): Promise<void>;
   /** Shorthand for `run("clear")`. */
   clear(): Promise<void>;
+  /** The recorded browser window; throws if `browser` is not configured. */
+  readonly browser: BrowserSession;
 
   /** Current visible screen as text (rows joined by "\n"). */
   screen(): string;
@@ -257,7 +286,13 @@ export interface TerminalSession {
 
 export type Script = (t: TerminalSession) => Promise<void> | void;
 
-export type CastEventType = "o" | "i" | "r" | "m";
+/** o = output, i = input, r = resize, m = marker, b = browser frame (path relative to the cast file). */
+export type CastEventType = "o" | "i" | "r" | "m" | "b";
+
+export interface BrowserFrame {
+  time: number;
+  png: Uint8Array;
+}
 export type CastEvent = [time: number, type: CastEventType, data: string];
 
 export interface CastHeader {
@@ -276,6 +311,10 @@ export interface CastHeader {
 export interface Recording {
   header: CastHeader;
   events: CastEvent[];
+  /** Absolute path of the cast file this recording was read from / written to; resolves `b` event paths. */
+  source?: string;
+  /** Browser frames captured during recording, before they are written beside the cast. */
+  browserFrames?: BrowserFrame[];
 }
 
 export interface RenderProgress {
