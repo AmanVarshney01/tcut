@@ -12,6 +12,9 @@ jobs:
   release:
     runs-on: macos-latest
     timeout-minutes: 30
+    env:
+      # Empty unless the NPM_TOKEN repository secret is configured (Settings → Secrets → Actions).
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,9 +45,8 @@ jobs:
             --generate-notes \
             dist/tcut-* dist/SHA256SUMS
 
-      # Runs only when an NPM_TOKEN repository secret exists (Settings → Secrets → Actions).
       - name: Publish to npm
-        if: ${{ secrets.NPM_TOKEN != '' }}
+        if: ${{ env.NPM_TOKEN != '' }}
         env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{ env.NPM_TOKEN }}
         run: bun publish --access public
