@@ -97,10 +97,14 @@ export async function render(
       width: config.width,
       height: config.height,
     });
-    const { frameW, frameH, padX, padY, height } = fit;
-    // A browser pane sits to the right of the terminal window and adds to the canvas width.
-    const paneW = hasBrowser && config.browser ? BROWSER_GAP + config.browser.width : 0;
-    const width = paneW ? (fit.width + paneW) % 2 === 0 ? fit.width + paneW : fit.width + paneW + 1 : fit.width;
+    const { frameW, frameH, padX, padY } = fit;
+    // The browser pane extends the canvas sideways (left/right) or vertically (top/bottom).
+    const even = (n: number) => (n % 2 === 0 ? n : n + 1);
+    const stacked = config.browser?.position === "top" || config.browser?.position === "bottom";
+    const extraW = hasBrowser && config.browser && !stacked ? BROWSER_GAP + config.browser.width : 0;
+    const extraH = hasBrowser && config.browser && stacked ? BROWSER_GAP + (config.browser.height || 480) : 0;
+    const width = even(fit.width + extraW);
+    const height = even(fit.height + extraH);
     await view.evaluate(`window.__vt.layout(${frameW}, ${frameH}, ${termW}, ${termH}, ${padX}, ${padY})`);
     await view.resize(width, height);
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");

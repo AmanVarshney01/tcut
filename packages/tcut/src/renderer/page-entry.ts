@@ -73,7 +73,12 @@ const api = {
     frame.style.height = `${frameH}px`;
     if (padX !== undefined && padY !== undefined) frame.style.padding = `${padY}px ${padX}px`;
     const browser = document.getElementById("browser");
-    if (browser) browser.style.height = `${frameH}px`;
+    const stage = document.getElementById("stage");
+    const stacked = stage ? /column/.test(getComputedStyle(stage).flexDirection) : false;
+    if (browser) {
+      if (stacked) browser.style.width = `${frameW}px`;
+      else browser.style.height = `${frameH}px`;
+    }
     const el = document.getElementById("term")!;
     el.style.width = `${termW}px`;
     el.style.height = `${termH}px`;

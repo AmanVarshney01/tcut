@@ -59,6 +59,8 @@ export interface BrowserConfig {
   fps?: number;
   /** Text shown in the browser window's address bar. Default: the current URL. */
   title?: string;
+  /** Where the browser window sits relative to the terminal. Default "right". */
+  position?: "right" | "left" | "top" | "bottom";
 }
 
 /** Control of the recorded browser window. */
