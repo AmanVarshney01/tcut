@@ -4,7 +4,7 @@ import { defineConfig, passthroughImageService } from "astro/config";
 
 // Deployed to Cloudflare Workers (static assets) with Alchemy — see packages/infra/alchemy.run.ts.
 // SITE is the public origin used for canonical/OG URLs; BASE_PATH only matters for sub-path hosting.
-const site = process.env.SITE ?? "https://tcut-web-production-dybtqf7ubu6k5hel.amanvarshney.workers.dev";
+const site = process.env.SITE ?? "https://tcut.amanv.dev";
 const base = process.env.BASE_PATH ?? "/";
 
 export default defineConfig({

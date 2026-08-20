@@ -12,7 +12,7 @@ Script terminal sessions in **TypeScript**, render them to **reproducible** MP4 
 bunx termcut init demo     # the npm package is `termcut`, the command is `tcut`
 ```
 
-**Website:** https://tcut-web-production-dybtqf7ubu6k5hel.amanvarshney.workers.dev · **Docs & API:** [`packages/tcut/README.md`](packages/tcut/README.md) · **Binaries:** [Releases](https://github.com/AmanVarshney01/tcut/releases)
+**Website:** https://tcut.amanv.dev · **Docs & API:** [`packages/tcut/README.md`](packages/tcut/README.md) · **Binaries:** [Releases](https://github.com/AmanVarshney01/tcut/releases)
 
 ## Repository layout
 
