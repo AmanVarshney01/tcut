@@ -42,42 +42,16 @@ html {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  scroll-behavior: smooth;
-}
-html,
-body,
-.card,
-.copy-cmd {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-@media (prefers-reduced-motion: reduce) {
-  html,
-  body,
-  .card,
-  .copy-cmd {
-    transition: none;
-  }
-}
-
-/* Theme toggle: shows the icon for the mode you'd switch to. */
-.theme-toggle .icon-moon { display: inline; }
-.theme-toggle .icon-sun { display: none; }
-:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
-:root[data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
-
-/* Dark desk: the demo terminal needs a hairline so it doesn't dissolve into the background. */
-:root[data-theme="dark"] .demo-svg {
-  outline: 1px solid var(--color-line);
 }
 
 body {
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 ::selection {
   background: var(--color-amber);
-  color: var(--color-ink);
+  color: #14181d;
 }
 
 :focus-visible {
@@ -86,91 +60,60 @@ body {
   border-radius: 2px;
 }
 
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-ink-3);
-}
-
-.display {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-}
-
-.link {
+a {
   text-decoration: underline;
-  text-decoration-color: var(--color-amber);
-  text-decoration-thickness: 2px;
+  text-decoration-color: var(--color-line);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
-.link:hover {
-  color: var(--color-amber-deep);
+a:hover {
+  text-decoration-color: var(--color-amber);
 }
 
-.card {
-  background: var(--color-desk-2);
-  border: 1px solid var(--color-line);
-}
-
-.hairline {
-  border-top: 1px solid var(--color-line);
-}
-
-/* Astro's <Code> block */
-.astro-code {
+h1,
+h2 {
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--font-mono);
+}
+p code,
+li code,
+td code {
+  font-size: 0.92em;
+  background: var(--color-desk-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+/* Astro's <Code> block: always the mocha terminal colours, in both themes. */
+.astro-code {
+  font-size: 0.84rem;
   line-height: 1.6;
-  padding: 1.1rem 1.25rem;
-  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  border-radius: 8px;
   overflow-x: auto;
   background: var(--color-mocha) !important;
 }
-.astro-code code {
-  counter-reset: line;
-}
 
-/* The hero demo is tcut's own animated SVG; honour reduced motion by freezing it on its first frame. */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .demo-svg svg .strip {
-    animation-play-state: paused !important;
-  }
-}
-
+/* The demo is tcut's own animated SVG; reduced motion freezes it on its first frame. */
 .demo-svg svg {
   display: block;
   width: 100%;
   height: auto;
 }
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.rise {
-  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-.rise-2 {
-  animation-delay: 0.12s;
-}
-.rise-3 {
-  animation-delay: 0.24s;
-}
 @media (prefers-reduced-motion: reduce) {
-  .rise {
-    animation: none;
+  .demo-svg svg .strip {
+    animation-play-state: paused !important;
   }
 }
+
+.theme-toggle .icon-moon { display: inline; }
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: inline; }

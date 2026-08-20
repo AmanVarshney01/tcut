@@ -1,72 +1,141 @@
 ---
 import { Code } from "astro:components";
-import { Image } from "astro:assets";
 import Layout from "../layouts/Layout.astro";
 import CopyCommand from "../components/CopyCommand.astro";
-import FilmStrip from "../components/FilmStrip.astro";
 import demoSvg from "../assets/demo.svg?raw";
-import demoPng from "../assets/demo.png";
 import facts from "../assets/facts.json";
 import btsGif from "../assets/examples/better-t-stack.gif";
+import claudeGif from "../assets/examples/claude-code.gif";
+import lazygitGif from "../assets/examples/lazygit.gif";
 import aiGif from "../assets/examples/ai-agents.gif";
-import readmeScript from "../../../../packages/tcut/examples/readme.ts?raw";
 
 const GITHUB = "https://github.com/AmanVarshney01/tcut";
 const NPM = "https://www.npmjs.com/package/termcut";
-const README = `${GITHUB}#readme`;
-const RELEASES = `${GITHUB}/releases`;
+const REFERENCE = `${GITHUB}/blob/main/packages/tcut/docs/REFERENCE.md`;
+const EXAMPLES = `${GITHUB}/tree/main/packages/tcut/examples`;
 
-const kb = (n: number) => `${Math.round(n / 1024)} KB`;
+const script = `import { defineVideo } from "tcut";
 
-// Strip the "Produces the media…" comment; the page says that itself.
-const script = readmeScript.replace(/^\/\/ Produces.*\n/m, "");
+export default defineVideo({ output: ["demo.mp4", "demo.gif"] }, async (t) => {
+  await t.run("bun --version");        // type, Enter, wait for the prompt
+  await t.run("ls -la");
+  await t.expect(/package\\.json/);     // assert on the screen
+  await t.sleep("1.5s");
+});`;
 
-const outputs = [
-  { ext: ".mp4 .webm", via: "ffmpeg", note: "H.264 / VP9, even dimensions, faststart" },
-  { ext: ".gif .webp", via: "ffmpeg", note: "palette-optimised GIF, animated WebP" },
-  { ext: ".svg", via: "nothing", note: "animated vector, built from the cell grid — crisp at any size, tiny" },
-  { ext: ".html", via: "nothing", note: "single-file player with play / pause / loop" },
-  { ext: ".png .jpg", via: "WebView", note: "the final frame; screenshot() for any moment" },
-  { ext: "frames/", via: "WebView", note: "one PNG per frame" },
-  { ext: ".cast", via: "always", note: "asciicast v2 — plays in asciinema, re-renders forever" },
-];
-
-const compare = [
-  ["Script format", "a .tape DSL", "TypeScript — loops, imports, shared scenes, assertions"],
-  ["Waiting for output", "regex on raw bytes", "run() / wait() / expect() read the rendered screen of a headless Ghostty terminal"],
-  ["Determinism", "live screenshots; depends on machine speed", "record once to .cast, render on a virtual clock — identical frames anywhere"],
-  ["Re-theme a demo", "run everything again", "tcut render demo.cast --theme dracula — no shell is spawned"],
-  ["Outputs", "mp4 · gif · webm · png frames", "+ animated SVG · HTML player · PNG/JPG stills; SVG and HTML need no ffmpeg or browser"],
-  ["As tests", "—", "tcut test runs scripts fast; exit code follows expect()"],
-  ["Record live", "vhs record → editable .tape", "tcut rec → exact .cast + editable .video.ts"],
-  ["Themes", "~300 named + JSON", "607 from Ghostty's collection, loose name matching, or your own object"],
-  ["Sharing", "vhs publish → vhs.charm.sh", "tcut publish → your own S3-compatible bucket (RustFS, MinIO, R2, S3); no hosted service"],
-  ["Under the hood", "ttyd + Chrome + ffmpeg", "Bun.Terminal + Ghostty (WASM) + Bun.WebView; ffmpeg only for video containers"],
-];
-
-const requirements = [
-  ["run tcut", "Bun ≥ 1.4 (bun add -g termcut), or the standalone binary — Bun is embedded"],
-  ["record · tcut test", "a shell (bash, zsh, fish or sh) and the tools your script runs. No browser, no ffmpeg"],
-  ["render .svg · .html", "nothing else"],
-  ["render .png · .jpg · frames/", "a WebView — macOS: built in. Linux / Windows: Chrome, Chromium, Edge or Brave installed"],
-  ["render .mp4 · .gif · .webm", "the WebView above + ffmpeg"],
-  ["render .webp", "an ffmpeg with libwebp — Homebrew: brew install ffmpeg-full (found automatically)"],
+const examples = [
+  { src: btsGif, alt: "bun create better-t-stack answered with arrow keys", label: "bun create better-t-stack, driven with arrow keys" },
+  { src: claudeGif, alt: "Claude Code's interactive TUI editing a file", label: "Claude Code, the interactive TUI, end to end" },
+  { src: lazygitGif, alt: "lazygit navigated with the keyboard", label: "lazygit" },
+  { src: aiGif, alt: "claude -p answering, codex exec editing a file", label: "claude -p and codex exec" },
 ];
 ---
 
 <Layout>
-  <header class="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-    <a href={import.meta.env.BASE_URL} class="display text-xl" aria-label="tcut home">tcut<span class="text-amber">_</span></a>
-    <nav class="flex items-center gap-5 font-mono text-sm text-ink-2" aria-label="Primary">
-      <a class="hover:text-ink" href={README}>README</a>
-      <a class="hover:text-ink" href={NPM}>npm</a>
-      <a class="hover:text-ink" href={GITHUB}>GitHub</a>
-      <button type="button" class="theme-toggle -mr-1 rounded-md border border-line p-1.5 hover:bg-desk-2 hover:text-ink" aria-label="Switch between light and dark theme" title="Theme">
-        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg>
-      </button>
-    </nav>
-  </header>
+  <div class="mx-auto max-w-[46rem] px-5 py-10 sm:py-14">
+    <header class="flex items-center justify-between">
+      <a href={import.meta.env.BASE_URL} class="font-mono text-lg font-medium no-underline" aria-label="tcut home">tcut<span class="text-amber">_</span></a>
+      <nav class="flex items-center gap-5 font-mono text-sm text-ink-2" aria-label="Primary">
+        <a class="no-underline hover:text-ink" href={GITHUB}>GitHub</a>
+        <a class="no-underline hover:text-ink" href={NPM}>npm</a>
+        <a class="no-underline hover:text-ink" href={REFERENCE}>Reference</a>
+        <button type="button" class="theme-toggle rounded-md border border-line p-1.5 hover:bg-desk-2 hover:text-ink" aria-label="Switch between light and dark theme" title="Theme">
+          <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <main class="mt-14 space-y-16">
+      <section>
+        <h1 class="text-[1.6rem] leading-tight sm:text-[1.85rem]">Turn a terminal session into a video.</h1>
+        <p class="mt-3 max-w-[40rem] text-ink-2">
+          Record it live or script it in TypeScript. Render to MP4, GIF, WebM, SVG or HTML. Same recording, same pixels, every time.
+        </p>
+        <div class="mt-6">
+          <CopyCommand command="bun add -g termcut" />
+        </div>
+        <p class="mt-2 text-sm text-ink-3">Bun ≥ 1.4. ffmpeg for MP4/GIF; SVG and HTML need nothing else. Or a <a href={`${GITHUB}/releases`}>standalone binary</a>.</p>
+      </section>
+
+      <figure>
+        <div class="demo-svg overflow-hidden rounded-lg" set:html={demoSvg} />
+        <figcaption class="mt-2 font-mono text-xs text-ink-3">
+          demo.svg, {Math.round(facts.svgBytes / 1024)} KB, rendered by tcut from a 20-line script. {facts.totalFrames} frames, {facts.uniqueFrames} unique.
+        </figcaption>
+      </figure>
+
+      <section class="space-y-8">
+        <h2 class="text-xl">Record</h2>
+
+        <div>
+          <p class="text-ink-2">Live. A clean shell opens; type; exit. You get the recording and a script of what you typed.</p>
+          <div class="mt-3"><Code code={`tcut rec -o demo.gif\ntcut rec -o demo.mp4 -- npm create vite   # just one command`} lang="sh" theme="catppuccin-mocha" /></div>
+        </div>
+
+        <div>
+          <p class="text-ink-2">
+            Scripted. Plain TypeScript, so loops, helpers and imports work. <code>run()</code> waits for your prompt to come back, not for a timer; <code>expect()</code> makes the demo a test.
+          </p>
+          <div class="mt-3"><Code code={script} lang="ts" theme="catppuccin-mocha" /></div>
+          <div class="mt-3"><Code code={`tcut demo.video.ts`} lang="sh" theme="catppuccin-mocha" /></div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-xl">Render again</h2>
+        <p class="mt-3 text-ink-2">
+          Recording and rendering are separate. Every recording is an asciicast; frames are computed on a virtual clock. Change the theme, the size or the format without running anything again. 607 themes, Ghostty's collection.
+        </p>
+        <div class="mt-3">
+          <Code
+            code={`tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg -o demo.html\ntcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4\ntcut publish demo.gif     # to your own S3-compatible bucket`}
+            lang="sh"
+            theme="catppuccin-mocha"
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-xl">Examples</h2>
+        <p class="mt-3 text-ink-2">
+          tcut waits on the rendered screen, so it can drive anything a person can: menus, prompts, agents that think for ten seconds. All recorded by tcut; scripts in <a href={EXAMPLES}>examples/</a>.
+        </p>
+        <div class="mt-5 grid gap-6 sm:grid-cols-2">
+          {
+            examples.map((e) => (
+              <figure>
+                <img src={e.src.src} width={e.src.width} height={e.src.height} alt={e.alt} loading="lazy" class="block aspect-[16/10] w-full rounded-lg object-cover object-top" />
+                <figcaption class="mt-2 font-mono text-xs text-ink-3">{e.label}</figcaption>
+              </figure>
+            ))
+          }
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-xl">How it works</h2>
+        <p class="mt-3 text-ink-2">
+          <code>Bun.Terminal</code> runs your shell in a PTY. Output is timestamped into the cast and fed to a headless <a href="https://ghostty.org">Ghostty</a> terminal (via <a href="https://github.com/vercel-labs/wterm">wterm</a>); that is how <code>run()</code> knows the prompt is back and <code>expect()</code> sees what you see.
+          Rendering replays the cast into the same terminal inside <code>Bun.WebView</code>, one frame per tick, and hands frames to ffmpeg. SVG and HTML are built straight from the terminal grid.
+          Inspired by <a href="https://github.com/charmbracelet/vhs">VHS</a>.
+        </p>
+        <p class="mt-3 text-ink-2">
+          Built for agents as much as people: no prompts, exit codes, <code>--json</code>, and an <a href="/llms.txt">llms.txt</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="mt-20 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 font-mono text-xs text-ink-3">
+      <span>tcut · MIT</span>
+      <span class="flex gap-4">
+        <a class="no-underline hover:text-ink" href={GITHUB}>GitHub</a>
+        <a class="no-underline hover:text-ink" href={NPM}>npm</a>
+        <a class="no-underline hover:text-ink" href={REFERENCE}>Reference</a>
+        <a class="no-underline hover:text-ink" href="/llms.txt">llms.txt</a>
+      </span>
+    </footer>
+  </div>
 
   <script>
     const toggle = document.querySelector<HTMLButtonElement>(".theme-toggle");
@@ -76,272 +145,4 @@ const requirements = [
       localStorage.setItem("tcut-theme", next);
     });
   </script>
-
-  <main>
-    <!-- Hero: the thesis is the output itself -->
-    <section class="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-8 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-14 lg:pt-14">
-      <div>
-        <p class="eyebrow rise">termcut 0.4.1 · Bun ≥ 1.4 · MIT</p>
-        <h1 class="display rise rise-2 mt-4 text-[2.6rem] sm:text-[3.4rem] lg:text-[3.6rem]">
-          Terminal videos,<br />written in TypeScript.
-        </h1>
-        <p class="rise rise-3 mt-6 max-w-[34ch] text-lg text-ink-2">
-          Record a session live, or script it. Render it anywhere — MP4, GIF, WebM, SVG, HTML — byte-for-byte the same every time.
-        </p>
-        <div class="rise rise-3 mt-8 flex flex-col gap-3">
-          <CopyCommand command="bun add -g termcut" primary />
-          <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
-            <span class="font-mono">tcut rec -o demo.gif</span>
-            <span aria-hidden="true">·</span>
-            <a class="link" href={RELEASES}>standalone binaries</a>
-            <span aria-hidden="true">·</span>
-            <a class="link" href={GITHUB}>source</a>
-          </div>
-        </div>
-      </div>
-
-      <figure class="rise rise-2 min-w-0">
-        <div class="demo-svg overflow-hidden rounded-xl shadow-[0_24px_60px_-20px_rgba(20,24,29,0.45)]" set:html={demoSvg} />
-        <figcaption class="mt-3 flex flex-wrap justify-between gap-2 font-mono text-xs text-ink-3">
-          <span>docs/demo.svg · {kb(facts.svgBytes)} · no JavaScript, no fonts embedded</span>
-          <span>rendered by tcut from the script below</span>
-        </figcaption>
-      </figure>
-    </section>
-
-    <!-- Signature: real frames, real cut -->
-    <section class="mx-auto max-w-6xl px-5 sm:px-8" aria-labelledby="strip-title">
-      <div class="hairline pt-10">
-        <p class="eyebrow">record ≠ render</p>
-        <h2 id="strip-title" class="display mt-3 max-w-[24ch] text-2xl sm:text-3xl">One recording. Every frame decided by a clock, not by how fast your laptop is.</h2>
-        <p class="mt-4 max-w-[60ch] text-ink-2">
-          tcut writes a standard asciicast while it drives the shell, then replays it on a virtual clock: frame <em>N</em> is the screen at <em>N</em>&nbsp;÷&nbsp;fps. Hidden setup is cut out of the timeline, unchanged frames are reused, and the same cast re-renders to any format or
-          theme without running a single command again.
-        </p>
-      </div>
-      <div class="mt-8">
-        <FilmStrip />
-      </div>
-    </section>
-
-    <!-- Script ↔ output -->
-    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="script-title">
-      <p class="eyebrow">the whole script</p>
-      <h2 id="script-title" class="display mt-3 text-2xl sm:text-3xl">This is everything that made the demo above.</h2>
-      <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <div class="min-w-0">
-          <Code code={script} lang="ts" theme="catppuccin-mocha" />
-        </div>
-        <div class="flex flex-col gap-6">
-          <div class="card rounded-xl p-5">
-            <p class="eyebrow">what the calls do</p>
-            <dl class="mt-4 space-y-4 text-[0.95rem]">
-              <div>
-                <dt class="font-mono text-ink">t.run(cmd)</dt>
-                <dd class="text-ink-2">types it, presses Enter, and returns when the prompt is back — it watches the actual screen, not a timer.</dd>
-              </div>
-              <div>
-                <dt class="font-mono text-ink">t.expect(/re/)</dt>
-                <dd class="text-ink-2">asserts against the screen. Fails loudly with a screen dump, so the demo is also an integration test.</dd>
-              </div>
-              <div>
-                <dt class="font-mono text-ink">t.hide(fn)</dt>
-                <dd class="text-ink-2">runs setup that keeps its effects but never appears in the video.</dd>
-              </div>
-              <div>
-                <dt class="font-mono text-ink">typingJitter + seed</dt>
-                <dd class="text-ink-2">human-looking typing from a seeded generator — reproducible, like everything else.</dd>
-              </div>
-            </dl>
-          </div>
-          <figure class="card overflow-hidden rounded-xl">
-            <Image src={demoPng} alt="Final frame of the demo as a PNG still" width={demoPng.width / 2} loading="lazy" />
-            <figcaption class="flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 font-mono text-xs text-ink-3">
-              <span>demo.png {kb(facts.pngBytes)}</span>
-              <span>demo.gif {kb(facts.gifBytes)}</span>
-              <span>demo.svg {kb(facts.svgBytes)}</span>
-              <span>{facts.durationSeconds}s</span>
-            </figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <!-- Examples: TUIs and AI agents -->
-    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="ex-title">
-      <div class="hairline pt-10">
-        <p class="eyebrow">examples</p>
-        <h2 id="ex-title" class="display mt-3 text-2xl sm:text-3xl">Interactive tools and AI agents, not just echo.</h2>
-        <p class="mt-4 max-w-[60ch] text-ink-2">
-          Because tcut waits on the rendered screen, it can drive anything a human can: menus, prompts, agents that take
-          ten seconds to think. Both recordings below are in the repo under
-          <a class="link" href={`${GITHUB}/tree/main/packages/tcut/examples`}>packages/tcut/examples</a>.
-        </p>
-      </div>
-      <div class="mt-8 grid gap-8 lg:grid-cols-2">
-        <figure class="card overflow-hidden rounded-xl">
-          <img src={btsGif.src} width={btsGif.width} height={btsGif.height} alt="Recording of bun create better-t-stack being answered with arrow keys and Enter" loading="lazy" class="block h-auto w-full" />
-          <figcaption class="px-5 py-4 text-[0.95rem] text-ink-2">
-            <span class="font-mono text-ink">better-t-stack.ts</span> — answers the <span class="font-mono text-ink">bun create better-t-stack</span>
-            prompts with <span class="font-mono text-ink">down()</span> / <span class="font-mono text-ink">enter()</span>, and picks the deployment by
-            reading the screen until the highlighted row says Cloudflare.
-          </figcaption>
-        </figure>
-        <figure class="card overflow-hidden rounded-xl">
-          <img src={aiGif.src} width={aiGif.width} height={aiGif.height} alt="Recording of Claude Code answering a question and Codex editing a file" loading="lazy" class="block h-auto w-full" />
-          <figcaption class="px-5 py-4 text-[0.95rem] text-ink-2">
-            <span class="font-mono text-ink">ai-agents.ts</span> — <span class="font-mono text-ink">claude -p</span> explains a file,
-            <span class="font-mono text-ink">codex exec</span> edits it. The model's words differ every recording; the rendered video never does.
-          </figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <!-- Outputs -->
-    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="out-title">
-      <div class="hairline pt-10">
-        <p class="eyebrow">outputs</p>
-        <h2 id="out-title" class="display mt-3 text-2xl sm:text-3xl">Pick by extension. Mix them in one run.</h2>
-      </div>
-      <ul class="mt-8 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
-        {
-          outputs.map((o) => (
-            <li class="flex flex-col gap-1 bg-desk-2 p-5">
-              <span class="font-mono text-lg text-ink">{o.ext}</span>
-              <span class="eyebrow">needs {o.via}</span>
-              <span class="mt-1 text-[0.95rem] text-ink-2">{o.note}</span>
-            </li>
-          ))
-        }
-        <li aria-hidden="true" class="hidden bg-desk-2 sm:block"></li>
-        <li aria-hidden="true" class="hidden bg-desk-2 lg:block"></li>
-      </ul>
-      <p class="mt-5 font-mono text-sm text-ink-2">
-        output: ["demo.mp4", "demo.gif", "demo.svg", "demo.html"] <span class="text-ink-3">— or</span> tcut render demo.cast -o demo.svg --theme "Gruvbox Dark" <span class="text-ink-3">— then</span> tcut publish demo.svg
-      </p>
-    </section>
-
-    <!-- Tests -->
-    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="test-title">
-      <div class="grid gap-8 lg:grid-cols-2 lg:items-start">
-        <div class="hairline pt-10">
-          <p class="eyebrow">tcut test</p>
-          <h2 id="test-title" class="display mt-3 text-2xl sm:text-3xl">Your demos are already integration tests.</h2>
-          <p class="mt-4 max-w-[56ch] text-ink-2">
-            <span class="font-mono text-ink">tcut test examples/</span> runs every script in fast mode — no typing delay, no sleeps — with no video
-            and no browser. Each <span class="font-mono text-ink">expect()</span> becomes an assertion against the real screen; the exit code tells CI
-            whether your README still works.
-          </p>
-        </div>
-        <div class="hairline pt-10 lg:pt-10">
-          <Code
-            code={`$ tcut test examples/
-TAP version 14
-1..2
-ok 1 - examples/demo.ts (412ms)
-not ok 2 - examples/release.ts (1803ms)
-  ---
-  Expected /v0\\.2\\.0/ on screen to match.
-  --- screen ---
-  > bun --version
-  1.4.0
-  >
-  ...
-
-# 1 passed, 1 failed`}
-            lang="text"
-            theme="catppuccin-mocha"
-          />
-        </div>
-      </div>
-    </section>
-
-    <!-- Compared with VHS -->
-    <section class="mx-auto max-w-6xl px-5 pt-20 sm:px-8" aria-labelledby="vhs-title">
-      <div class="hairline pt-10">
-        <p class="eyebrow">compared with VHS</p>
-        <h2 id="vhs-title" class="display mt-3 text-2xl sm:text-3xl">Same idea. Different answers.</h2>
-        <p class="mt-4 max-w-[60ch] text-ink-2">
-          <a class="link" href="https://github.com/charmbracelet/vhs">VHS</a> showed that terminal GIFs should be code. tcut keeps that and changes what the code
-          is, what it waits on, and what it produces.
-        </p>
-      </div>
-      <div class="mt-8 overflow-x-auto">
-        <table class="w-full min-w-[640px] border-collapse text-[0.95rem]">
-          <thead>
-            <tr class="eyebrow text-left">
-              <th class="border-b border-line py-3 pr-4 font-normal"> </th>
-              <th class="border-b border-line py-3 pr-4 font-normal">VHS</th>
-              <th class="border-b border-line py-3 font-normal text-ink">tcut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              compare.map(([k, vhs, us]) => (
-                <tr class="align-top">
-                  <th scope="row" class="border-b border-line py-3 pr-4 text-left font-mono text-sm font-normal text-ink">{k}</th>
-                  <td class="border-b border-line py-3 pr-4 text-ink-2">{vhs}</td>
-                  <td class="border-b border-line py-3 text-ink">{us}</td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Requirements + install -->
-    <section class="mx-auto max-w-6xl px-5 pb-24 pt-20 sm:px-8" aria-labelledby="req-title">
-      <div class="grid gap-10 lg:grid-cols-2">
-        <div class="hairline pt-10">
-          <p class="eyebrow">what your machine needs</p>
-          <h2 id="req-title" class="display mt-3 text-2xl sm:text-3xl">Only as much as the output you ask for.</h2>
-          <dl class="mt-6 divide-y divide-line border-y border-line">
-            {
-              requirements.map(([to, need]) => (
-                <div class="grid gap-1 py-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
-                  <dt class="font-mono text-sm text-ink">{to}</dt>
-                  <dd class="text-[0.95rem] text-ink-2">{need}</dd>
-                </div>
-              ))
-            }
-          </dl>
-          <p class="mt-4 text-sm text-ink-3">Verified on macOS. Linux and Windows binaries are cross-compiled and not yet exercised in CI.</p>
-        </div>
-        <div class="hairline pt-10">
-          <p class="eyebrow">install</p>
-          <h2 class="display mt-3 text-2xl sm:text-3xl">Three ways in.</h2>
-          <div class="mt-6 flex flex-col gap-4">
-            <div>
-              <p class="mb-2 text-sm text-ink-2">With Bun — the package is <span class="font-mono text-ink">termcut</span>, the command is <span class="font-mono text-ink">tcut</span>.</p>
-              <CopyCommand command="bun add -g termcut" />
-            </div>
-            <div>
-              <p class="mb-2 text-sm text-ink-2">Without installing anything.</p>
-              <CopyCommand command="bunx termcut init demo" />
-            </div>
-            <div>
-              <p class="mb-2 text-sm text-ink-2">Without Bun — a single binary for macOS, Linux or Windows from <a class="link" href={RELEASES}>Releases</a>.</p>
-              <CopyCommand command="curl -fsSL https://github.com/AmanVarshney01/tcut/releases/latest/download/tcut-0.4.1-darwin-arm64 -o tcut && chmod +x tcut" />
-            </div>
-          </div>
-          <p class="mt-6 text-[0.95rem] text-ink-2">
-            Then <span class="font-mono text-ink">tcut demo.video.ts</span>. The full API — every option of <span class="font-mono text-ink">defineVideo</span> and
-            the <span class="font-mono text-ink">t</span> object — is in the <a class="link" href={README}>README</a>.
-          </p>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="hairline">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8 font-mono text-xs text-ink-3 sm:px-8">
-      <span>tcut · MIT · made with Bun, wterm and libghostty</span>
-      <span class="flex gap-5">
-        <a class="hover:text-ink" href={GITHUB}>GitHub</a>
-        <a class="hover:text-ink" href={NPM}>npm</a>
-        <a class="hover:text-ink" href={`${GITHUB}/issues`}>Issues</a>
-      </span>
-    </div>
-  </footer>
 </Layout>
