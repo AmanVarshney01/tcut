@@ -92,7 +92,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
     stdin.on("data", onData);
   }
   process.on("SIGWINCH", onResize);
-  log(`recording ${setup.cmd.join(" ")} at ${cols}x${rows} — exit the shell to stop`);
+  log(`recording ${setup.cmd.join(" ")} at ${cols}×${rows} — ${opts.command ? "ends when the command exits" : "type exit to stop"}`);
 
   try {
     await Promise.race([exitedPromise, proc.exited]);

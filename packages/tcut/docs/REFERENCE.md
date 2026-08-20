@@ -18,7 +18,7 @@ tcut themes
 --font <family>  --font-size <px>  --line-height <x>  --letter-spacing <px>
 --fps <n>  --speed <x>  --padding <px>  --margin <px>  --margin-fill <color>  --radius <px>
 --window-bar <none|colorful|colorfulRight|rings|ringsRight>  --title <text>  --no-blink
---core <ghostty|lite>  --cast <path>  --record-only  --force  -q
+--core <ghostty|lite>  --cols <n>  --rows <n>  --cast <path>  --record-only  --force  -q
 ```
 
 ## Script reference

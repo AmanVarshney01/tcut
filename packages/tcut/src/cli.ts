@@ -44,6 +44,7 @@ Options (override the script's config):
       --window-bar <type>  none | colorful | colorfulRight | rings | ringsRight
       --title <text>       --no-blink
       --core <name>        ghostty | lite
+      --cols <n> --rows <n>  terminal size (rec: defaults to your terminal's size)
       --cast <path>        where to read/write the .cast
       --record-only        stop after writing the cast
       --force              ignore the cast cache and re-record
@@ -72,6 +73,8 @@ const { values, positionals } = parseArgs({
     title: { type: "string" },
     "no-blink": { type: "boolean" },
     core: { type: "string" },
+    cols: { type: "string" },
+    rows: { type: "string" },
     cast: { type: "string" },
     "record-only": { type: "boolean" },
     force: { type: "boolean" },
@@ -82,12 +85,19 @@ const { values, positionals } = parseArgs({
 });
 
 const quiet = values.quiet === true;
+const useColor = process.stdout.isTTY === true && !process.env.NO_COLOR;
+const paint = (code: string) => (s: string) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
+const green = paint("32");
+const dim = paint("2");
+const red = paint("31");
+
+// Status goes to stdout (plain informational output); only real errors go to stderr.
 const log = (msg: string) => {
-  if (!quiet) console.error(msg);
+  if (!quiet) process.stdout.write(`${msg}\n`);
 };
 
 function fail(message: string): never {
-  console.error(`error: ${message}`);
+  console.error(`${red("error:")} ${message}`);
   process.exit(1);
 }
 
@@ -123,6 +133,8 @@ function overridesFromFlags(): Partial<VideoConfig> {
     o.core = values.core as CoreName;
   }
   if (values.cast) o.cast = values.cast;
+  if (values.cols !== undefined) o.cols = num("cols");
+  if (values.rows !== undefined) o.rows = num("rows");
   return o;
 }
 
@@ -152,14 +164,14 @@ async function loadVideo(file: string): Promise<Video> {
 }
 
 function progressReporter(): (p: { frame: number; total: number }) => void {
-  if (quiet || !process.stderr.isTTY) return () => {};
+  if (quiet || !process.stdout.isTTY) return () => {};
   let last = -1;
   return ({ frame, total }) => {
     const pct = Math.floor((frame / total) * 100);
     if (pct === last && frame !== total) return;
     last = pct;
-    process.stderr.write(`\r  rendering ${frame}/${total} frames (${pct}%)`);
-    if (frame === total) process.stderr.write("\n");
+    process.stdout.write(`\r${dim(`  rendering ${frame}/${total} frames (${pct}%)`)}`);
+    if (frame === total) process.stdout.write("\n");
   };
 }
 
@@ -171,9 +183,11 @@ async function fileSize(file: string): Promise<string> {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+const ok = (what: string, detail = "") => log(`${green("✔")} ${what}${detail ? ` ${dim(detail)}` : ""}`);
+
 async function reportOutputs(outputs: string[], screenshots: string[]): Promise<void> {
-  for (const out of outputs) log(`✔ wrote ${out} ${await fileSize(out)}`);
-  for (const shot of screenshots) log(`✔ screenshot ${shot}`);
+  for (const out of outputs) ok(`wrote ${out}`, await fileSize(out));
+  for (const shot of screenshots) ok(`screenshot ${shot}`);
 }
 
 const TEMPLATES: Record<string, (name: string) => string> = {
@@ -288,28 +302,30 @@ async function main(): Promise<void> {
       const outputs = overrides.output ?? ["rec.mp4"];
       const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast });
       const command = rest.length > 0 ? rest : undefined;
-      const recording = await recordLive(config, { command, log });
+      // Size: --cols/--rows if given, else the terminal tcut runs in.
+      const recording = await recordLive(config, { command, log, cols: overrides.cols, rows: overrides.rows });
       await mkdir(path.dirname(path.resolve(config.cast)), { recursive: true });
       await writeCast(config.cast, recording);
-      log(`\n✔ wrote ${config.cast} (${recording.events.length} events, ${(recording.header.duration ?? 0).toFixed(1)}s)`);
+      log("");
+      ok(`wrote ${config.cast}`, `${recording.events.length} events, ${(recording.header.duration ?? 0).toFixed(1)}s`);
       if (values["record-only"]) return;
       const result = await renderOutputs(recording, config, progressReporter());
       await reportOutputs(result.outputs, result.screenshots);
-      log(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`);
+      log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
       return;
     }
     case "record": {
       if (!rest[0]) fail("record needs a script file");
       const video = await loadVideo(rest[0]);
       const rec = await video.record({ log, force: values.force });
-      log(`✔ ${rec.cached ? "reused" : "wrote"} ${video.config.cast} (${rec.events.length} events, ${(rec.header.duration ?? 0).toFixed(1)}s) in ${elapsed()}`);
+      ok(`${rec.cached ? "reused" : "wrote"} ${video.config.cast}`, `${rec.events.length} events, ${(rec.header.duration ?? 0).toFixed(1)}s, ${elapsed()}`);
       return;
     }
     case "render": {
       if (!rest[0]) fail("render needs a .cast file");
       const result = await renderCast(rest[0], overridesFromFlags(), progressReporter());
       await reportOutputs(result.outputs, result.screenshots);
-      log(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`);
+      log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
       return;
     }
     case "test": {
@@ -321,9 +337,9 @@ async function main(): Promise<void> {
     default: {
       const video = await loadVideo(first!);
       const result = await video.run({ log, force: values.force, recordOnly: values["record-only"], onProgress: progressReporter() });
-      log(`✔ ${result.cached ? "reused" : "wrote"} ${result.cast}`);
+      ok(`${result.cached ? "reused" : "wrote"} ${result.cast}`);
       await reportOutputs(result.outputs, result.screenshots);
-      if (!values["record-only"]) log(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`);
+      if (!values["record-only"]) log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
     }
   }
 }
