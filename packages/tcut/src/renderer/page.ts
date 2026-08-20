@@ -82,8 +82,8 @@ export function renderHtml(config: ResolvedConfig): string {
   ${
     config.browser?.position === "overlay"
       ? `#stage { display: block; }
-  #frame { position: absolute; left: 0; top: 0; z-index: 2; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
-  #browser { position: absolute; z-index: 1; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
+  #stage #frame { position: absolute; left: 0; top: 0; z-index: 2; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
+  #stage #browser { position: absolute; z-index: 1; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
   #stage.front-browser #browser { z-index: 3; }
   #stage.front-browser #frame { z-index: 1; }`
       : ""
