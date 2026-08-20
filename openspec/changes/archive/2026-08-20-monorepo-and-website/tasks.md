@@ -13,4 +13,4 @@
 
 ## 3. Ship
 
-- [ ] 3.1 Enable GitHub Pages (Actions source), push, deployment green, URL verified
+- [x] 3.1 Enable GitHub Pages (Actions source), push, deployment green, URL verified
