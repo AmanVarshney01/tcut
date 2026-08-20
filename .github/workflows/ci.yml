@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install ffmpeg
+        run: brew install ffmpeg
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Render demo
+        run: bun src/cli.ts examples/demo.ts -o out/demo.mp4 -o out/demo.gif -o out/demo.svg -o out/demo.html
+
+      - name: Build binary
+        run: bun run build
+
+      - name: Smoke-test binary from an empty directory
+        run: |
+          mkdir -p /tmp/empty && cp out/demo.cast /tmp/empty/demo.cast
+          cd /tmp/empty && "$GITHUB_WORKSPACE/dist/tcut" render demo.cast -o demo.svg -o demo.mp4
+          ls -la /tmp/empty
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-outputs
+          path: |
+            out/demo.mp4
+            out/demo.gif
+            out/demo.svg
+            out/demo.html
+            dist/tcut

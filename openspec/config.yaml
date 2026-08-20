@@ -1,0 +1,17 @@
+schema: spec-driven
+
+context: |
+  Project: tcut — script terminal sessions in TypeScript, render reproducible videos.
+  Runtime: Bun >= 1.4 only (Bun.Terminal PTY, Bun.WebView, Bun.build, Bun.serve). No Node-only APIs.
+  Emulator: @wterm/ghostty (libghostty WASM) via the wterm TerminalCore interface; @wterm/dom renders in Bun.WebView.
+  Video encoding: ffmpeg on PATH. Bun.Image is decode/resize/encode only (no text drawing, no raw pixels).
+  Prefer Bun built-ins over third-party deps; call out any new dependency explicitly.
+  Style: strict TypeScript, ESM, no default exports except script files, small modules under src/.
+  Architecture: record (PTY -> .cast) is separate from render (.cast -> frames -> ffmpeg); render must be deterministic.
+  Plan and measurements live in PLAN.md.
+
+rules:
+  proposal:
+    - Keep it under one page; list capabilities that map 1:1 to spec folders
+  tasks:
+    - Each task must be verifiable by running a command or inspecting an artifact

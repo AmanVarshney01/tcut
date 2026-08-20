@@ -1,0 +1,32 @@
+{
+  "name": "tcut",
+  "version": "0.1.0",
+  "description": "Script terminal sessions in TypeScript, render them to reproducible MP4/GIF/WebM/SVG with Bun.",
+  "type": "module",
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "tcut": "./src/cli.ts"
+  },
+  "scripts": {
+    "demo": "bun src/cli.ts examples/demo.ts",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test",
+    "build:assets": "bun scripts/build-assets.ts",
+    "build": "bun run build:assets && bun build --compile --minify src/cli.ts --outfile dist/tcut",
+    "prepare": "bun scripts/build-assets.ts"
+  },
+  "dependencies": {
+    "@wterm/core": "^0.3.4",
+    "@wterm/dom": "^0.3.4",
+    "@wterm/ghostty": "^0.3.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
