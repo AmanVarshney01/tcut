@@ -47,6 +47,8 @@ const Clip: React.FC<{ src: string; caption: string }> = ({ src, caption }) => {
 
 4. **Render**: `bunx remotion render <CompositionId> out/promo.mp4 --crf 15 --image-format png` for a high-quality master (PNG intermediates, near-lossless H.264). Match composition `fps` to the tcut clips to avoid resampling; check layout first with `bunx remotion still <Id> still.png --frame N` for one frame per scene.
 
+5. **Ship it as a web page too** (optional): the same composition runs live in the browser with `@remotion/player` — `<Player component={Promo} durationInFrames fps compositionWidth={1920} compositionHeight={1080} controls autoPlay loop initiallyMuted acknowledgeRemotionLicense style={{ width: "100%" }} />`. `<OffthreadVideo>` falls back to `<Video>` in the Player automatically. Keep clip URLs behind one helper (`staticFile(ASSET_BASE + path)`) so the project and the site can point at different folders, copy the clips into the site's `public/`, and load the same font (e.g. `@fontsource-variable/jetbrains-mono`). Titles become real DOM text and the whole video is scrubbable; tcut.amanv.dev/promo is an example.
+
 ## Design notes that make it look pro
 
 - Terminal clips are crisp text: never scale above 100%; scale down slightly (~85–95%) inside a framed card instead

@@ -81,7 +81,8 @@ const examples = [
       <figure>
         <div class="demo-svg overflow-hidden rounded-lg" set:html={demoSvg} />
         <figcaption class="mt-2 font-mono text-xs text-ink-3">
-          demo.svg, {Math.round(facts.svgBytes / 1024)} KB, rendered by tcut from a 20-line script. {facts.totalFrames} frames, {facts.uniqueFrames} unique.
+          demo.svg, {Math.round(facts.svgBytes / 1024)} KB — real text, not pixels: select it, copy it. tcut recording tcut, {facts.totalFrames} frames,{" "}
+          {facts.uniqueFrames} unique.
         </figcaption>
       </figure>
 

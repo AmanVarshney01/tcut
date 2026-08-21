@@ -1,11 +1,11 @@
 {
-  "durationSeconds": 6.7,
-  "totalFrames": 202,
-  "uniqueFrames": 47,
+  "durationSeconds": 9.2,
+  "totalFrames": 276,
+  "uniqueFrames": 48,
   "fps": 30,
-  "stripFrames": 8,
-  "hiddenSeconds": 2.9,
-  "svgBytes": 19223,
-  "pngBytes": 31397,
-  "gifBytes": 19212
+  "stripFrames": 11,
+  "hiddenSeconds": 17.3,
+  "svgBytes": 99067,
+  "pngBytes": 102976,
+  "gifBytes": 46661
 }
