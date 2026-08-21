@@ -51,7 +51,11 @@ defineVideo({ output: "demo.mp4", browser: { position: "overlay" } }, async (t) 
 });
 ```
 
-Polish: `shadow: true`, `watermark: "© you"`, `marginFill: "transparent"` (real alpha in PNG/WebP/GIF/WebM/SVG), `keys: true` shows key presses, `maxPause: "800ms"` cuts dead air, `t.timelapse(fn, { speed: 8 })` fast-forwards an install, `t.zoom({ rows: [0, 5] })` magnifies output, `t.chapter("Install")` adds mp4 chapters, `preset: "x"` sizes it for X. `tcut diff a.cast b.cast` catches output changes in CI.
+Polish: `shadow: true`, `watermark: "© you"`, `marginFill: "transparent"` (real alpha in PNG/WebP/GIF/WebM/SVG), `title: "auto"` follows the title the program sets, `keys: true` shows key presses, `maxPause: "800ms"` cuts dead air, `t.timelapse(fn, { speed: 8 })` fast-forwards an install, `t.zoom({ rows: [0, 5] })` magnifies output, `t.chapter("Install")` adds mp4 chapters, `preset: "x"` sizes it for X.
+
+Faithful to the terminal: arrows switch to the form vim/less asked for, `t.paste()` uses bracketed paste (no autoindent stair-steps), synchronized-output repaints never show torn frames, and OSC 8 hyperlinks — including Markdown links in `t.print()` captions — stay clickable in SVG and HTML output.
+
+Test and inspect: `tcut diff a.cast b.cast` catches output changes in CI, `t.expect(/…/, { scope: "scrollback" })` checks output that scrolled away (`-o demo.log` writes the whole transcript), and `tcut doctor demo.cast` tells you what a recording used — and what can't be rendered (inline images).
 
 Cut and join without re-recording — on the cast, so every format works:
 

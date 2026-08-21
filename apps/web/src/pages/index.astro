@@ -96,7 +96,9 @@ const examples = [
 
         <div>
           <p class="text-ink-2">
-            Scripted. Plain TypeScript, so loops, helpers and imports work. <code>run()</code> waits for your prompt to come back, not for a timer; <code>expect()</code> makes the demo a test.
+            Scripted. Plain TypeScript, so loops, helpers and imports work. <code>run()</code> waits for your prompt to come back, not for a timer; <code>expect()</code> makes the demo a test — including against output
+            that already scrolled away. Arrow keys and pastes arrive exactly as the running program asked (application cursor mode, bracketed paste), hyperlinks stay clickable in SVG/HTML, and{" "}
+            <code>tcut doctor demo.cast</code> explains what a recording used.
             <code>print()</code> renders Markdown captions into the terminal without typing anything, and <code>browser: {"{ position: \"overlay\" }"}</code> records a real browser window beside or over the terminal, for dev-server demos.
           </p>
           <div class="mt-3"><Code code={script} lang="ts" theme="catppuccin-mocha" /></div>
