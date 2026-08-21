@@ -114,13 +114,17 @@ export function renderHtml(config: ResolvedConfig): string {
     position: relative;
     background: ${theme.background};
     border-radius: ${config.borderRadius}px;
-    padding: ${config.padding}px;
+    --pad-x: ${config.padding}px;
+    --pad-y: ${config.padding}px;
+    padding: var(--pad-y) var(--pad-x);
     box-sizing: border-box;
     overflow: hidden;
   }
   #bar {
     height: ${barHeight(config)}px;
-    margin-top: -${Math.min(config.padding, 12)}px;
+    margin: calc(var(--pad-y) * -1) calc(var(--pad-x) * -1) 0;
+    padding: 0 14px;
+    background: ${theme.background};
     display: flex; align-items: center; justify-content: space-between;
     font: 13px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
     color: ${theme.foreground};
@@ -156,7 +160,7 @@ export function renderHtml(config: ResolvedConfig): string {
      The frame clips it so magnified content never spills over the bar or the rounded corners. */
   #zoom { transform-origin: 0 0; will-change: transform; }
   #frame { overflow: hidden; }
-  #frame > *:not(#zoom) { position: relative; z-index: 2; }
+  #frame > *:not(#zoom):not(#keys) { position: relative; z-index: 2; }
 </style>
 <style id="blink"></style>
 </head>
