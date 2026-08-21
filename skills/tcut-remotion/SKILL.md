@@ -12,10 +12,12 @@ Install both skills first: `npx skills add AmanVarshney01/tcut remotion-dev/skil
 ## Pipeline
 
 1. **Record the footage with tcut** (see the `tcut` skill). For clips destined for Remotion:
-   - `preset: "x"` (1280×720) or explicit `width/height`, `fps: 30` to match the Remotion composition
-   - `windowBar: "none", margin: 0, borderRadius: 0` for a bare terminal you can frame in React, **or** keep tcut's window chrome and float it as-is
-   - `maxPause: "1s"` and `keys: true` keep clips tight and legible
+   - `fps: 30` to match the Remotion composition; `margin: 0, borderRadius: 0` and let React draw the card (rounded corners, shadow). Keep `windowBar: "colorful"` — the traffic lights read as "a real terminal"
+   - For a 1920×1080 composition record with `--font-size 30` (≈1480 px wide for 80 cols) so clips are never upscaled
+   - `maxPause: "1s"` keeps clips tight; add `keys: true` only if the audience needs to see keystrokes
    - Output MP4 (H.264) — Remotion's `<OffthreadVideo>` reads it frame-accurately
+   - Drop `t.chapter("name")` before each step: chapters land in the MP4 and `ffprobe -show_chapters -print_format json clip.mp4` gives exact timestamps you can use to sync overlays (e.g. highlight the script line that is executing — the strongest "code → video" shot)
+   - Re-render one cast in several themes — `tcut render hero.cast --theme nord -o themes/nord.mp4` — and swap the `<OffthreadVideo src>` by frame: same timeline, theme flips live
 
 2. **Scaffold Remotion**: `bun create video` (choose blank), or add `remotion`, `@remotion/cli`, `react`, `react-dom` to a project with a `registerRoot`.
 
@@ -41,7 +43,9 @@ const Clip: React.FC<{ src: string; caption: string }> = ({ src, caption }) => {
 
    Sequence scenes with `<Sequence from={...} durationInFrames={...}>`; time scene lengths to each clip's real duration (`ffprobe -show_entries format=duration`). Trim with `startFrom`/`endAt` (frames).
 
-4. **Render**: `bunx remotion render <CompositionId> out/promo.mp4`. Match composition `fps`/dimensions to the tcut clips to avoid resampling.
+   Clips recorded with a `margin` baked in can be cropped by scaling the video by `videoW / (videoW - 2 * margin)` inside an `overflow: hidden` card.
+
+4. **Render**: `bunx remotion render <CompositionId> out/promo.mp4 --crf 15 --image-format png` for a high-quality master (PNG intermediates, near-lossless H.264). Match composition `fps` to the tcut clips to avoid resampling; check layout first with `bunx remotion still <Id> still.png --frame N` for one frame per scene.
 
 ## Design notes that make it look pro
 
@@ -49,7 +53,7 @@ const Clip: React.FC<{ src: string; caption: string }> = ({ src, caption }) => {
 - Reuse the terminal theme's palette for backgrounds/captions (Catppuccin Mocha bg `#11111b`, fg `#cdd6f4`) so footage and motion design feel like one piece
 - Title card: type-on monospace headline (slice the string by frame) reads as "terminal-native"
 - End card: the install command in a copy-paste-looking block beats a logo
-- Keep it under 45 s; one idea per scene; cut on the moment something appears in the clip
+- One idea per scene, a big mono headline plus the one line of tcut API that does it; cut on the moment something appears in the clip. A feature tour can run ~70 s; a social cut should stay under 30 s
 
 ## Why this combo
 
