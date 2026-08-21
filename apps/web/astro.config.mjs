@@ -1,4 +1,5 @@
 // @ts-check
+import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, passthroughImageService } from "astro/config";
 
@@ -11,6 +12,7 @@ export default defineConfig({
   site,
   base,
   output: "static",
+  integrations: [react()],
   trailingSlash: "ignore",
   // Media is pre-rendered by tcut at the right size (scripts/media.ts); skip Sharp entirely.
   image: { service: passthroughImageService() },
