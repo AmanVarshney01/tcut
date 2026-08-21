@@ -66,6 +66,14 @@ tcut publish --setup        # once: your S3-compatible bucket (RustFS, MinIO, R2
 tcut publish demo.gif       # → https://…/3f9a1c2b7d4e/demo.gif
 ```
 
+## Agents
+
+```sh
+npx skills add AmanVarshney01/tcut   # tcut + tcut-remotion skills for Claude Code, Cursor, etc.
+```
+
+Two skills: `tcut` (record terminal videos) and `tcut-remotion` (compose tcut footage into launch videos with [Remotion](https://remotion.dev)). Plus [llms.txt](https://tcut.amanv.dev/llms.txt) and `--json` everywhere.
+
 ## More
 
 - [Examples](https://github.com/AmanVarshney01/tcut/tree/main/packages/tcut/examples) — driving an interactive TUI, recording Claude Code / Codex

@@ -1,4 +1,5 @@
 # tcut — terminal sessions to video (for agents)
+# Skills: npx skills add AmanVarshney01/tcut  (tcut + tcut-remotion)
 
 npm package: termcut · command: tcut · requires Bun ≥ 1.4 (or the standalone binary) · ffmpeg only for .mp4/.gif/.webm/.webp
 Docs: https://github.com/AmanVarshney01/tcut · Reference: https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md
