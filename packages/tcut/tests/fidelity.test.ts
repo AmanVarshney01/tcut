@@ -114,6 +114,8 @@ describe("doctor", () => {
     ]);
     const r = await diagnoseRecording(cast, "demo.cast");
     expect(r.features).toMatchObject({ altScreen: true, mouseTracking: true, bracketedPaste: true, hyperlinks: 1, titles: ["htop"] });
+    const multi = await diagnoseRecording(rec([[0, "o", "\x1b]0;one\x07mid\x1b]2;two\x1b\\"], [0.4, "m", "end"]]), "titles.cast");
+    expect(multi.features.titles).toEqual(["one", "two"]); // several titles inside one chunk all count
     expect(r.unsupported.map((u) => u.name)).toEqual(["kitty-graphics"]);
     expect(r.markers.chapters).toBe(1);
     expect(r.warnings.some((w) => /full-screen program exited/.test(w))).toBe(true); // ?1049h…?1049l flashed by

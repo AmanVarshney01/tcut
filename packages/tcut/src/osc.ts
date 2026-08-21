@@ -7,11 +7,15 @@ const BEL_MARK = "";
 
 const marked = (chunk: string): string => chunk.replaceAll(ESC, ESC_MARK).replaceAll(BEL, BEL_MARK);
 
-/** The last window title set in `chunk` via OSC 0/2 (`ESC ] 0 ; title BEL`), or null. */
+/** Every window title set in `chunk` via OSC 0/2 (`ESC ] 0 ; title BEL`), in order. */
+export function extractTitles(chunk: string): string[] {
+  return [...marked(chunk).matchAll(/\](?:0|2);([^]*)(?:|\\)/g)].map((m) => m[1] ?? "");
+}
+
+/** The last window title set in `chunk`, or null — what a live window bar should show after the chunk. */
 export function extractTitle(chunk: string): string | null {
-  let title: string | null = null;
-  for (const m of marked(chunk).matchAll(/\](?:0|2);([^]*)(?:|\\)/g)) title = m[1] ?? "";
-  return title;
+  const titles = extractTitles(chunk);
+  return titles.length ? titles[titles.length - 1]! : null;
 }
 
 /** Wrap `text` in an OSC 8 hyperlink (terminals, the HTML player and the SVG export make it clickable). */

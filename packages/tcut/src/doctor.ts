@@ -1,6 +1,6 @@
 // `tcut doctor`: replay a cast through the emulator and report what the program used — and what tcut cannot show.
 import { MARKER, readCast } from "./cast";
-import { unsupportedProtocols, extractTitle, type UnsupportedProtocol } from "./osc";
+import { unsupportedProtocols, extractTitles, type UnsupportedProtocol } from "./osc";
 import { loadCore } from "./screen";
 import type { Recording } from "./types";
 
@@ -66,8 +66,7 @@ export async function diagnoseRecording(rec: Recording, castPath = rec.source ??
     }
     if (type !== "o") continue;
     core.writeString(data);
-    const t = extractTitle(data);
-    if (t !== null && titles[titles.length - 1] !== t) titles.push(t);
+    for (const t of extractTitles(data)) if (titles[titles.length - 1] !== t) titles.push(t);
     altScreen ||= core.usingAltScreen() || requested("1049") || requested("47");
     mouse ||= (core.mouseTracking?.() ?? 0) !== 0 || requested("1000") || requested("1002") || requested("1003");
     paste ||= core.bracketedPaste() || requested("2004");
