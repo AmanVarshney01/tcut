@@ -81,6 +81,17 @@ Durations accept `500`, `"500ms"`, `"1.5s"`, `"2m"`.
 
 Verified on macOS. Linux and Windows binaries are cross-compiled and not yet exercised in CI.
 
+## Agents
+
+```sh
+npx skills add AmanVarshney01/tcut
+```
+
+Installs two skills: `tcut` (recording terminal videos) and `tcut-remotion` (composing tcut clips into
+motion-designed launch videos with [Remotion](https://remotion.dev)). Every command also takes `--json`
+(one JSON document on stdout, `{ "error" }` on failure) and never prompts; [llms.txt](https://tcut.amanv.dev/llms.txt)
+is the condensed reference.
+
 ## How it works, briefly
 
 `Bun.Terminal` runs your shell in a PTY. Output is timestamped into the cast and also fed to a headless

@@ -71,6 +71,8 @@ Options (override the script's config):
       --json               machine-readable result (or { "error" }) on stdout, nothing else
   -q, --quiet
   -h, --help
+
+Agents: npx skills add AmanVarshney01/tcut   ·   docs: https://tcut.amanv.dev/llms.txt
 `;
 
 const { values, positionals } = parseArgs({
