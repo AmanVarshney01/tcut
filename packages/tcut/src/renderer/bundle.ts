@@ -43,8 +43,8 @@ async function embeddedAssets(): Promise<PageAssets | null> {
   }
 }
 
-/** True inside a `bun build --compile` binary, where sources live on the virtual /$bunfs filesystem. */
-const isCompiled = import.meta.dir.startsWith("/$bunfs");
+/** True inside a `bun build --compile` binary (sources then live on a virtual filesystem: /$bunfs, or B:\~BUN on Windows). */
+const isCompiled = Bun.isStandaloneExecutable;
 
 /**
  * Prebuilt assets in the compiled binary; otherwise built at runtime with Bun.build so edits to the page entries
