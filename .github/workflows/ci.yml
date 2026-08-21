@@ -78,6 +78,40 @@ jobs:
           mkdir -p /tmp/empty && cp out/demo.cast /tmp/empty/ 2>/dev/null || bun src/cli.ts examples/demo.ts --record-only -q --cast /tmp/empty/demo.cast
           cd /tmp/empty && "$GITHUB_WORKSPACE/packages/tcut/dist/tcut" render demo.cast -o demo.svg -o demo.png -o demo.mp4 && ls -la
 
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    continue-on-error: true # exploratory until it is green; does not block main
+    defaults:
+      run:
+        shell: bash
+        working-directory: packages/tcut
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install ffmpeg
+        run: choco install ffmpeg -y --no-progress >/dev/null && ffmpeg -version | head -1
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: .
+      - name: Environment
+        run: |
+          bun --version
+          bash --version | head -1
+          which bash sh ffmpeg chrome google-chrome || true
+          ls "/c/Program Files/Google/Chrome/Application/chrome.exe" || true
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Test
+        run: bun test
+      - name: Build and smoke-test the Windows binary
+        run: |
+          bun run build
+          bun src/cli.ts examples/demo.ts --record-only -q --cast out/demo.cast
+          ./dist/tcut.exe render out/demo.cast -o out/demo.svg -o out/demo.png -o out/demo.mp4 && ls -la out
+
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
