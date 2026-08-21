@@ -90,13 +90,16 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Install ffmpeg
-        run: choco install ffmpeg -y --no-progress >/dev/null && ffmpeg -version | head -1
+      - uses: FedericoCarboni/setup-ffmpeg@v3 # cached static build; Chocolatey took ~45 s every run
+        with:
+          ffmpeg-version: release
       - uses: actions/cache@v4
         with:
-          path: ~/.bun/install/cache
-          key: bun-win-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-win-
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: node-modules-win-${{ hashFiles('bun.lock') }}
       - name: Install dependencies
         run: bun install --frozen-lockfile
         working-directory: .
@@ -107,8 +110,7 @@ jobs:
           which bash sh ffmpeg chrome google-chrome || true
           ls "/c/Program Files/Google/Chrome/Application/chrome.exe" || true
       # Typecheck runs on macOS and Linux; tsc on the Windows runner costs a minute for the same answer.
-      - name: Warm up Chrome (first launch on a fresh runner is slow)
-        run: timeout 60 "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --no-first-run --dump-dom about:blank >/dev/null 2>&1 || true
+      # Chrome's first launch on a fresh runner takes ~20 s; the probe absorbs that (and tcut's startup grace covers it).
       - name: Probe WebView behaviour
         run: TCUT_DEBUG_CHROME=1 bun scripts/probe-webview.ts 2>&1 | grep -v -E "^\[[0-9:/.]+:(INFO|WARNING)" | head -60
       - name: Test
