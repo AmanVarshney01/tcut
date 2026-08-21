@@ -45,7 +45,7 @@ export async function runScriptTests(inputs: string[], log: (line: string) => vo
   const results: TestResult[] = [];
   log(`TAP version 14\n1..${files.length}`);
   for (const [index, file] of files.entries()) {
-    const rel = path.relative(process.cwd(), file);
+    const rel = path.relative(process.cwd(), file).split(path.sep).join("/"); // stable TAP output on every platform
     const started = performance.now();
     let error: string | undefined;
     try {

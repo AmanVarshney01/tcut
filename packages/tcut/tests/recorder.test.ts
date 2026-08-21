@@ -72,7 +72,8 @@ describe("recorder", () => {
     // Ask for Device Attributes and read the reply the shell receives on stdin.
     const rec = await record(resolveConfig({ ...base, waitTimeout: 5000 }), async (t) => {
       await t.run(`printf '\\033[c'; IFS= read -rs -t 2 -d c reply; printf 'reply=%q\\n' "$reply"`);
-      await t.expect(/reply=\$'\\E\[\?1;2'/);
+      // On Windows ConPTY answers DA itself (a different id); elsewhere the answer comes from tcut's screen model.
+      await t.expect(process.platform === "win32" ? /reply=\$'\\E\[\?/ : /reply=\$'\\E\[\?1;2'/);
     });
     expect(rec.events.length).toBeGreaterThan(0);
   });

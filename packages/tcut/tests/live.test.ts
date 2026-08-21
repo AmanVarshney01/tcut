@@ -19,7 +19,7 @@ describe("live recording", () => {
       stdout: { write: (d) => chunks.push(d instanceof Uint8Array ? new TextDecoder().decode(d) : d) },
     });
     const out = rec.events.filter((e) => e[1] === "o").map((e) => e[2]).join("");
-    expect(out).toContain("live-\x1b[32mok\x1b[0m");
+    expect(out).toMatch(/live-(?:\x1b\][^\x07]*\x07)?\x1b\[32mok/); // ConPTY may interleave a title OSC and re-encode resets
     expect(out).toContain("done");
     expect(chunks.join("")).toContain("done"); // mirrored to the terminal
     expect(rec.header.width).toBe(40);

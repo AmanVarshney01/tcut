@@ -48,7 +48,7 @@ describe("browser pane", () => {
       expect([...times].sort((a, b) => a - b)).toEqual(times); // merged in order
 
       const reread = await readCast(castPath);
-      expect(reread.source).toBe(castPath);
+      expect(reread.source).toBe(path.resolve(castPath));
       expect(reread.events.some((e) => e[1] === "b" && e[2].startsWith("demo.browser/"))).toBe(true);
     } finally {
       server.stop(true);

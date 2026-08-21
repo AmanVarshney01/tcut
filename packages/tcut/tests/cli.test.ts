@@ -43,7 +43,7 @@ describe("cast cache", () => {
     const write = (body: string) =>
       Bun.write(
         script,
-        `import { defineVideo } from "${path.join(import.meta.dir, "..", "src", "index.ts")}";\nexport default defineVideo({ output: "${dir}/out.mp4", shell: "bash", endPause: 0, typingSpeed: 0 }, async (t) => { await t.run("echo ${body}"); });\n`,
+        `import { defineVideo } from ${JSON.stringify(path.join(import.meta.dir, "..", "src", "index.ts"))};\nexport default defineVideo({ output: ${JSON.stringify(`${dir}/out.mp4`)}, shell: "bash", endPause: 0, typingSpeed: 0 }, async (t) => { await t.run("echo ${body}"); });\n`,
       );
     await write("one");
     const load = async () => {

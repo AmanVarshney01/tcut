@@ -48,8 +48,10 @@ describe("publish", () => {
     expect(await loadPublishConfig()).toBeNull();
     const file = await savePublishConfig(cfg);
     expect(file).toBe(configPath());
-    const mode = (await Bun.file(file).stat()).mode & 0o777;
-    expect(mode).toBe(0o600);
+    if (process.platform !== "win32") {
+      const mode = (await Bun.file(file).stat()).mode & 0o777;
+      expect(mode).toBe(0o600);
+    }
     expect((await loadPublishConfig())?.bucket).toBe("tcut");
     process.env.TCUT_S3_BUCKET = "override";
     expect((await loadPublishConfig())?.bucket).toBe("override");

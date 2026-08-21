@@ -163,6 +163,8 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     reload: () => within(view.reload(), 30000, "reload").catch((err) => (/pending/i.test(String(err)) ? undefined : Promise.reject(err))),
     evaluate: (js) => evaluate(js, 10000, "evaluate"),
     async stop() {
+      // A session shorter than the browser's start-up (cold Chrome on CI) should still show the page once.
+      if (frames.length === 0 && initialLoad) await Promise.race([initialLoad, Bun.sleep(5000)]);
       running = false;
       await sampler;
       await sampleOnce(); // final state of the page
@@ -174,6 +176,6 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     },
   };
 
-  if (bcfg.url) void goto(bcfg.url).catch((err) => log(String(err)));
+  const initialLoad = bcfg.url ? goto(bcfg.url).catch((err) => log(String(err))) : null;
   return capture;
 }
