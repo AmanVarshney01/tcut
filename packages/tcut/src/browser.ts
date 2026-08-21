@@ -48,21 +48,22 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
   // Sampling starts once a page has loaded: headless Chrome never resolves a screenshot of the initial blank
   // view, and a hung screenshot blocks every later command on that view.
   let loaded = false;
-  /** The page's own idea of where it is — `view.url` is not populated by every backend. */
-  const pageHref = (): Promise<string> =>
-    within(view.evaluate("location.href"), 3000, "probe")
-      .then((v) => String(v ?? ""))
-      .catch(() => "");
-  const sampler = (async () => {
-    while (running) {
-      if (!loaded) {
-        const href = await pageHref();
-        if (href && href !== "about:blank") loaded = true;
-        else {
-          await Bun.sleep(100);
-          continue;
-        }
-      }
+  // A view runs one evaluate() at a time; goto's probes, waitFor and the script's own evaluate calls take turns.
+  let chain: Promise<unknown> = Promise.resolve();
+  const serial = <T,>(fn: () => Promise<T>): Promise<T> => {
+    const next = chain.then(fn, fn);
+    chain = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    return next;
+  };
+  const evaluate = (js: string, ms: number, label: string): Promise<unknown> => serial(() => within(view.evaluate(js), ms, label));
+  // One screenshot at a time: the periodic sampler and the event-driven samples (after waitFor, at stop) share it.
+  let sampling: Promise<void> | null = null;
+  const sampleOnce = (): Promise<void> => {
+    if (!loaded) return Promise.resolve();
+    sampling ??= (async () => {
       try {
         const png = (await within(view.screenshot({ encoding: "buffer" }), 5000, "screenshot")) as Uint8Array;
         const hash = Bun.hash(png).toString(16);
@@ -72,8 +73,16 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
         }
       } catch {
         /* view busy or closed */
+      } finally {
+        sampling = null;
       }
-      await Bun.sleep(1000 / bcfg.fps);
+    })();
+    return sampling;
+  };
+  const sampler = (async () => {
+    while (running) {
+      await sampleOnce();
+      await Bun.sleep(loaded ? 1000 / bcfg.fps : 50);
     }
   })();
 
@@ -105,9 +114,10 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
       }
       if (outcome === "failed") navigation = null;
       if (!running) return;
-      const state = await within(view.evaluate("document.readyState"), 3000, "goto").catch(() => "");
-      const href = (view.url || (await pageHref())).replace(/\/$/, "");
-      if (state === "complete" && href.startsWith(target)) {
+      const state = await evaluate("document.readyState", 3000, "goto").catch(() => "");
+      // Some backends leave view.url empty; then a complete document is the best signal we have.
+      const href = (view.url ?? "").replace(/\/$/, "");
+      if (state === "complete" && (href === "" || href.startsWith(target))) {
         currentUrl = url;
         loaded = true;
         return;
@@ -130,30 +140,32 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
       const timeout = toMs(waitOpts.timeout, config.waitTimeout);
       const deadline = performance.now() + timeout;
       for (;;) {
-        const text = String((await within(view.evaluate("document.body ? document.body.innerText : ''"), 5000, "waitFor").catch(() => "")) ?? "");
-        if (regex.test(text)) return;
+        const text = String((await evaluate("document.body ? document.body.innerText : ''", 5000, "waitFor").catch(() => "")) ?? "");
+        if (regex.test(text)) {
+          loaded = true; // a page that answers is a page worth sampling, even if navigate() has not settled yet
+          await sampleOnce(); // the frame the script waited for, captured the moment it appeared
+          return;
+        }
         if (performance.now() > deadline) throw new WaitTimeoutError(`${regex} in the browser page`, timeout, text.slice(0, 2000));
         await Bun.sleep(150);
       }
     },
     /** Real input emulation first; if the browser's actionability checks stall, a DOM click still drives the page. */
     click: async (selector) => {
+      loaded = true;
       try {
         await within(view.click(selector), 3000, "click");
       } catch {
-        const hit = await within(
-          view.evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; el.click(); return true; })()`),
-          5000,
-          "click",
-        );
+        const hit = await evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; el.click(); return true; })()`, 5000, "click");
         if (hit !== true) throw new Error(`browser.click: no element matches ${selector}`);
       }
     },
     reload: () => within(view.reload(), 30000, "reload").catch((err) => (/pending/i.test(String(err)) ? undefined : Promise.reject(err))),
-    evaluate: (js) => within(view.evaluate(js), 10000, "evaluate"),
+    evaluate: (js) => evaluate(js, 10000, "evaluate"),
     async stop() {
       running = false;
       await sampler;
+      await sampleOnce(); // final state of the page
       try {
         view.close();
       } catch {
