@@ -104,6 +104,8 @@ jobs:
           ls "/c/Program Files/Google/Chrome/Application/chrome.exe" || true
       - name: Typecheck
         run: bun run typecheck
+      - name: Probe WebView behaviour
+        run: TCUT_DEBUG_CHROME=1 bun scripts/probe-webview.ts 2>&1 | grep -v -E "^\[[0-9:/.]+:(INFO|WARNING)" | head -60
       - name: Test
         run: bun test
       - name: Build and smoke-test the Windows binary
