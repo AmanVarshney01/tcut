@@ -51,7 +51,7 @@ export default defineVideo(
 
 ## Config essentials
 
-`output` (array = multiple formats), `preset: "readme" | "x" | "youtube" | "square"`, `theme` (~600 Ghostty themes, `tcut themes`), `cols/rows` or `width/height` (px), `fps`, `typingSpeed`/`typingJitter`, `keys: true` (key-press overlay, one chip at a time; `{ limit, font, color, background, radius, position }`), `maxPause: "1.5s"` (idle compression), `windowBar: "none"` + `margin: 0` + `borderRadius: 0` for a bare terminal, `title`, `marginFill` (`"transparent"` = real alpha in png/webp/gif/webm/svg/html; mp4 falls back), `shadow: true` (soft drop shadow; margin defaults to 40), `watermark: "© you"` or `{ image: "logo.png", position: "top-left", opacity, size }`.
+`output` (array = multiple formats), `preset: "readme" | "x" | "youtube" | "square"`, `theme` (~600 Ghostty themes, `tcut themes`), `cols/rows` or `width/height` (px), `fps`, `typingSpeed`/`typingJitter`, `keys: true` (key-press overlay, one chip at a time; `{ limit, font, color, background, radius, position }`), `maxPause: "1.5s"` (idle compression), `requires: ["bun", "eza"]` (fail fast before recording if a tool is missing — also in `tcut test`), `windowBar: "none"` + `margin: 0` + `borderRadius: 0` for a bare terminal, `title`, `marginFill` (`"transparent"` = real alpha in png/webp/gif/webm/svg/html; mp4 falls back), `shadow: true` (soft drop shadow; margin defaults to 40), `watermark: "© you"` or `{ image: "logo.png", position: "top-left", opacity, size }`.
 
 ## Cut and join (no re-recording)
 
