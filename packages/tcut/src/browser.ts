@@ -89,6 +89,11 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     })();
     return sampling;
   };
+  /** A sample taken after this moment: waits out any in-flight screenshot (seconds on a cold Chrome), then takes a fresh one. */
+  const sampleNow = async (): Promise<void> => {
+    if (sampling) await sampling;
+    await sampleOnce();
+  };
   const sampler = (async () => {
     while (running) {
       await sampleOnce();
@@ -153,7 +158,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
         const text = String((await evaluate("document.body ? document.body.innerText : ''", 5000, "waitFor").catch(() => "")) ?? "");
         if (regex.test(text)) {
           loaded = true; // a page that answers is a page worth sampling, even if navigate() has not settled yet
-          await sampleOnce(); // the frame the script waited for, captured the moment it appeared
+          await sampleNow(); // the frame the script waited for, captured the moment it appeared
           return;
         }
         if (performance.now() > startupDeadline(deadline)) throw new WaitTimeoutError(`${regex} in the browser page`, timeout, text.slice(0, 2000));
@@ -178,7 +183,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
       if (!loaded && bcfg.url) await evaluate("document.readyState", 2000, "probe").catch(() => undefined); // marks loaded if the page answers
       running = false;
       await sampler;
-      await sampleOnce(); // final state of the page
+      await sampleNow(); // final state of the page
       try {
         view.close();
       } catch {
