@@ -55,7 +55,8 @@ describe("recorder", () => {
     const rec = await record(resolveConfig(base), async (t) => {
       await t.resize(100, 30);
       await t.run("tput cols");
-      await t.expect(/^100$/m);
+      // ConPTY does not deliver SIGWINCH to the child, so on Windows the shell keeps reporting the old size.
+      if (process.platform !== "win32") await t.expect(/^100$/m);
     });
     expect(rec.events.some((e) => e[1] === "r" && e[2] === "100x30")).toBe(true);
   });

@@ -100,7 +100,7 @@ tcut concat intro.cast demo.cast outro.cast --gap 500ms -o launch.mp4
 | render `.mp4` / `.gif` / `.webm` | the above + ffmpeg |
 | render `.webp` | ffmpeg with libwebp (`brew install ffmpeg-full`; found automatically) |
 
-macOS renders with the system WebKit. **Linux** renders through a headless Chrome/Chromium found on the PATH (or `BUN_CHROME_PATH=/path/to/chrome`); SVG, HTML and TXT output need no browser. Running as root (Docker, CI) automatically adds `--no-sandbox`. The Linux binaries are exercised in CI on every push; Windows is cross-compiled and not yet verified. The recorded shell gets an installed UTF-8 locale (your `LANG` if it is one, else `C.UTF-8`), so emoji and non-ASCII input work on minimal images.
+macOS renders with the system WebKit. **Linux** renders through a headless Chrome/Chromium found on the PATH (or `BUN_CHROME_PATH=/path/to/chrome`); SVG, HTML and TXT output need no browser. Running as root (Docker, CI) automatically adds `--no-sandbox`. **Windows** records through ConPTY (Git Bash or any shell) and renders through Chrome the same way; one ConPTY limitation: `t.resize()` changes the recorded grid but the running shell is not told (no SIGWINCH), so resize-aware programs keep their old size. macOS, Linux and Windows binaries are all exercised by CI on every push. The recorded shell gets an installed UTF-8 locale (your `LANG` if it is one, else `C.UTF-8`), so emoji and non-ASCII input work on minimal images.
 
 Transparent output renders every changed frame twice (over the theme background and over a contrasting one) and mattes the pair into RGBA, so it is slower than opaque output; MP4 cannot carry alpha and falls back to the theme background.
 

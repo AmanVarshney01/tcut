@@ -81,7 +81,6 @@ jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 30
-    continue-on-error: true # exploratory until it is green; does not block main
     defaults:
       run:
         shell: bash
