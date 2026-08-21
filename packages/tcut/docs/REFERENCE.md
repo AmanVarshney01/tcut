@@ -57,6 +57,7 @@ tcut themes
 | `cursor` | `{ blink: true, period: 1000 }` | |
 | `playbackSpeed` · `waitTimeout` · `endPause` | 1 · `"15s"` · `"1s"` | |
 | `cache` · `quantize` · `core` | true · false · `"ghostty"` | skip re-recording when unchanged · frame-grid timestamps · emulator |
+| `requires` | `[]` | programs the script needs on the PATH, e.g. `["bun", "eza"]`; checked before the shell starts, so a missing tool fails in milliseconds with a clear message (also in `tcut test` and `--json`: `"type": "MissingRequirementError"`) |
 
 **`t`**
 

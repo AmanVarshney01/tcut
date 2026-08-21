@@ -2,7 +2,7 @@ import { MarkdownRenderer } from "@wterm/markdown";
 import { startBrowserCapture, type BrowserCapture } from "./browser";
 import { MARKER } from "./cast";
 import { toMs } from "./duration";
-import { ExpectationError, WaitTimeoutError } from "./errors";
+import { ExpectationError, MissingRequirementError, WaitTimeoutError } from "./errors";
 import { altSequence, ctrlSequence, keySequence, shiftSequence, wheelSequence } from "./keys";
 import { Screen } from "./screen";
 import type {
@@ -20,7 +20,7 @@ import type {
   WaitOptions,
 } from "./types";
 
-export { WaitTimeoutError, ExpectationError } from "./errors";
+export { WaitTimeoutError, ExpectationError, MissingRequirementError } from "./errors";
 
 /** Deterministic PRNG (mulberry32) so typing jitter is reproducible. */
 function mulberry32(seed: number): () => number {
@@ -103,6 +103,8 @@ export function defaultLang(): string {
 /** Drives a Bun.Terminal PTY according to a script and produces an asciicast recording. */
 export async function record(config: ResolvedConfig, script: Script, opts: RecordOptions = {}): Promise<Recording> {
   const log = opts.log ?? (() => {});
+  const missing = config.requires.filter((name) => Bun.which(name) === null);
+  if (missing.length > 0) throw new MissingRequirementError(missing);
   const events: CastEvent[] = [];
   const screen = await Screen.create(config.cols, config.rows, { core: config.core });
   const fast = opts.fast === true;

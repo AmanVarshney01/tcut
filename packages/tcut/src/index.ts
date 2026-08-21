@@ -26,5 +26,5 @@ export type { DiffOptions, DiffResult } from "./diff";
 export { keyLabels, keyChips } from "./keylabels";
 export { startBrowserCapture } from "./browser";
 export { resolveConfig } from "./config";
-export { WaitTimeoutError, ExpectationError } from "./recorder";
+export { WaitTimeoutError, ExpectationError, MissingRequirementError } from "./recorder";
 export type * from "./types";

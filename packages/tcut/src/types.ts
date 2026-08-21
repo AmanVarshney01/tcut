@@ -205,6 +205,8 @@ export interface VideoConfig {
   core?: CoreName;
   /** Reuse the existing cast when the script and record config are unchanged. Default true. */
   cache?: boolean;
+  /** Programs the script needs on the PATH (`["bun", "eza"]`). Checked before the shell starts; missing ones fail fast with a clear message. */
+  requires?: string[];
 
   font?: FontConfig;
   theme?: ThemeName | Theme;
@@ -257,6 +259,7 @@ export interface ResolvedConfig {
   quantize: boolean;
   core: CoreName;
   cache: boolean;
+  requires: string[];
   font: Required<FontConfig>;
   theme: Theme;
   cursor: Required<CursorConfig>;

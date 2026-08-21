@@ -114,6 +114,7 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
     quantize: config.quantize ?? false,
     core: config.core ?? "ghostty",
     cache: config.cache ?? true,
+    requires: config.requires ?? [],
     font,
     theme,
     cursor: {

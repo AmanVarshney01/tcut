@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { MissingRequirementError } from "../src/errors";
 import { resolveConfig } from "../src/config";
 import { record } from "../src/recorder";
 import type { VideoConfig } from "../src/types";
@@ -68,4 +69,19 @@ describe("print() and title()", () => {
     expect(outputs).toContain("\x1b[1m\x1b[97mShipping\x1b[0m");
     expect(outputs).toContain("\x1b[1mbold\x1b[0m");
   });
+});
+
+describe("requires", () => {
+  test("a missing program fails before the shell starts, a present one does not", async () => {
+    const missing = resolveConfig({ output: "/tmp/tcut-req/x.mp4", requires: ["bash", "definitely-not-a-real-binary-xyz"] });
+    const started = performance.now();
+    await expect(record(missing, async () => {})).rejects.toBeInstanceOf(MissingRequirementError);
+    await expect(record(missing, async () => {})).rejects.toThrow(/definitely-not-a-real-binary-xyz/);
+    expect(performance.now() - started).toBeLessThan(2000);
+    const ok = resolveConfig({ output: "/tmp/tcut-req/x.mp4", requires: ["bash"], endPause: 0 });
+    const rec = await record(ok, async (t) => {
+      await t.run("echo fine");
+    });
+    expect(rec.events.length).toBeGreaterThan(0);
+  }, 20_000);
 });
