@@ -6,6 +6,8 @@ import { chapterRanges, concatRecordings, cutRecording, flattenRecording, record
 import { buildSvg } from "../src/export/svg";
 import { renderOutputs } from "../src/render";
 import { decodePng, encodePng, matte, type RgbaImage } from "../src/renderer/png";
+import { defaultLang } from "../src/recorder";
+import { chromeArgs, webViewBackend } from "../src/renderer/view";
 import { buildTimeline } from "../src/timeline";
 import type { Recording } from "../src/types";
 
@@ -253,4 +255,24 @@ describe("transparent raster output", () => {
     expect(belowWindow).toBeGreaterThan(0);
     expect(belowWindow).toBeLessThan(255);
   }, 30_000);
+});
+
+describe("platform plumbing", () => {
+  test("the recorded shell gets an installed UTF-8 locale", () => {
+    const lang = defaultLang();
+    expect(lang).toMatch(/utf-?8/i);
+    expect(defaultLang()).toBe(lang);
+  });
+  test("webview backend follows the platform, chrome can be forced", () => {
+    const saved = process.env.TCUT_WEBVIEW;
+    delete process.env.TCUT_WEBVIEW;
+    const auto = webViewBackend();
+    if (process.platform === "darwin") expect(auto).toBe("webkit");
+    else expect(auto).toMatchObject({ type: "chrome", url: false });
+    process.env.TCUT_WEBVIEW = "chrome";
+    expect(webViewBackend()).toMatchObject({ type: "chrome", argv: chromeArgs() });
+    if (saved === undefined) delete process.env.TCUT_WEBVIEW;
+    else process.env.TCUT_WEBVIEW = saved;
+    expect(chromeArgs()).toContain("--force-device-scale-factor=1");
+  });
 });

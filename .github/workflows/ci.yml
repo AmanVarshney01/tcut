@@ -54,6 +54,30 @@ jobs:
             packages/tcut/out/demo.html
             packages/tcut/dist/tcut
 
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: packages/tcut
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: .
+      - name: Test (renders through Chrome)
+        run: bun test
+      - name: Build and smoke-test the Linux binary
+        run: |
+          bun run build
+          mkdir -p /tmp/empty && cp out/demo.cast /tmp/empty/ 2>/dev/null || bun src/cli.ts examples/demo.ts --record-only -q --cast /tmp/empty/demo.cast
+          cd /tmp/empty && "$GITHUB_WORKSPACE/packages/tcut/dist/tcut" render demo.cast -o demo.svg -o demo.png -o demo.mp4 && ls -la
+
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10

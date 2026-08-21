@@ -10,7 +10,7 @@ Turn a terminal session into a video. Record it live or script it in TypeScript;
 bun add -g termcut     # Bun ≥ 1.4 · installs the `tcut` command
 ```
 
-Standalone binaries: [Releases](https://github.com/AmanVarshney01/tcut/releases). MP4/GIF need `ffmpeg`; SVG/HTML don't.
+Standalone binaries for macOS, Linux and Windows: [Releases](https://github.com/AmanVarshney01/tcut/releases). MP4/GIF need `ffmpeg`; SVG/HTML don't. Linux renders pixels through Chrome/Chromium on the PATH.
 
 ## Use
 

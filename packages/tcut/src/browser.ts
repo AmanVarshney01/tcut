@@ -1,4 +1,5 @@
 import { WINDOW_BAR_HEIGHT, estimateCell } from "./config";
+import { createWebView } from "./renderer/view";
 import { toMs } from "./duration";
 import { WaitTimeoutError } from "./errors";
 import type { BrowserFrame, BrowserSession, ResolvedConfig } from "./types";
@@ -25,7 +26,7 @@ const toRegExp = (pattern: RegExp | string): RegExp =>
  */
 export function startBrowserCapture(config: ResolvedConfig, stamp: () => number, log: (m: string) => void = () => {}): BrowserCapture {
   if (!config.browser) throw new Error("startBrowserCapture needs config.browser");
-  if (!Bun.WebView) throw new Error("The browser pane needs Bun.WebView (Bun >= 1.4).");
+
   const bcfg = config.browser;
 
   // Default pane size: match the terminal window (estimated from the font metrics) unless given.
@@ -35,7 +36,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
   const stacked = bcfg.position === "top" || bcfg.position === "bottom";
   const paneW = stacked ? termFrameW : bcfg.width;
   const paneH = bcfg.height || (stacked || bcfg.position === "overlay" ? 480 : termFrameH);
-  const view = new Bun.WebView({ width: paneW, height: paneH });
+  const view = createWebView({ width: paneW, height: paneH });
 
   const frames: BrowserFrame[] = [];
   const within = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> =>

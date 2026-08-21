@@ -10,6 +10,7 @@ import { createSinks, type Chapter } from "./encoder";
 import { chipBuilder } from "../keylabels";
 import { BROWSER_GAP, barHeight, opaqueFill, renderHtml, themeOsc } from "./page";
 import { decodePng, encodePng, luminance, matte, parseHex } from "./png";
+import { createWebView } from "./view";
 
 export interface RenderResult {
   outputs: string[];
@@ -60,10 +61,6 @@ export async function render(
   config: ResolvedConfig,
   onProgress?: (p: RenderProgress) => void,
 ): Promise<RenderResult> {
-  if (!Bun.WebView) {
-    throw new Error("Bun.WebView is not available in this Bun version. tcut needs Bun >= 1.4.");
-  }
-
   const assets = await pageAssets();
   const html = renderHtml(config);
   const osc = themeOsc(config.theme);
@@ -121,7 +118,7 @@ export async function render(
   const rgbA = parseHex(fillA);
   const rgbB = parseHex(fillB);
 
-  const view = new Bun.WebView({ width: 800, height: 600 });
+  const view = createWebView({ width: 800, height: 600 });
   try {
     await view.navigate(`http://127.0.0.1:${server.port}/`);
     for (let i = 0; i < 100; i++) {

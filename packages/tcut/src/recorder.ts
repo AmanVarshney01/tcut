@@ -78,6 +78,28 @@ export function shellSetup(config: ResolvedConfig): ShellSetup {
   }
 }
 
+let cachedLang: string | null = null;
+
+/**
+ * A UTF-8 locale the shell can actually switch to. A LANG naming a locale that is not installed (en_US.UTF-8 on a
+ * minimal Debian, say) silently drops bash into the C locale, where readline mangles multi-byte input such as emoji.
+ */
+export function defaultLang(): string {
+  if (cachedLang !== null) return cachedLang;
+  const current = process.env.LANG ?? "";
+  const available = new Set<string>();
+  try {
+    const proc = Bun.spawnSync(["locale", "-a"], { stdout: "pipe", stderr: "ignore" });
+    for (const line of proc.stdout.toString().split("\n")) available.add(line.trim().toLowerCase().replace("utf8", "utf-8"));
+  } catch {
+    /* no `locale` binary: keep the first candidate */
+  }
+  const has = (name: string) => available.size === 0 || available.has(name.toLowerCase());
+  const candidates = [current, "C.UTF-8", "en_US.UTF-8"].filter((c) => /utf-?8/i.test(c));
+  cachedLang = candidates.find(has) ?? candidates[candidates.length - 1] ?? "C.UTF-8";
+  return cachedLang;
+}
+
 /** Drives a Bun.Terminal PTY according to a script and produces an asciicast recording. */
 export async function record(config: ResolvedConfig, script: Script, opts: RecordOptions = {}): Promise<Recording> {
   const log = opts.log ?? (() => {});
@@ -111,7 +133,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     ...inheritedEnv,
     TERM: "xterm-256color",
     COLORTERM: "truecolor",
-    LANG: process.env.LANG ?? "en_US.UTF-8",
+    LANG: defaultLang(),
     ...setup.env,
     ...config.env,
   };
