@@ -178,3 +178,10 @@ An output ending in `.log` SHALL contain every scrollback line followed by the f
 #### Scenario: seq
 - **WHEN** `seq 1 60` was recorded on a 12-row grid and rendered to `.log`
 - **THEN** the file starts with "1" and ends with "60"
+
+### Requirement: Snapshot emission on every render path
+Rendering SHALL emit snapshot marks regardless of the configured outputs: `.svg` stills headlessly from the grid replay, raster stills via the WebView pass — which SHALL run when raster marks exist even if no raster video output is configured. Snapshots SHALL be written on re-renders of existing casts (`tcut render x.cast`).
+
+#### Scenario: snapshot without a video
+- **WHEN** a recording contains a `.png` snapshot mark and only text outputs are configured
+- **THEN** the WebView pass runs and the PNG is written and reported

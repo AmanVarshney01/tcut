@@ -61,12 +61,13 @@ describe("recorder", () => {
     expect(rec.events.some((e) => e[1] === "r" && e[2] === "100x30")).toBe(true);
   });
 
-  test("screenshot() and marker() are recorded", async () => {
+  test("snapshot(), its screenshot() alias, and marker() are recorded", async () => {
     const rec = await record(resolveConfig(base), async (t) => {
+      await t.snapshot("/tmp/tcut-test/still.svg");
       await t.screenshot("/tmp/tcut-test/shot.png");
       await t.marker("chapter-1");
     });
-    expect(markers(rec.events)).toEqual(["screenshot:/tmp/tcut-test/shot.png", "chapter-1", "end"]);
+    expect(markers(rec.events)).toEqual(["screenshot:/tmp/tcut-test/still.svg", "screenshot:/tmp/tcut-test/shot.png", "chapter-1", "end"]);
   });
 
   test("programs that query the terminal get an answer", async () => {

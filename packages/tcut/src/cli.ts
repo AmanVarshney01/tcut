@@ -370,7 +370,7 @@ export default defineVideo(
     await t.sleep("400ms");
     await t.enter();
     await t.wait();                         // prompt is back
-    await t.screenshot("${name}-notes.png");
+    await t.snapshot("${name}-notes.png");
     await t.sleep("1.5s");
   },
 );

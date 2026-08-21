@@ -216,7 +216,7 @@ export async function render(
 
       const blinkOn = !config.cursor.blink || Math.floor((time / blinkPeriod) * 2) % 2 === 0;
       const drawable = batch.filter((e) => e.type === "o" || e.type === "r");
-      const shots = batch.filter((e) => e.type === "m" && e.data.startsWith(MARKER.screenshot));
+      const shots = batch.filter((e) => e.type === "m" && e.data.startsWith(MARKER.screenshot) && !e.data.toLowerCase().endsWith(".svg"));
       const browserFrame = hasBrowser ? batch.filter((e) => e.type === "b").at(-1) : undefined;
       const focusChanged = hasBrowser && batch.some((e) => e.type === "m" && e.data.startsWith(MARKER.focus));
       let dirty = lastPng === null || drawable.length > 0 || blinkOn !== lastBlink || browserFrame !== undefined || focusChanged;

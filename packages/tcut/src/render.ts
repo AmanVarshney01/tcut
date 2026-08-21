@@ -1,13 +1,37 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { MARKER } from "./cast";
 import { chapterRanges, chapterSlug, cutRecording, findChapters, flattenedConfig, selectChapters } from "./edit";
 import { frameText, replayFrames } from "./export/frames";
 import { writeHtml } from "./export/html";
-import { writeSvg } from "./export/svg";
+import { writeSvg, writeSvgSnapshots, type SnapshotMark } from "./export/svg";
+import { buildTimeline } from "./timeline";
 import { render as renderRaster, type RenderResult } from "./renderer/webview";
 import type { ClipSelection, Recording, RenderProgress, ResolvedConfig } from "./types";
 
 export type { RenderResult };
+
+/**
+ * `t.snapshot(file)` marks with their instants on the visible timeline. `.svg` stills are produced headlessly
+ * (same clock as the SVG exporter); anything else is a raster still written by the WebView pass.
+ */
+interface SnapshotMarks {
+  vector: SnapshotMark[];
+  /** How many marks need pixels (anything that is not `.svg`). */
+  raster: number;
+}
+
+function snapshotMarks(rec: Recording, config: ResolvedConfig): SnapshotMarks {
+  const vector: SnapshotMark[] = [];
+  let raster = 0;
+  for (const e of buildTimeline(rec.events, config.playbackSpeed).events) {
+    if (e.type !== "m" || !e.data.startsWith(MARKER.screenshot)) continue;
+    const file = e.data.slice(MARKER.screenshot.length);
+    if (file.toLowerCase().endsWith(".svg")) vector.push({ file, at: e.vt });
+    else raster += 1;
+  }
+  return { vector, raster };
+}
 
 const kind = (output: string): "svg" | "html" | "txt" | "log" | "raster" => {
   if (output.endsWith("/")) return "raster";
@@ -50,6 +74,7 @@ export async function renderOutputs(
   const raster = config.output.filter((o) => kind(o) === "raster");
 
   const result: RenderResult = { outputs: [], frames: 0, screenshots: [], durationSeconds: 0 };
+  const marks = snapshotMarks(rec, config);
 
   for (const file of txt) {
     await writeTxt(rec, config, file);
@@ -70,7 +95,11 @@ export async function renderOutputs(
     await writeHtml(rec, config, file);
     result.outputs.push(file);
   }
-  if (raster.length > 0) {
+  if (marks.vector.length > 0) {
+    result.screenshots.push(...(await writeSvgSnapshots(rec, config, marks.vector)));
+  }
+  // Raster snapshots need pixels: run the WebView pass even when no raster output is configured.
+  if (raster.length > 0 || marks.raster > 0) {
     const r = await renderRaster(rec, { ...config, output: raster }, onProgress);
     result.outputs.push(...r.outputs);
     result.frames = r.frames;

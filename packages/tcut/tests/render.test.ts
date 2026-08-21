@@ -4,6 +4,7 @@ import path from "node:path";
 import { resolveConfig } from "../src/config";
 import { hasEncoder } from "../src/renderer/encoder";
 import { render } from "../src/renderer/webview";
+import { renderOutputs } from "../src/render";
 import type { Recording } from "../src/types";
 
 const dir = "/tmp/tcut-render-test";
@@ -68,4 +69,26 @@ describe("renderer", () => {
     const frames = (await readdir(path.join(dir, "lite"))).filter((f) => f.endsWith(".png"));
     expect(frames).toHaveLength(5);
   }, 60_000);
+});
+
+describe("raster snapshots", () => {
+  test("a png snapshot renders even when no raster output is configured", async () => {
+    const d = path.join(dir, "snap-only");
+    await rm(d, { recursive: true, force: true });
+    await mkdir(d, { recursive: true });
+    const shot = path.join(d, "only.png");
+    const rec: Recording = {
+      header: { version: 2, width: 20, height: 5 },
+      events: [
+        [0.0, "o", "hello still\r\n> "],
+        [0.2, "m", "screenshot:" + shot],
+        [0.3, "m", "end"],
+      ],
+    };
+    const config = resolveConfig({ output: [path.join(d, "out.txt")], fps: 10 });
+    const result = await renderOutputs(rec, config);
+    expect(result.outputs).toEqual([path.join(d, "out.txt")]);
+    expect(result.screenshots).toEqual([shot]);
+    expect(Bun.file(shot).size).toBeGreaterThan(0);
+  }, 30_000);
 });

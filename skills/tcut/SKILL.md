@@ -49,7 +49,7 @@ export default defineVideo(
 - Arrows are sent as SS3 when the program enabled application cursor mode, `t.paste()` is bracketed when the program asked — editors behave like with a real terminal; `print("[text](url)")` makes a clickable link in SVG/HTML
 - `title: "auto"` follows OSC titles; `tcut doctor demo.cast` explains what a recording used and what tcut cannot show (inline images)
 - `t.timelapse(async () => { await t.run("bun install") }, { speed: 8 })` — everything inside plays 8× faster (`maxPause` only removes silence; this compresses output)
-- `t.screenshot("shot.png")`, `t.clear()`, `t.resize(cols, rows)`, `t.screen()` / `t.line()` for reading the screen
+- `t.snapshot("shot.png")` / `t.snapshot("hero.svg")` — still of that exact moment on every render (`screenshot` = alias), `t.clear()`, `t.resize(cols, rows)`, `t.screen()` / `t.line()` for reading the screen
 - Browser pane: `browser: { position: "right" | "overlay", width }` in config, then `t.browser.goto(url)`, `t.browser.waitFor(/text/)`, `t.browser.click(sel)`, `t.focus("browser" | "terminal")` — records a real WebView beside/over the terminal (dev-server demos)
 
 ## Config essentials

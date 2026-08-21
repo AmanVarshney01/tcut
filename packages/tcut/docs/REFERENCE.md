@@ -66,8 +66,9 @@ tcut themes
 - Wait: `sleep("500ms")` · `wait(/re/, { scope: "line" | "screen" | "scrollback" })` — default waits for the prompt; `scrollback` also searches lines that scrolled off
 - Assert: `expect(/re/)` — throws with a screen dump; `expect(/re/, { scope: "scrollback" })` for output that is no longer visible
 - Fidelity: arrows/home/end switch to the SS3 form when the program turned on application cursor mode (vim, less, fzf); `paste()` uses bracketed paste when the program enabled it (readline, zsh, editors), so autoindent doesn't stair-step; Markdown links in `print()` captions become real OSC 8 hyperlinks
-- Shape the video: `hide(async () => …)` cuts a section · `screenshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`
+- Shape the video: `hide(async () => …)` cuts a section · `snapshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`
 - Zoom: `zoom({ rows: [a, b], cols: [a, b], duration: "400ms", padding: 1 })` magnifies a region (animated on the render clock); `zoom(null)` resets.
+- Snapshots: `snapshot("hero.png")` / `snapshot("hero.svg")` save a still of that exact moment when the video renders — `.png` pixel-perfect through the WebView (transparency-aware), `.svg` headlessly with selectable text. Written on every render (`tcut render old.cast` included), even when no video output is configured, so one script keeps the video and its screenshots in sync. `screenshot()` is the pre-1.0 alias.
 - Chapters: `chapter("name")` writes mp4 chapter metadata (`ffprobe -show_chapters`), appears in `--json`, and is a cut point: `--chapters Zoom,Intro` renders only those (in that order), `--split-chapters` writes one file per chapter (`demo-01-intro.mp4`, …).
 - Timelapse: `timelapse(async () => { await t.run("bun install") }, { speed: 8 })` plays everything inside 8× faster — `maxPause` only squeezes silence, this squeezes output too. Nests.
 - Captions: `print(markdown)` renders Markdown to ANSI (via @wterm/markdown) straight into the recording, not the shell: headings, bold, lists, code, links. `title(text, { pause })` is a heading + rule + pause. Use at a prompt, not inside a TUI.

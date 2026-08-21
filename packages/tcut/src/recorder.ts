@@ -385,10 +385,11 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     expect,
     hide,
     timelapse,
-    screenshot: async (file) => {
+    snapshot: async (file) => {
       await screen.settle();
       push("m", MARKER.screenshot + file);
     },
+    screenshot: (file) => session.snapshot(file),
     marker: async (name) => {
       push("m", name);
     },

@@ -1,3 +1,5 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
 import { fitFrame } from "../loop";
 import { barHeight, embedImage } from "../renderer/page";
 import type { Recording, ResolvedConfig } from "../types";
@@ -165,11 +167,29 @@ export interface SvgResult {
   duration: number;
 }
 
+/** The shared document: chrome (background, window, bar, watermark) around exporter-supplied style + body. */
+async function svgDocument(config: ResolvedConfig, g: Geometry, title: string, style: string, body: string): Promise<string> {
+  const { theme, font } = config;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${g.width}" height="${g.height}" viewBox="0 0 ${g.width} ${g.height}" font-family="${esc(font.family)}" font-size="${font.size}">
+<style>
+${style}text{white-space:pre;dominant-baseline:auto}
+</style>
+${config.marginFill === "transparent" ? "" : `<rect width="100%" height="100%" fill="${config.marginFill}"/>`}
+${shadowDefs(config)}
+<rect x="${num(g.frameX)}" y="${num(g.frameY)}" width="${num(g.frameW)}" height="${num(g.frameH)}" rx="${config.borderRadius}" fill="${theme.background}"${config.shadow ? ' filter="url(#shadow)"' : ""}/>
+${windowBar(config, g, title)}
+<clipPath id="term"><rect x="${num(g.termX)}" y="${num(g.termY)}" width="${num(g.termW)}" height="${num(g.termH)}"/></clipPath>
+<g clip-path="url(#term)"><g transform="translate(${num(g.termX)} ${num(g.termY)})">${body}</g></g>
+${await watermarkMarkup(config, g)}
+</svg>
+`;
+}
+
 /** Animated SVG: a horizontal strip of unique frames moved by a stepped CSS animation. No JS, no fonts embedded. */
 export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<SvgResult> {
   const replay = await replayFrames(rec, config);
   const g = svgGeometry(config, replay.cols, replay.rows);
-  const { theme, font } = config;
   const n = replay.frames.length;
   const total = replay.duration;
 
@@ -184,25 +204,46 @@ export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<
     .map((f, i) => `<g transform="translate(${num(i * g.termW)} 0)">${frameMarkup(f, config, g)}</g>`)
     .join("\n");
 
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${g.width}" height="${g.height}" viewBox="0 0 ${g.width} ${g.height}" font-family="${esc(font.family)}" font-size="${font.size}">
-<style>
-.strip{animation:tcut ${num(total)}s steps(1,end) infinite}
-@keyframes tcut{${keyframes.join("")}}
-text{white-space:pre;dominant-baseline:auto}
-</style>
-${config.marginFill === "transparent" ? "" : `<rect width="100%" height="100%" fill="${config.marginFill}"/>`}
-${shadowDefs(config)}
-<rect x="${num(g.frameX)}" y="${num(g.frameY)}" width="${num(g.frameW)}" height="${num(g.frameH)}" rx="${config.borderRadius}" fill="${theme.background}"${config.shadow ? ' filter="url(#shadow)"' : ""}/>
-${windowBar(config, g, config.title === "auto" ? (replay.title ?? "") : config.title)}
-<clipPath id="term"><rect x="${num(g.termX)}" y="${num(g.termY)}" width="${num(g.termW)}" height="${num(g.termH)}"/></clipPath>
-<g clip-path="url(#term)"><g transform="translate(${num(g.termX)} ${num(g.termY)})"><g class="strip" xml:space="preserve">
-${frames}
-</g></g></g>
-${await watermarkMarkup(config, g)}
-</svg>
-`;
-  return { svg, frames: n, duration: total };
+  const style = `.strip{animation:tcut ${num(total)}s steps(1,end) infinite}\n@keyframes tcut{${keyframes.join("")}}\n`;
+  const body = `<g class="strip" xml:space="preserve">\n${frames}\n</g>`;
+  const title = config.title === "auto" ? (replay.title ?? "") : config.title;
+  return { svg: await svgDocument(config, g, title, style, body), frames: n, duration: total };
+}
+
+export interface SnapshotMark {
+  file: string;
+  /** Seconds on the visible timeline. */
+  at: number;
+}
+
+/** The frame on screen at `at` seconds (frames carry their start time; the last one started before `at` wins). */
+function frameAt(frames: GridFrame[], at: number): GridFrame | undefined {
+  let current = frames[0];
+  for (const f of frames) {
+    if (f.time <= at + 1e-9) current = f;
+    else break;
+  }
+  return current;
+}
+
+/** Static (non-animated) SVG stills for `t.snapshot("x.svg")` marks — one replay serves all of them. */
+export async function writeSvgSnapshots(rec: Recording, config: ResolvedConfig, marks: SnapshotMark[]): Promise<string[]> {
+  const replay = await replayFrames(rec, config);
+  const g = svgGeometry(config, replay.cols, replay.rows);
+  const title = config.title === "auto" ? (replay.title ?? "") : config.title;
+  const written: string[] = [];
+  for (const mark of marks) {
+    // The raster pass applies output and marks that share a frame tick together; match that: the mark
+    // captures the first tick at or after its instant, so output recorded just before it is included.
+    const tick = Math.ceil(mark.at * config.fps - 1e-6) / config.fps;
+    const frame = frameAt(replay.frames, tick);
+    if (!frame) continue;
+    const svg = await svgDocument(config, g, title, "", `<g xml:space="preserve">${frameMarkup(frame, config, g)}</g>`);
+    await mkdir(path.dirname(path.resolve(mark.file)), { recursive: true });
+    await Bun.write(mark.file, svg);
+    written.push(mark.file);
+  }
+  return written;
 }
 
 export async function writeSvg(rec: Recording, config: ResolvedConfig, file: string): Promise<SvgResult> {

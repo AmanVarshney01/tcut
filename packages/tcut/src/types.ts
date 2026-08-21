@@ -353,7 +353,14 @@ export interface TerminalSession {
 
   /** Everything inside `fn` happens, but is cut from the video (state changes are kept). */
   hide<T>(fn: () => Promise<T>): Promise<T>;
-  /** Save a PNG of the current frame during rendering. */
+  /**
+   * Save a still of this exact moment when the video renders: `.png` (pixel-perfect raster) or `.svg`
+   * (vector, selectable text — produced headlessly, no WebView). Written by `tcut <script>` and
+   * `tcut render`, even when no video output is configured, so one script keeps the video and its
+   * screenshots in sync.
+   */
+  snapshot(path: string): Promise<void>;
+  /** Alias of `snapshot` (pre-1.0 name). */
   screenshot(path: string): Promise<void>;
   /** Insert a named marker (written to the .cast, useful for chapters/tooling). */
   marker(name: string): Promise<void>;
