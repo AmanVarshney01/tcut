@@ -93,6 +93,25 @@ describe("replay fidelity", () => {
     expect(texts.some((t) => t === "half")).toBe(false); // the torn state never becomes a frame
     expect(texts.some((t) => t.includes("half done"))).toBe(true);
   });
+  test("an unclosed synchronized-output block cannot freeze the video", async () => {
+    const cast = rec([
+      [0, "o", "before\r\n"],
+      [0.2, "o", `${ESC}[?2026h${ESC}[2J${ESC}[Hstuck`], // block never closes
+      [2, "m", "end"],
+    ]);
+    const replay = await replayFrames(cast, resolveConfig({ output: "x.svg", cols: 40, rows: 6, fps: 10 }));
+    const texts = replay.frames.map((f) => [...f.rows_.values()].map((cells) => cells.map((c) => c.text).join("").trim()).join("|"));
+    expect(texts.some((t) => t.includes("stuck"))).toBe(true); // released after the bounded hold
+  });
+
+  test("adjacent different links stay separate anchors", async () => {
+    const cast = rec([[0, "o", `${hyperlink("one", "https://a.a")}${hyperlink("two", "https://b.b")}\r\n`], [0.3, "m", "end"]]);
+    const { svg } = await buildSvg(cast, resolveConfig({ output: "x.svg", cols: 40, rows: 6 }));
+    expect(svg).toContain('<a href="https://a.a"><tspan');
+    expect(svg).toContain('<a href="https://b.b"><tspan');
+    expect(svg).not.toContain("onetwo");
+  });
+
   test("links reach the SVG and the auto title follows OSC", async () => {
     const cast = rec([[0, "o", `${ESC}]0;vim notes.md\x07${hyperlink("docs", "https://tcut.amanv.dev")} rest\r\n`], [0.3, "m", "end"]]);
     const replay = await replayFrames(cast, resolveConfig({ output: "x.svg", cols: 40, rows: 6 }));
