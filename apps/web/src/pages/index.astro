@@ -107,11 +107,12 @@ const examples = [
       <section>
         <h2 class="text-xl">Render again</h2>
         <p class="mt-3 text-ink-2">
-          Recording and rendering are separate. Every recording is an asciicast; frames are computed on a virtual clock. Change the theme, the size or the format without running anything again. 607 themes, Ghostty's collection.
+          Recording and rendering are separate. Every recording is an asciicast; frames are computed on a virtual clock. Change the theme, the size or the format without running anything again — or cut, join and split by chapter, still on the
+          cast, so it works for SVG as much as MP4. Add a shadow, a watermark or a transparent background the same way. 607 themes, Ghostty's collection.
         </p>
         <div class="mt-3">
           <Code
-            code={`tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg -o demo.html\ntcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4\ntcut publish demo.gif     # to your own S3-compatible bucket`}
+            code={`tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg -o demo.html\ntcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4\ntcut render demo.cast --from 2s --to 10s --shadow --watermark "@you" -o clip.gif\ntcut render demo.cast --split-chapters --margin-fill transparent -o demo.webm\ntcut concat intro.cast demo.cast --gap 500ms -o launch.mp4\ntcut publish demo.gif     # to your own S3-compatible bucket`}
             lang="sh"
             theme="catppuccin-mocha"
           />

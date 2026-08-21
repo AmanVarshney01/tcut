@@ -3,8 +3,8 @@ import path from "node:path";
 import { readCast, writeCast } from "./cast";
 import { applyOverrides, resolveConfig } from "./config";
 import { record } from "./recorder";
-import { renderOutputs, type RenderResult } from "./render";
-import type { CastEvent, RecordOptions, Recording, RenderOptions, ResolvedConfig, Script, VideoConfig } from "./types";
+import { renderSelection, type RenderResult } from "./render";
+import type { CastEvent, ClipSelection, RecordOptions, Recording, RenderOptions, ResolvedConfig, Script, VideoConfig } from "./types";
 
 export interface VideoRecordOptions extends RecordOptions {
   /** Re-record even if a cached cast matches. */
@@ -112,7 +112,7 @@ export class Video {
   async render(recording?: Recording, opts: RenderOptions = {}): Promise<RenderResult> {
     const rec = recording ?? (await readCast(this.config.cast));
     const config = applyOverrides(this.config, opts.overrides);
-    return renderOutputs(rec, config, opts.onProgress);
+    return renderSelection(rec, config, opts.clip, opts.onProgress);
   }
 
   async run(opts: RunOptions = {}): Promise<RunResult> {
@@ -141,11 +141,14 @@ export async function renderCast(
   castFile: string,
   overrides: Partial<VideoConfig> & { output?: string | string[] },
   onProgress?: RenderOptions["onProgress"],
+  clip?: ClipSelection,
 ): Promise<RenderResult> {
   const rec = await readCast(castFile);
-  const base =
-    rec.header.bunVideo ??
-    resolveConfig({ output: overrides.output ?? castFile.replace(/\.cast$/, "") + ".mp4", cols: rec.header.width, rows: rec.header.height });
-  const config = applyOverrides(base, overrides);
-  return renderOutputs(rec, config, onProgress);
+  const config = applyOverrides(castConfig(rec, castFile, overrides.output), overrides);
+  return renderSelection(rec, config, clip, onProgress);
+}
+
+/** The config a cast should be rendered with: the one recorded in its header, or sensible defaults for foreign casts. */
+export function castConfig(rec: Recording, castFile: string, output?: string | string[]): ResolvedConfig {
+  return rec.header.bunVideo ?? resolveConfig({ output: output ?? castFile.replace(/\.cast$/, "") + ".mp4", cols: rec.header.width, rows: rec.header.height });
 }

@@ -307,6 +307,22 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     }
   };
 
+  const speedStack: number[] = [];
+  const timelapse = async <T>(fn: () => Promise<T>, tlOpts: { speed?: number } = {}): Promise<T> => {
+    const speed = tlOpts.speed ?? 8;
+    if (!(speed > 0)) throw new Error(`timelapse speed must be greater than 0, got ${speed}`);
+    await screen.settle();
+    speedStack.push(speed);
+    push("m", `${MARKER.speed}${speed}`);
+    try {
+      return await fn();
+    } finally {
+      await screen.settle();
+      speedStack.pop();
+      push("m", `${MARKER.speed}${speedStack[speedStack.length - 1] ?? 1}`);
+    }
+  };
+
   const session: TerminalSession = {
     type,
     run,
@@ -336,6 +352,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     wait,
     expect,
     hide,
+    timelapse,
     screenshot: async (file) => {
       await screen.settle();
       push("m", MARKER.screenshot + file);

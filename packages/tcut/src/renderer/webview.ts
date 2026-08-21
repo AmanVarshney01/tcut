@@ -8,7 +8,8 @@ import { buildTimeline, withReinjection, type TimedEvent } from "../timeline";
 import { pageAssets } from "./bundle";
 import { createSinks, type Chapter } from "./encoder";
 import { chipBuilder } from "../keylabels";
-import { BROWSER_GAP, barHeight, renderHtml, themeOsc } from "./page";
+import { BROWSER_GAP, barHeight, opaqueFill, renderHtml, themeOsc } from "./page";
+import { decodePng, encodePng, luminance, matte, parseHex } from "./png";
 
 export interface RenderResult {
   outputs: string[];
@@ -16,6 +17,8 @@ export interface RenderResult {
   screenshots: string[];
   durationSeconds: number;
   chapters?: Chapter[];
+  /** Things worth telling the user (e.g. a format that cannot carry alpha). */
+  notes?: string[];
 }
 
 interface ZoomRect {
@@ -78,6 +81,7 @@ export async function render(
       if (pathname === "/wterm.css") return new Response(assets.css, { headers: { "content-type": "text/css" } });
       if (pathname === "/ghostty-vt.wasm") return new Response(Bun.file(assets.wasmPath), { headers: { "content-type": "application/wasm" } });
       if (pathname === "/theme") return new Response(osc, { headers: { "content-type": "text/plain; charset=utf-8" } });
+      if (pathname === "/watermark" && config.watermark?.image) return new Response(Bun.file(path.resolve(config.watermark.image)));
       if (pathname.startsWith("/bframe/")) {
         const rel = decodeURIComponent(pathname.slice("/bframe/".length));
         if (rel.includes("..")) return new Response("forbidden", { status: 403 });
@@ -108,6 +112,14 @@ export async function render(
   const totalFrames = Math.max(1, Math.ceil(timeline.duration * fps) + 1);
   const blinkPeriod = config.cursor.period / 1000;
   const screenshots: string[] = [];
+  const notes: string[] = [];
+  // Transparent output: every dirty frame is shot twice, over the theme background and over a contrasting one,
+  // and the pair is matted into real RGBA (the WebView itself always composites onto an opaque page).
+  const transparent = config.marginFill === "transparent";
+  const fillA = opaqueFill(config);
+  const fillB = luminance(fillA) > 0.5 ? "#000000" : "#ffffff";
+  const rgbA = parseHex(fillA);
+  const rgbB = parseHex(fillB);
 
   const view = new Bun.WebView({ width: 800, height: 600 });
   try {
@@ -168,7 +180,11 @@ export async function render(
     await view.resize(width, height);
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
 
-    const sinks = await createSinks(config.output, fps, { chapters, durationSeconds: timeline.duration });
+    const sinks = await createSinks(config.output, fps, { chapters, durationSeconds: timeline.duration, alpha: transparent });
+    if (transparent) {
+      const opaque = sinks.filter((s) => !s.alpha).map((s) => path.basename(s.target));
+      if (opaque.length) notes.push(`${opaque.join(", ")}: this format has no alpha channel, so the theme background was used instead of transparency`);
+    }
     const cellPx = cell;
     const fullRect: ZoomRect = { x: 0, y: 0, w: termW, h: termH };
     let zoomFrom: ZoomRect | null = null;
@@ -180,10 +196,12 @@ export async function render(
     // loopOffset rotates the frame order for looping outputs; those frames are buffered and flushed at the end.
     const loopSinks = config.loopOffset ? sinks.filter((s) => s.loops) : [];
     const streamSinks = sinks.filter((s) => !loopSinks.includes(s));
-    const buffered: Uint8Array[] = [];
+    const buffered: Array<{ opaque: Uint8Array; alpha: Uint8Array }> = [];
     let pointer = 0;
     let lastPng: Uint8Array | null = null;
+    let lastAlphaPng: Uint8Array | null = null;
     let lastBlink: boolean | null = null;
+    const setFill = (color: string) => view.evaluate(`window.__vt.background(${JSON.stringify(color)})`);
 
     for (let frame = 0; frame < totalFrames; frame++) {
       const time = frame / fps;
@@ -254,26 +272,33 @@ export async function render(
       if (zoomChanged || chipsChanged) dirty = true;
       if (dirty) {
         lastPng = (await view.screenshot({ encoding: "buffer" })) as Uint8Array;
+        if (transparent) {
+          await setFill(fillB);
+          const onB = (await view.screenshot({ encoding: "buffer" })) as Uint8Array;
+          await setFill(fillA);
+          lastAlphaPng = encodePng(matte(decodePng(lastPng), decodePng(onB), rgbA, rgbB));
+        }
       }
+      const frameFor = (sink: { alpha?: boolean }): Uint8Array => (sink.alpha && lastAlphaPng ? lastAlphaPng : lastPng!);
 
       for (const shot of shots) {
         const file = shot.data.slice(MARKER.screenshot.length);
         await mkdir(path.dirname(path.resolve(file)), { recursive: true });
-        await Bun.write(file, lastPng!);
+        await Bun.write(file, lastAlphaPng ?? lastPng!);
         screenshots.push(file);
       }
 
-      for (const sink of streamSinks) await sink.frame(lastPng!);
-      if (loopSinks.length) buffered.push(lastPng!);
+      for (const sink of streamSinks) await sink.frame(frameFor(sink));
+      if (loopSinks.length) buffered.push({ opaque: lastPng!, alpha: lastAlphaPng ?? lastPng! });
       onProgress?.({ frame: frame + 1, total: totalFrames });
     }
 
     if (loopSinks.length) {
       const rotated = rotateFrames(buffered, loopOffsetFrames(buffered.length, config.loopOffset));
-      for (const png of rotated) for (const sink of loopSinks) await sink.frame(png);
+      for (const pair of rotated) for (const sink of loopSinks) await sink.frame(sink.alpha ? pair.alpha : pair.opaque);
     }
     for (const sink of sinks) await sink.finish();
-    return { outputs: sinks.map((s) => s.target), frames: totalFrames, screenshots, durationSeconds: timeline.duration, chapters };
+    return { outputs: sinks.map((s) => s.target), frames: totalFrames, screenshots, durationSeconds: timeline.duration, chapters, ...(notes.length && { notes }) };
   } finally {
     view.close();
     server.stop(true);

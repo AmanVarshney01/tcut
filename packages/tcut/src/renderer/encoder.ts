@@ -9,6 +9,8 @@ export interface FrameSink {
   readonly target: string;
   /** True for outputs that loop (GIF, WebP) — `loopOffset` applies to these. */
   readonly loops?: boolean;
+  /** True when this sink receives RGBA frames (transparent output). */
+  readonly alpha?: boolean;
 }
 
 type Format = "mp4" | "webm" | "gif" | "webp" | "png-sequence" | "png" | "jpeg";
@@ -40,11 +42,15 @@ export function detectFormat(output: string): Format {
 /** Still image of the final frame. PNG is written as-is; JPEG is transcoded with Bun.Image (no ffmpeg). */
 class StillSink implements FrameSink {
   private last: Uint8Array | null = null;
+  readonly alpha: boolean;
 
   constructor(
     readonly target: string,
     private format: "png" | "jpeg",
-  ) {}
+    alpha = false,
+  ) {
+    this.alpha = alpha && format === "png";
+  }
 
   async frame(png: Uint8Array): Promise<void> {
     this.last = png;
@@ -156,10 +162,26 @@ export function chaptersMetadata(chapters: Chapter[], durationSeconds: number): 
   return lines.join("\n") + "\n";
 }
 
-function ffmpegArgs(format: Format, fps: number, output: string, encoder: string, metadataFile?: string): string[] {
+function ffmpegArgs(format: Format, fps: number, output: string, encoder: string, metadataFile?: string, alpha = false): string[] {
   const input = ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(fps), "-i", "pipe:0"];
   if (metadataFile && format === "mp4") input.push("-i", metadataFile, "-map_metadata", "1");
   const evenSize = "scale=trunc(iw/2)*2:trunc(ih/2)*2";
+  if (alpha && format === "webm") {
+    return [...input, "-vf", `${evenSize},format=yuva420p`, "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-auto-alt-ref", "0", "-b:v", "0", "-crf", "30", "-row-mt", "1", output];
+  }
+  if (alpha && format === "gif") {
+    const gifFps = Math.min(fps, 50);
+    return [
+      ...input,
+      "-vf",
+      `fps=${gifFps},split[a][b];[a]palettegen=stats_mode=diff:reserve_transparent=1[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle:alpha_threshold=128`,
+      "-loop", "0",
+      output,
+    ];
+  }
+  if (alpha && format === "webp") {
+    return [...input, "-c:v", encoder, "-pix_fmt", "yuva420p", "-lossless", "0", "-q:v", "85", "-loop", "0", "-preset", "text", output];
+  }
   switch (format) {
     case "mp4":
       return [
@@ -191,11 +213,15 @@ function ffmpegArgs(format: Format, fps: number, output: string, encoder: string
   }
 }
 
+/** Formats whose container/codec can carry an alpha channel. */
+export const ALPHA_FORMATS = new Set<Format>(["webm", "gif", "webp", "png", "png-sequence"]);
+
 class FfmpegSink implements FrameSink {
   private proc: Subprocess<"pipe", "ignore", "pipe">;
   private stdin: FileSink;
   private stderr: Promise<string>;
   readonly loops: boolean;
+  readonly alpha: boolean;
 
   constructor(
     readonly target: string,
@@ -203,9 +229,11 @@ class FfmpegSink implements FrameSink {
     fps: number,
     match: EncoderMatch,
     metadataFile?: string,
+    alpha = false,
   ) {
     this.loops = format === "gif" || format === "webp";
-    this.proc = Bun.spawn([match.binary, ...ffmpegArgs(format, fps, target, match.encoder, metadataFile)], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
+    this.alpha = alpha && ALPHA_FORMATS.has(format);
+    this.proc = Bun.spawn([match.binary, ...ffmpegArgs(format, fps, target, match.encoder, metadataFile, this.alpha)], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
     this.stdin = this.proc.stdin;
     this.stderr = new Response(this.proc.stderr).text();
   }
@@ -229,7 +257,10 @@ class PngSequenceSink implements FrameSink {
   private index = 0;
   private pending: Promise<unknown>[] = [];
 
-  constructor(readonly target: string) {}
+  constructor(
+    readonly target: string,
+    readonly alpha = false,
+  ) {}
 
   async frame(png: Uint8Array): Promise<void> {
     const file = path.join(this.target, `frame-${String(this.index++).padStart(6, "0")}.png`);
@@ -254,7 +285,14 @@ export async function ensureFfmpeg(): Promise<void> {
   );
 }
 
-export async function createSinks(outputs: string[], fps: number, opts: { chapters?: Chapter[]; durationSeconds?: number } = {}): Promise<FrameSink[]> {
+export interface SinkOptions {
+  chapters?: Chapter[];
+  durationSeconds?: number;
+  /** Frames will be RGBA; sinks whose format supports it keep the alpha channel. */
+  alpha?: boolean;
+}
+
+export async function createSinks(outputs: string[], fps: number, opts: SinkOptions = {}): Promise<FrameSink[]> {
   const sinks: FrameSink[] = [];
   let metadataFile: string | undefined;
   if (opts.chapters && opts.chapters.length > 0) {
@@ -265,18 +303,18 @@ export async function createSinks(outputs: string[], fps: number, opts: { chapte
     const format = detectFormat(output);
     if (format === "png-sequence") {
       await mkdir(output, { recursive: true });
-      sinks.push(new PngSequenceSink(output));
+      sinks.push(new PngSequenceSink(output, opts.alpha === true));
       continue;
     }
     if (format === "png" || format === "jpeg") {
       await mkdir(path.dirname(path.resolve(output)), { recursive: true });
-      sinks.push(new StillSink(output, format));
+      sinks.push(new StillSink(output, format, opts.alpha === true));
       continue;
     }
     await ensureFfmpeg();
     const match = await requireEncoder(format as FfmpegFormat, output);
     await mkdir(path.dirname(path.resolve(output)), { recursive: true });
-    sinks.push(new FfmpegSink(output, format, fps, match, metadataFile));
+    sinks.push(new FfmpegSink(output, format, fps, match, metadataFile, opts.alpha === true));
   }
   return sinks;
 }

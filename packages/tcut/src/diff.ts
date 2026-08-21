@@ -1,7 +1,7 @@
 import path from "node:path";
 import { readCast } from "./cast";
 import { applyOverrides, resolveConfig } from "./config";
-import { replayFrames, type GridFrame } from "./export/frames";
+import { frameText, replayFrames, type GridFrame } from "./export/frames";
 import { renderOutputs } from "./render";
 import type { Recording, ResolvedConfig } from "./types";
 
@@ -26,16 +26,6 @@ function frameAt(frames: GridFrame[], at: number | undefined): GridFrame {
   let chosen = frames[0]!;
   for (const f of frames) if (f.time <= at + 1e-9) chosen = f;
   return chosen;
-}
-
-function rowsText(frame: GridFrame): string[] {
-  const out: string[] = [];
-  for (let y = 0; y < frame.rows; y++) {
-    const cells = frame.rows_.get(y);
-    out.push(cells ? cells.map((c) => c.text).join("").replace(/\s+$/, "") : "");
-  }
-  while (out.length && out[out.length - 1] === "") out.pop();
-  return out;
 }
 
 /** Simple LCS-based line diff — screens are small, so O(n·m) is fine. */
@@ -69,7 +59,7 @@ async function screenOf(rec: Recording, at: number | undefined): Promise<{ text:
   const base = rec.header.bunVideo ?? resolveConfig({ output: "x.svg", cols: rec.header.width, rows: rec.header.height });
   const config = applyOverrides(base, {});
   const replay = await replayFrames(rec, config);
-  return { text: rowsText(frameAt(replay.frames, at)), config };
+  return { text: frameText(frameAt(replay.frames, at)), config };
 }
 
 /** Compare what two recordings show on screen (text, not pixels) at the end or at a given time. */

@@ -10,6 +10,96 @@ export function barHeight(config: ResolvedConfig): number {
   return config.windowBar === "none" ? 0 : BAR_HEIGHT;
 }
 
+/** "#RRGGBB" + opacity → "rgba(r, g, b, a)". */
+export function rgba(hex: string, opacity: number): string {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!m) throw new Error(`Expected a #RRGGBB colour, got "${hex}"`);
+  return `rgba(${parseInt(m[1]!, 16)}, ${parseInt(m[2]!, 16)}, ${parseInt(m[3]!, 16)}, ${opacity})`;
+}
+
+/** CSS box-shadow value for the configured shadow, or null. */
+export function shadowCss(config: ResolvedConfig): string | null {
+  const s = config.shadow;
+  return s ? `${s.x}px ${s.y}px ${s.blur}px ${rgba(s.color, s.opacity)}` : null;
+}
+
+/** The colour painted behind the window while rendering; transparent output is matted from two of these. */
+export function opaqueFill(config: ResolvedConfig): string {
+  return config.marginFill === "transparent" ? config.theme.background : config.marginFill;
+}
+
+/** CSS placing an absolutely positioned watermark inside its container. */
+export function watermarkPlacement(position: NonNullable<ResolvedConfig["watermark"]>["position"], margin: number): string {
+  switch (position) {
+    case "top-left":
+      return `left: ${margin}px; top: ${margin}px;`;
+    case "top-right":
+      return `right: ${margin}px; top: ${margin}px;`;
+    case "bottom-left":
+      return `left: ${margin}px; bottom: ${margin}px;`;
+    case "center":
+      return "left: 50%; top: 50%; transform: translate(-50%, -50%);";
+    default:
+      return `right: ${margin}px; bottom: ${margin}px;`;
+  }
+}
+
+export function watermarkCss(config: ResolvedConfig, selector = "#watermark"): string {
+  const w = config.watermark;
+  if (!w) return "";
+  return `${selector} {
+    position: absolute; z-index: 20; pointer-events: none; white-space: pre; ${watermarkPlacement(w.position, w.margin)}
+    opacity: ${w.opacity}; color: ${w.color};
+    font: 500 ${w.size}px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1;
+  }
+  ${selector} img { display: block; height: ${w.size}px; width: auto; }`;
+}
+
+/** The watermark element: text, or an image served from `imageSrc`. */
+export function watermarkHtml(config: ResolvedConfig, imageSrc: string): string {
+  const w = config.watermark;
+  if (!w) return "";
+  const inner = w.image ? `<img src="${escapeHtml(imageSrc)}" alt="">` : escapeHtml(w.text ?? "");
+  return `<div id="watermark">${inner}</div>`;
+}
+
+const IMAGE_MIME = new Map([
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".webp", "image/webp"],
+  [".svg", "image/svg+xml"],
+  [".gif", "image/gif"],
+]);
+
+export interface EmbeddedImage {
+  dataUri: string;
+  width: number;
+  height: number;
+}
+
+/** Read a watermark image file as a data URI with its pixel size (for self-contained SVG/HTML output). */
+export async function embedImage(file: string): Promise<EmbeddedImage> {
+  const f = Bun.file(file);
+  if (!(await f.exists())) throw new Error(`Watermark image not found: ${file}`);
+  const bytes = new Uint8Array(await f.arrayBuffer());
+  const ext = file.slice(file.lastIndexOf(".")).toLowerCase();
+  const mime = IMAGE_MIME.get(ext) ?? "application/octet-stream";
+  let width = 0;
+  let height = 0;
+  if (mime === "image/svg+xml") {
+    const text = new TextDecoder().decode(bytes);
+    const vb = /viewBox="[\d.\s-]*?([\d.]+)\s+([\d.]+)"\s*/.exec(text);
+    width = Number(/\swidth="([\d.]+)/.exec(text)?.[1] ?? vb?.[1] ?? 0);
+    height = Number(/\sheight="([\d.]+)/.exec(text)?.[1] ?? vb?.[2] ?? 0);
+  } else {
+    const meta = await new Bun.Image(bytes).metadata();
+    width = meta.width;
+    height = meta.height;
+  }
+  return { dataUri: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`, width, height };
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
@@ -72,7 +162,7 @@ export function renderHtml(config: ResolvedConfig): string {
 <meta charset="utf-8">
 <link rel="stylesheet" href="/wterm.css">
 <style>
-  html, body { margin: 0; padding: 0; background: ${config.marginFill}; overflow: hidden; }
+  html, body { margin: 0; padding: 0; background: ${opaqueFill(config)}; overflow: hidden; }
   #stage {
     position: absolute;
     left: ${config.margin}px; top: ${config.margin}px;
@@ -82,8 +172,8 @@ export function renderHtml(config: ResolvedConfig): string {
   ${
     config.browser?.position === "overlay"
       ? `#stage { display: block; }
-  #stage #frame { position: absolute; left: 0; top: 0; z-index: 2; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
-  #stage #browser { position: absolute; z-index: 1; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
+  #stage #frame { position: absolute; left: 0; top: 0; z-index: 2; box-shadow: ${shadowCss(config) ?? "0 18px 50px rgba(0,0,0,0.45)"}; }
+  #stage #browser { position: absolute; z-index: 1; box-shadow: ${shadowCss(config) ?? "0 18px 50px rgba(0,0,0,0.45)"}; }
   #stage.front-browser #browser { z-index: 3; }
   #stage.front-browser #frame { z-index: 1; }`
       : ""
@@ -98,6 +188,7 @@ export function renderHtml(config: ResolvedConfig): string {
     display: ${config.browser ? "flex" : "none"};
     flex-direction: column;
     box-sizing: border-box;
+    ${shadowCss(config) ? `box-shadow: ${shadowCss(config)};` : ""}
   }
   #browser-bar {
     height: ${BROWSER_BAR}px; flex: none;
@@ -119,7 +210,9 @@ export function renderHtml(config: ResolvedConfig): string {
     padding: var(--pad-y) var(--pad-x);
     box-sizing: border-box;
     overflow: hidden;
+    ${shadowCss(config) ? `box-shadow: ${shadowCss(config)};` : ""}
   }
+  ${watermarkCss(config)}
   #bar {
     height: ${barHeight(config)}px;
     margin: calc(var(--pad-y) * -1) calc(var(--pad-x) * -1) 0;
@@ -161,6 +254,8 @@ export function renderHtml(config: ResolvedConfig): string {
   #zoom { transform-origin: 0 0; will-change: transform; }
   #frame { overflow: hidden; }
   #frame > *:not(#zoom):not(#keys) { position: relative; z-index: 2; }
+  /* Shadows are painted outside #frame; keep the shadow of the window, not of the zoomed grid. */
+  #zoom { position: relative; }
 </style>
 <style id="blink"></style>
 </head>
@@ -183,6 +278,7 @@ ${
     : ""
 }
 </div>
+${watermarkHtml(config, "/watermark")}
 <script type="module" src="/app.js"></script>
 </body>
 </html>`;

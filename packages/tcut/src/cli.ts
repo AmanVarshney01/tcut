@@ -2,19 +2,21 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { writeCast } from "./cast";
-import { resolveConfig } from "./config";
+import { readCast, writeCast } from "./cast";
+import { applyOverrides, resolveConfig } from "./config";
 import * as api from "./index";
 import { recordLive } from "./live";
 import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig, type Published } from "./publish";
 import { diffCasts, type DiffResult } from "./diff";
+import { toMs } from "./duration";
+import { concatRecordings, cutRecording, flattenedConfig, rebaseBrowserFrames, recordingDuration, selectChapters } from "./edit";
 import { presetNames, type PresetName } from "./presets";
 import { renderOutputs } from "./render";
 import { generateScript } from "./scriptgen";
 import { runScriptTests, type TestSummary } from "./testing";
 import { findThemes, themeNames } from "./themes";
-import type { BrowserConfig, CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
-import { Video, attachBrowserFrames, isVideo, renderCast } from "./video";
+import type { BrowserConfig, ClipSelection, CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
+import { Video, attachBrowserFrames, castConfig, isVideo, renderCast } from "./video";
 
 // Let user scripts `import { defineVideo } from "tcut"` (or "termcut", the npm package name) regardless of
 // where they live or whether this is the compiled binary (no node_modules there): resolve the bare specifier
@@ -37,6 +39,8 @@ Usage:
   tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
   tcut test <path...>                 run scripts in fast mode as tests (no video)
   tcut diff <a.cast> <b.cast>         compare what two recordings show on screen (exit 1 if different)
+  tcut cut <file.cast> --from 2s --to 10s [--cast out.cast] [-o …]   keep part of a recording (by time or --chapters)
+  tcut concat <a.cast> <b.cast…> [--gap 500ms] [--cast out.cast] [-o …]   join recordings end to end
   tcut publish <files...> [--open]    upload to your S3-compatible bucket and print share links
   tcut publish --setup                configure the bucket (RustFS, MinIO, R2, S3 …) — once
   tcut init [name] [--template t]     scaffold a new script (basic | tour | test)
@@ -56,6 +60,12 @@ Options (override the script's config):
       --loop-offset <n|N%> where GIF/WebP loops start
       --max-pause <dur>    idle compression: cap gaps between events (e.g. 800ms)
       --keys               show recent key presses as chips
+      --shadow             drop shadow under the window (margin defaults to 40)
+      --watermark <text>   text in the bottom-right corner; --watermark-image <file> for a logo
+      --from <t> --to <t>  render/cut only this part of the visible timeline (seconds, or "1.5s", "2m")
+      --chapters <a,b>     render/cut only these chapters (titles or numbers), joined in that order
+      --split-chapters     one output per chapter: demo.mp4 → demo-01-install.mp4 …
+      --gap <dur>          concat: still time between parts
       --preset <name>      readme | x | youtube | square
       --browser <url>      rec: record a browser window too (--browser-position right|left|top|bottom|overlay)
       --at <seconds>       diff: compare the screen at this time instead of the end
@@ -105,6 +115,14 @@ const { values, positionals } = parseArgs({
     preset: { type: "string" },
     browser: { type: "string" },
     "browser-position": { type: "string" },
+    shadow: { type: "boolean" },
+    watermark: { type: "string" },
+    "watermark-image": { type: "string" },
+    from: { type: "string" },
+    to: { type: "string" },
+    chapters: { type: "string" },
+    "split-chapters": { type: "boolean" },
+    gap: { type: "string" },
     at: { type: "string" },
     images: { type: "string" },
     cast: { type: "string" },
@@ -142,6 +160,7 @@ type CliReport =
   | { cast: string; cached: boolean; events: number; durationSeconds: number }
   | { cast: string; outputs: OutputFile[]; frames: number; durationSeconds: number }
   | { cast: string; cached: boolean; outputs: OutputFile[]; frames: number; durationSeconds: number }
+  | { cast: string; events: number; durationSeconds: number; outputs: OutputFile[] }
   | DiffResult
   | TestSummary;
 
@@ -205,6 +224,10 @@ function overridesFromFlags(): Partial<VideoConfig> {
   if (values["loop-offset"] !== undefined) o.loopOffset = values["loop-offset"];
   if (values["max-pause"] !== undefined) o.maxPause = values["max-pause"];
   if (values.keys) o.keys = true;
+  if (values.shadow) o.shadow = true;
+  if (values.watermark || values["watermark-image"]) {
+    o.watermark = { ...(values.watermark && { text: values.watermark }), ...(values["watermark-image"] && { image: values["watermark-image"] }) };
+  }
   if (values.preset) {
     if (!presetNames.includes(values.preset as PresetName)) fail(`--preset must be one of ${presetNames.join(", ")}`);
     o.preset = values.preset as PresetName;
@@ -215,6 +238,28 @@ function overridesFromFlags(): Partial<VideoConfig> {
     o.browser = { url: values.browser, ...(position && { position }) };
   }
   return o;
+}
+
+/** `--from 2` and `--at 2` are seconds; `--from 1.5s` / `"2m"` go through the duration parser. */
+function seconds(flag: "from" | "to" | "gap"): number | undefined {
+  const raw = values[flag];
+  if (raw === undefined) return undefined;
+  return /^\s*\d+(\.\d+)?\s*$/.test(raw) ? Number(raw) : toMs(raw) / 1000;
+}
+
+function clipFromFlags(): ClipSelection | undefined {
+  const clip: ClipSelection = {};
+  const from = seconds("from");
+  const to = seconds("to");
+  if (from !== undefined) clip.from = from;
+  if (to !== undefined) clip.to = to;
+  if (values.chapters) clip.chapters = values.chapters.split(",").map((s) => s.trim()).filter(Boolean);
+  if (values["split-chapters"]) clip.splitChapters = true;
+  return Object.keys(clip).length ? clip : undefined;
+}
+
+function reportNotes(notes: string[] | undefined): void {
+  for (const note of notes ?? []) log(dim(`  note: ${note}`));
 }
 
 async function loadVideo(file: string): Promise<Video> {
@@ -463,10 +508,56 @@ async function main(): Promise<void> {
     }
     case "render": {
       if (!rest[0]) fail("render needs a .cast file");
-      const result = await renderCast(rest[0], overridesFromFlags(), progressReporter());
+      const result = await renderCast(rest[0], overridesFromFlags(), progressReporter(), clipFromFlags());
       const files = await reportOutputs(result.outputs, result.screenshots);
+      reportNotes(result.notes);
       log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
       emit({ cast: rest[0], outputs: files, frames: result.frames, durationSeconds: result.durationSeconds });
+      return;
+    }
+    case "cut":
+    case "concat": {
+      const joining = first === "concat";
+      if (joining ? rest.length < 2 : !rest[0]) fail(joining ? "concat needs two or more .cast files" : "cut needs a .cast file");
+      const clip = clipFromFlags();
+      if (!joining && !clip) fail("cut needs --from/--to and/or --chapters");
+      const castOut = values.cast ?? (joining ? path.join(path.dirname(rest[0]!), "concat.cast") : rest[0]!.replace(/\.cast$/, "") + "-cut.cast");
+      const overrides = overridesFromFlags();
+      delete overrides.cast;
+      const parts: Array<{ rec: Awaited<ReturnType<typeof readCast>>; config: ReturnType<typeof castConfig> }> = [];
+      for (const [i, file] of rest.entries()) {
+        const rec = await readCast(file);
+        const config = applyOverrides(castConfig(rec, file, values.output), overrides);
+        parts.push({ rec: await rebaseBrowserFrames(rec, file, castOut, joining ? `${i}-` : ""), config });
+      }
+      let out: Awaited<ReturnType<typeof readCast>>;
+      if (joining) {
+        out = concatRecordings(parts, { gap: seconds("gap") ?? 0 });
+      } else {
+        const { rec, config } = parts[0]!;
+        let part = rec;
+        let partConfig = config;
+        if (clip?.chapters) {
+          part = selectChapters(rec, config, clip.chapters);
+          partConfig = flattenedConfig(config);
+        }
+        out = clip && (clip.from !== undefined || clip.to !== undefined) ? cutRecording(part, partConfig, clip) : part;
+      }
+      const renderConfig = { ...flattenedConfig(parts[0]!.config), cast: castOut, output: values.output?.length ? values.output : parts[0]!.config.output };
+      out.header.bunVideo = renderConfig;
+      await mkdir(path.dirname(path.resolve(castOut)), { recursive: true });
+      await writeCast(castOut, out);
+      out.source = path.resolve(castOut);
+      const durationSeconds = recordingDuration(out);
+      ok(`wrote ${castOut}`, `${out.events.length} events, ${durationSeconds.toFixed(1)}s`);
+      let files: OutputFile[] = [];
+      if (values.output?.length) {
+        const result = await renderOutputs(out, renderConfig, progressReporter());
+        files = await reportOutputs(result.outputs, result.screenshots);
+        reportNotes(result.notes);
+        log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
+      }
+      emit({ cast: castOut, events: out.events.length, durationSeconds, outputs: files });
       return;
     }
     case "diff": {
@@ -492,7 +583,8 @@ async function main(): Promise<void> {
     // eslint-disable-next-line no-fallthrough -- process.exit above never returns
     default: {
       const video = await loadVideo(first!);
-      const result = await video.run({ log, force: values.force, recordOnly: values["record-only"], onProgress: progressReporter() });
+      const result = await video.run({ log, force: values.force, recordOnly: values["record-only"], onProgress: progressReporter(), clip: clipFromFlags() });
+      reportNotes(result.notes);
       ok(`${result.cached ? "reused" : "wrote"} ${result.cast}`);
       const files = await reportOutputs(result.outputs, result.screenshots);
       if (!values["record-only"]) log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));

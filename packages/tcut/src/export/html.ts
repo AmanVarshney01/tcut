@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { barHeight } from "../renderer/page";
+import { barHeight, embedImage, shadowCss, watermarkCss } from "../renderer/page";
 import { pageAssets } from "../renderer/bundle";
 import { buildTimeline } from "../timeline";
 import type { Recording, ResolvedConfig, Theme } from "../types";
@@ -29,6 +29,8 @@ export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise
   const assets = await pageAssets();
   const { events, duration } = buildTimeline(rec.events, config.playbackSpeed);
   const { theme, font } = config;
+  const wm = config.watermark;
+  const watermark = wm ? `<div id="watermark">${wm.image ? `<img src="${(await embedImage(wm.image)).dataUri}" alt="">` : escapeHtml(wm.text ?? "")}</div>` : "";
   const data = {
     cols: rec.header.width,
     rows: rec.header.height,
@@ -54,7 +56,8 @@ export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise
 <style>
 ${assets.css}
 html, body { margin: 0; background: ${config.marginFill}; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-#frame { display: inline-block; background: ${theme.background}; border-radius: ${config.borderRadius}px; padding: ${config.padding}px; margin: ${config.margin}px; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+#frame { position: relative; display: inline-block; background: ${theme.background}; border-radius: ${config.borderRadius}px; padding: ${config.padding}px; margin: ${config.margin}px; box-shadow: ${shadowCss(config) ?? "0 12px 40px rgba(0,0,0,.35)"}; }
+${watermarkCss(config)}
 #bar { height: ${barHeight(config)}px; margin-top: -${Math.min(config.padding, 12)}px; display: flex; align-items: center; justify-content: space-between; font: 13px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: ${theme.foreground}; }
 #bar .dots { display: flex; gap: 8px; } #bar .dot { width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; display: inline-block; }
 #bar .title { flex: 1; text-align: center; opacity: .7; } #bar.right .title { text-align: left; }
@@ -68,6 +71,7 @@ html, body { margin: 0; background: ${config.marginFill}; min-height: 100vh; dis
 <body>
 <div id="frame">
   ${windowBar(config)}
+  ${watermark}
   <div id="term"></div>
   <div id="controls">
     <button id="play" title="Play / pause">▶</button>

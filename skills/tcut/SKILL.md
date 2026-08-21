@@ -44,13 +44,26 @@ export default defineVideo(
 - `t.hide(async () => { ... })` — run setup off-camera (state persists; don't kill background jobs here)
 - `t.print(markdown)` / `t.title(text)` — render Markdown captions into the video without typing
 - `t.zoom({ rows: [0, 5], cols: [0, 60], duration: "500ms" })` — magnify a region; `t.zoom(null)` resets
-- `t.chapter("Install")` — real MP4 chapter metadata
+- `t.chapter("Install")` — real MP4 chapter metadata, and a cut point: `--chapters Install` / `--split-chapters` at render time
+- `t.timelapse(async () => { await t.run("bun install") }, { speed: 8 })` — everything inside plays 8× faster (`maxPause` only removes silence; this compresses output)
 - `t.screenshot("shot.png")`, `t.clear()`, `t.resize(cols, rows)`, `t.screen()` / `t.line()` for reading the screen
 - Browser pane: `browser: { position: "right" | "overlay", width }` in config, then `t.browser.goto(url)`, `t.browser.waitFor(/text/)`, `t.browser.click(sel)`, `t.focus("browser" | "terminal")` — records a real WebView beside/over the terminal (dev-server demos)
 
 ## Config essentials
 
-`output` (array = multiple formats), `preset: "readme" | "x" | "youtube" | "square"`, `theme` (~600 Ghostty themes, `tcut themes`), `cols/rows` or `width/height` (px), `fps`, `typingSpeed`/`typingJitter`, `keys: true` (key-press overlay, one chip at a time; `{ limit, font, color, background, radius, position }`), `maxPause: "1.5s"` (idle compression), `windowBar: "none"` + `margin: 0` + `borderRadius: 0` for a bare terminal, `title`, `marginFill`.
+`output` (array = multiple formats), `preset: "readme" | "x" | "youtube" | "square"`, `theme` (~600 Ghostty themes, `tcut themes`), `cols/rows` or `width/height` (px), `fps`, `typingSpeed`/`typingJitter`, `keys: true` (key-press overlay, one chip at a time; `{ limit, font, color, background, radius, position }`), `maxPause: "1.5s"` (idle compression), `windowBar: "none"` + `margin: 0` + `borderRadius: 0` for a bare terminal, `title`, `marginFill` (`"transparent"` = real alpha in png/webp/gif/webm/svg/html; mp4 falls back), `shadow: true` (soft drop shadow; margin defaults to 40), `watermark: "© you"` or `{ image: "logo.png", position: "top-left", opacity, size }`.
+
+## Cut and join (no re-recording)
+
+All on the cast's visible timeline, so every format works and the result is still a `.cast`:
+
+```sh
+tcut render demo.cast --from 2s --to 10s -o clip.gif      # time window
+tcut render demo.cast --chapters Zoom,Intro -o clip.mp4    # chapters, in that order
+tcut render demo.cast --split-chapters -o demo.mp4         # demo-01-intro.mp4, demo-02-zoom.mp4 …  (ideal clip library for Remotion)
+tcut cut demo.cast --from 2s --to 10s                      # writes demo-cut.cast
+tcut concat intro.cast demo.cast --gap 500ms -o launch.mp4 # same cols×rows required; screen resets at each seam
+```
 
 ## Render again without re-running
 

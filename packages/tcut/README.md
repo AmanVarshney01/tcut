@@ -51,7 +51,15 @@ defineVideo({ output: "demo.mp4", browser: { position: "overlay" } }, async (t) 
 });
 ```
 
-Polish: `keys: true` shows key presses, `maxPause: "800ms"` cuts dead air, `t.zoom({ rows: [0, 5] })` magnifies output, `t.chapter("Install")` adds mp4 chapters, `preset: "x"` sizes it for X. `tcut diff a.cast b.cast` catches output changes in CI.
+Polish: `shadow: true`, `watermark: "© you"`, `marginFill: "transparent"` (real alpha in PNG/WebP/GIF/WebM/SVG), `keys: true` shows key presses, `maxPause: "800ms"` cuts dead air, `t.timelapse(fn, { speed: 8 })` fast-forwards an install, `t.zoom({ rows: [0, 5] })` magnifies output, `t.chapter("Install")` adds mp4 chapters, `preset: "x"` sizes it for X. `tcut diff a.cast b.cast` catches output changes in CI.
+
+Cut and join without re-recording — on the cast, so every format works:
+
+```sh
+tcut render demo.cast --from 2s --to 10s -o clip.gif     # a window of the video
+tcut render demo.cast --split-chapters -o demo.mp4       # one file per t.chapter()
+tcut concat intro.cast demo.cast --gap 500ms -o launch.mp4
+```
 
 Re-render any recording without re-running it — ~600 themes ([Ghostty's collection](https://github.com/mbadolato/iTerm2-Color-Schemes)), `tcut themes` lists them:
 

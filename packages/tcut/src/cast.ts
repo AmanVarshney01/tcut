@@ -44,5 +44,7 @@ export const MARKER = {
   focus: "focus:",
   zoom: "zoom:",
   chapter: "chapter:",
+  /** Render-clock speed for the events that follow (`speed:8`); `speed:1` restores real time. */
+  speed: "speed:",
   end: "end",
 } as const;

@@ -1,5 +1,5 @@
 import { fitFrame } from "../loop";
-import { barHeight } from "../renderer/page";
+import { barHeight, embedImage } from "../renderer/page";
 import type { Recording, ResolvedConfig } from "../types";
 import { FLAG, replayFrames, type GridCell, type GridFrame } from "./frames";
 
@@ -128,6 +128,32 @@ function frameMarkup(frame: GridFrame, config: ResolvedConfig, g: Geometry): str
   return parts.join("");
 }
 
+/** Drop shadow as an SVG filter on the window rect (blur radius ≈ 2 × stdDeviation). */
+function shadowDefs(config: ResolvedConfig): string {
+  const s = config.shadow;
+  if (!s) return "";
+  return `<defs><filter id="shadow" x="-40%" y="-40%" width="180%" height="200%"><feDropShadow dx="${num(s.x)}" dy="${num(s.y)}" stdDeviation="${num(s.blur / 2)}" flood-color="${s.color}" flood-opacity="${num(s.opacity)}"/></filter></defs>`;
+}
+
+async function watermarkMarkup(config: ResolvedConfig, g: Geometry): Promise<string> {
+  const w = config.watermark;
+  if (!w) return "";
+  const m = w.margin;
+  const anchor = w.position === "center" ? "middle" : w.position.endsWith("left") ? "start" : "end";
+  const x = w.position === "center" ? g.width / 2 : w.position.endsWith("left") ? m : g.width - m;
+  if (w.image) {
+    const img = await embedImage(w.image);
+    const h = w.size;
+    const iw = img.height > 0 ? (img.width / img.height) * h : h;
+    const ix = anchor === "start" ? x : anchor === "end" ? x - iw : x - iw / 2;
+    const iy = w.position === "center" ? g.height / 2 - h / 2 : w.position.startsWith("top") ? m : g.height - m - h;
+    return `<image href="${img.dataUri}" x="${num(ix)}" y="${num(iy)}" width="${num(iw)}" height="${num(h)}" opacity="${num(w.opacity)}"/>`;
+  }
+  const y = w.position === "center" ? g.height / 2 : w.position.startsWith("top") ? m + w.size : g.height - m;
+  const baseline = w.position === "center" ? ' dominant-baseline="middle"' : "";
+  return `<text x="${num(x)}" y="${num(y)}" text-anchor="${anchor}"${baseline} font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-weight="500" font-size="${num(w.size)}" fill="${w.color}" opacity="${num(w.opacity)}">${esc(w.text ?? "")}</text>`;
+}
+
 export interface SvgResult {
   svg: string;
   frames: number;
@@ -160,13 +186,15 @@ export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<
 @keyframes tcut{${keyframes.join("")}}
 text{white-space:pre;dominant-baseline:auto}
 </style>
-<rect width="100%" height="100%" fill="${config.marginFill}"/>
-<rect x="${num(g.frameX)}" y="${num(g.frameY)}" width="${num(g.frameW)}" height="${num(g.frameH)}" rx="${config.borderRadius}" fill="${theme.background}"/>
+${config.marginFill === "transparent" ? "" : `<rect width="100%" height="100%" fill="${config.marginFill}"/>`}
+${shadowDefs(config)}
+<rect x="${num(g.frameX)}" y="${num(g.frameY)}" width="${num(g.frameW)}" height="${num(g.frameH)}" rx="${config.borderRadius}" fill="${theme.background}"${config.shadow ? ' filter="url(#shadow)"' : ""}/>
 ${windowBar(config, g)}
 <clipPath id="term"><rect x="${num(g.termX)}" y="${num(g.termY)}" width="${num(g.termW)}" height="${num(g.termH)}"/></clipPath>
 <g clip-path="url(#term)"><g transform="translate(${num(g.termX)} ${num(g.termY)})"><g class="strip" xml:space="preserve">
 ${frames}
 </g></g></g>
+${await watermarkMarkup(config, g)}
 </svg>
 `;
   return { svg, frames: n, duration: total };

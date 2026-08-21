@@ -109,6 +109,39 @@ export interface BrowserSession {
   readonly url: string;
 }
 
+/** Drop shadow under the window(s). Drawn by the compositor, so it is in every output that has pixels — and in SVG. */
+export interface ShadowConfig {
+  /** Horizontal offset, px. Default 0. */
+  x?: number;
+  /** Vertical offset, px. Default 18. */
+  y?: number;
+  /** Blur radius, px. Default 50. */
+  blur?: number;
+  /** Shadow colour. Default "#000000". */
+  color?: string;
+  /** 0–1. Default 0.45. */
+  opacity?: number;
+}
+
+export type WatermarkPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
+
+/** A watermark drawn over the whole picture (outside the terminal grid): a line of text or an image file. */
+export interface WatermarkConfig {
+  text?: string;
+  /** PNG/JPEG/SVG/WebP file. */
+  image?: string;
+  /** Default "bottom-right". */
+  position?: WatermarkPosition;
+  /** 0–1. Default 0.6. */
+  opacity?: number;
+  /** Text size in px (default 14) or image height in px (default 28). */
+  size?: number;
+  /** Text colour. Default: the theme foreground. */
+  color?: string;
+  /** Distance from the picture's edge, px. Default 16. */
+  margin?: number;
+}
+
 export interface CursorConfig {
   /** Default true. Blink is driven by the render clock, so it is deterministic. */
   blink?: boolean;
@@ -182,8 +215,15 @@ export interface VideoConfig {
   padding?: number;
   /** Space around the window, px. Default 0. */
   margin?: number;
-  /** Colour behind the window (visible when margin > 0). Default: theme background. */
+  /**
+   * Colour behind the window (visible when margin > 0). Default: theme background. `"transparent"` gives real
+   * alpha in PNG, WebP, GIF, WebM, SVG and HTML output (MP4 and JPEG fall back to the theme background).
+   */
   marginFill?: string;
+  /** Drop shadow under the window; `true` uses soft defaults. Needs margin — `margin` defaults to 40 when unset. */
+  shadow?: boolean | ShadowConfig;
+  /** Watermark over the picture: a string is text in the bottom-right corner; an object picks image/position/size. */
+  watermark?: string | WatermarkConfig;
   /** Rounded corner radius of the window, px. Default 0 (12 is nice with a margin). */
   borderRadius?: number;
   windowBar?: WindowBar;
@@ -224,6 +264,8 @@ export interface ResolvedConfig {
   padding: number;
   margin: number;
   marginFill: string;
+  shadow?: Required<ShadowConfig>;
+  watermark?: Required<Pick<WatermarkConfig, "position" | "opacity" | "size" | "color" | "margin">> & Pick<WatermarkConfig, "text" | "image">;
   borderRadius: number;
   windowBar: WindowBar;
   title: string;
@@ -326,8 +368,13 @@ export interface TerminalSession {
   title(text: string, opts?: { pause?: Duration }): Promise<void>;
   /** Magnify a region of the terminal (animated at render time); `zoom(null)` resets. */
   zoom(region: ZoomRegion | null): Promise<void>;
-  /** Named chapter: becomes mp4 chapter metadata and shows up in `--json` output. */
+  /** Named chapter: becomes mp4 chapter metadata, shows up in `--json` output, and is a cut point for `--chapters` / `--split-chapters`. */
   chapter(name: string): Promise<void>;
+  /**
+   * Everything inside `fn` plays back `speed`× faster (default 8). Unlike `maxPause`, which only squeezes silence,
+   * this squeezes active output too — installs, builds, test runs.
+   */
+  timelapse<T>(fn: () => Promise<T>, opts?: { speed?: number }): Promise<T>;
   /** The recorded browser window; throws if `browser` is not configured. */
   readonly browser: BrowserSession;
   /** Overlay layout: bring the terminal or the browser window to the front (recorded as a marker). */
@@ -381,9 +428,23 @@ export interface RenderProgress {
   total: number;
 }
 
+/** Which part of the visible timeline to render. */
+export interface ClipSelection {
+  /** Start, seconds. */
+  from?: number;
+  /** End, seconds. */
+  to?: number;
+  /** Keep only these chapters (titles or 1-based numbers), joined in the order given. */
+  chapters?: string[];
+  /** Render every chapter to its own file: `demo.mp4` → `demo-01-install.mp4`, … */
+  splitChapters?: boolean;
+}
+
 export interface RenderOptions {
   /** Override resolved config values (theme, font, outputs, …) without re-recording. */
   overrides?: Partial<VideoConfig>;
+  /** Render only part of the recording (by time or by chapter). */
+  clip?: ClipSelection;
   onProgress?: (p: RenderProgress) => void;
 }
 

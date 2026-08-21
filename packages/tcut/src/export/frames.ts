@@ -36,6 +36,17 @@ export interface GridFrame {
   cursor: { row: number; col: number; visible: boolean };
 }
 
+/** Visible text of a frame: one string per row, trailing spaces and trailing blank rows removed. */
+export function frameText(frame: GridFrame): string[] {
+  const out: string[] = [];
+  for (let y = 0; y < frame.rows; y++) {
+    const cells = frame.rows_.get(y);
+    out.push(cells ? cells.map((c) => c.text).join("").replace(/\s+$/, "") : "");
+  }
+  while (out.length && out[out.length - 1] === "") out.pop();
+  return out;
+}
+
 export interface GridReplay {
   frames: GridFrame[];
   duration: number;

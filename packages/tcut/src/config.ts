@@ -43,7 +43,30 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
     letterSpacing: config.font?.letterSpacing ?? 0,
   };
   const padding = config.padding ?? 24;
-  const margin = config.margin ?? 0;
+  const shadow = config.shadow
+    ? {
+        x: (config.shadow === true ? undefined : config.shadow.x) ?? 0,
+        y: (config.shadow === true ? undefined : config.shadow.y) ?? 18,
+        blur: (config.shadow === true ? undefined : config.shadow.blur) ?? 50,
+        color: (config.shadow === true ? undefined : config.shadow.color) ?? "#000000",
+        opacity: (config.shadow === true ? undefined : config.shadow.opacity) ?? 0.45,
+      }
+    : undefined;
+  // A shadow needs room around the window; give it some unless the margin was set explicitly.
+  const margin = config.margin ?? (shadow ? 40 : 0);
+  const wm = config.watermark === undefined ? undefined : config.watermark instanceof Object ? config.watermark : { text: config.watermark };
+  const watermark = wm
+    ? {
+        ...(wm.text !== undefined && { text: wm.text }),
+        ...(wm.image !== undefined && { image: wm.image }),
+        position: wm.position ?? "bottom-right",
+        opacity: wm.opacity ?? 0.6,
+        size: wm.size ?? (wm.image ? 28 : 14),
+        color: wm.color ?? theme.foreground,
+        margin: wm.margin ?? 16,
+      }
+    : undefined;
+  if (watermark && !watermark.text && !watermark.image) throw new Error("watermark needs `text` or `image`");
   const bar = (config.windowBar ?? "none") === "none" ? 0 : WINDOW_BAR_HEIGHT;
   const cell = estimateCell(font);
   let cols = config.cols;
@@ -111,6 +134,8 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
     padding,
     margin,
     marginFill: config.marginFill ?? theme.background,
+    ...(shadow && { shadow }),
+    ...(watermark && { watermark }),
     borderRadius: config.borderRadius ?? 0,
     windowBar: config.windowBar ?? "none",
     title: config.title ?? "",
@@ -123,6 +148,8 @@ export function applyOverrides(base: ResolvedConfig, overrides: Partial<VideoCon
   const merged: VideoConfig = {
     ...base,
     promptPattern: new RegExp(base.promptPattern),
+    // ResolvedConfig keeps maxPause in seconds; VideoConfig reads bare numbers as milliseconds.
+    maxPause: base.maxPause === undefined ? undefined : base.maxPause * 1000,
     ...overrides,
     font: { ...base.font, ...overrides.font },
     cursor: { ...base.cursor, ...overrides.cursor },

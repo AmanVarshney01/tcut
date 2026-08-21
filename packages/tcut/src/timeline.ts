@@ -21,14 +21,25 @@ export interface TimelineOptions {
 }
 
 /**
- * Collapse hidden intervals, apply playback speed, optionally cap idle gaps. Hidden events keep their relative
- * order but all land on the instant the hide started, so the first visible frame after `show` reflects their
- * combined effect. Input (`i`) events are dropped unless `keepInput`: the PTY already echoed them.
+ * Collapse hidden intervals, apply playback speed (global and per `speed:` segment), optionally cap idle gaps.
+ * Hidden events keep their relative order but all land on the instant the hide started, so the first visible
+ * frame after `show` reflects their combined effect. Input (`i`) events are dropped unless `keepInput`: the PTY
+ * already echoed them.
  */
 export function buildTimeline(events: CastEvent[], playbackSpeed: number, opts: TimelineOptions = {}): Timeline {
   const out: TimedEvent[] = [];
   let hiddenSince: number | null = null;
   let removed = 0;
+  // Visible time accumulates per segment: (collapsed time since the last event) / (global × segment speed).
+  let segmentSpeed = 1;
+  let lastCollapsed = 0;
+  let vt = 0;
+  const advance = (t: number): number => {
+    const collapsed = hiddenSince === null ? t - removed : hiddenSince - removed;
+    vt += Math.max(0, collapsed - lastCollapsed) / (playbackSpeed * segmentSpeed);
+    lastCollapsed = collapsed;
+    return vt;
+  };
 
   for (const [t, type, data] of events) {
     if (type === "m" && data === MARKER.hide) {
@@ -42,9 +53,14 @@ export function buildTimeline(events: CastEvent[], playbackSpeed: number, opts: 
       }
       continue;
     }
+    if (type === "m" && data.startsWith(MARKER.speed)) {
+      advance(t);
+      const speed = Number(data.slice(MARKER.speed.length));
+      segmentSpeed = Number.isFinite(speed) && speed > 0 ? speed : 1;
+      continue;
+    }
     if (type === "i" && !opts.keepInput) continue;
-    const visible = hiddenSince === null ? t - removed : hiddenSince - removed;
-    out.push({ vt: visible / playbackSpeed, type, data });
+    out.push({ vt: advance(t), type, data });
   }
 
   if (opts.maxPause !== undefined && opts.maxPause >= 0) {

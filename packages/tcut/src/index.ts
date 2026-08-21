@@ -1,6 +1,10 @@
-export { defineVideo, Video, renderCast, isVideo } from "./video";
+export { defineVideo, Video, renderCast, castConfig, isVideo } from "./video";
 export type { RunOptions as VideoRunOptions, RunResult, VideoRecordOptions } from "./video";
-export { renderOutputs } from "./render";
+export { renderOutputs, renderSelection, writeTxt } from "./render";
+export { cutRecording, concatRecordings, selectChapters, chapterRanges, findChapters, flattenRecording, flattenedConfig, rebaseBrowserFrames, recordingDuration } from "./edit";
+export type { ClipRange, ChapterRange, ConcatOptions } from "./edit";
+export { decodePng, encodePng, matte } from "./renderer/png";
+export type { RgbaImage } from "./renderer/png";
 export { recordLive } from "./live";
 export type { LiveOptions } from "./live";
 export { buildSvg } from "./export/svg";

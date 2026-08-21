@@ -175,6 +175,13 @@ const api = {
     return true;
   },
 
+  /** Page background behind the window (the margin fill). The renderer swaps it to matte transparent output. */
+  background(color: string): Promise<boolean> {
+    document.documentElement.style.background = color;
+    document.body.style.background = color;
+    return paint();
+  },
+
   cursor(visible: boolean): boolean {
     document.getElementById("blink")!.textContent = visible
       ? ""
