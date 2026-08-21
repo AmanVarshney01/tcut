@@ -54,6 +54,8 @@ export interface KeysConfig {
   ttl?: Duration;
   /** Printable keys pressed within this window merge into one chip. Default "350ms". */
   merge?: Duration;
+  /** How many chips are visible at once. Default 1 (the latest press replaces the previous). */
+  limit?: number;
 }
 
 /** A region of the terminal grid to magnify. */

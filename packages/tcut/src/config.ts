@@ -68,6 +68,7 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
         position: (config.keys === true ? undefined : config.keys.position) ?? "bottom",
         ttl: toMs(config.keys === true ? undefined : config.keys.ttl, 1200),
         merge: toMs(config.keys === true ? undefined : config.keys.merge, 350),
+        limit: (config.keys === true ? undefined : config.keys.limit) ?? 1,
       },
     }),
     fps: config.fps ?? 60,

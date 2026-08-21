@@ -232,7 +232,7 @@ export async function render(
       let chipsChanged = false;
       if (config.keys) {
         const ttl = config.keys.ttl / 1000;
-        const visible = chips.filter((c) => c.at <= time + 1e-9 && time - c.at < ttl).slice(-6).map((c) => c.label);
+        const visible = chips.filter((c) => c.at <= time + 1e-9 && time - c.at < ttl).slice(-config.keys.limit).map((c) => c.label);
         const key = visible.join("\u0000");
         if (key !== lastChips) {
           await view.evaluate(`window.__vt.keys(${JSON.stringify(visible)})`);

@@ -10,6 +10,12 @@ export interface BrowserCapture extends BrowserSession {
   stop(): Promise<void>;
 }
 
+/** "better-t-stack.dev" → "https://better-t-stack.dev"; localhost defaults to http. */
+export function normalizeUrl(url: string): string {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url) || /^(about|data|file|blob):/i.test(url)) return url;
+  return /^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(url) ? `http://${url}` : `https://${url}`;
+}
+
 const toRegExp = (pattern: RegExp | string): RegExp =>
   typeof pattern === "string" ? new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : pattern;
 
@@ -59,21 +65,28 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
    * or take a long first load (Vite pre-bundling, then a reload), so success is judged by the document's
    * readyState at the target URL rather than by the navigate() promise alone.
    */
-  const goto = async (url: string): Promise<void> => {
+  const goto = async (rawUrl: string): Promise<void> => {
+    const url = normalizeUrl(rawUrl);
     const deadline = performance.now() + config.waitTimeout;
     const target = url.replace(/\/$/, "");
     let navigation: Promise<"ok" | "pending" | "failed"> | null = null;
     for (;;) {
-      navigation ??= view.navigate(url).then(
+      if (!running) return; // stop() closed the view mid-retry; abort quietly
+      try {
+        navigation ??= view.navigate(url).then(
         () => "ok" as const,
-        (err: unknown) => (/pending/i.test(String(err)) ? ("pending" as const) : ("failed" as const)),
-      );
+          (err: unknown) => (/pending/i.test(String(err)) ? ("pending" as const) : ("failed" as const)),
+        );
+      } catch {
+        return; // navigate threw synchronously: the view is closed
+      }
       const outcome = await Promise.race([navigation, Bun.sleep(750).then(() => "tick" as const)]);
       if (outcome === "ok") {
         currentUrl = url;
         return;
       }
       if (outcome === "failed") navigation = null;
+      if (!running) return;
       const state = await within(view.evaluate("document.readyState"), 3000, "goto").catch(() => "");
       if (state === "complete" && (view.url ?? "").replace(/\/$/, "").startsWith(target)) {
         currentUrl = url;

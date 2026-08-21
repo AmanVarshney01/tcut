@@ -3,6 +3,7 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { writeCast } from "../src/cast";
 import { resolveConfig } from "../src/config";
+import { normalizeUrl } from "../src/browser";
 import { diffCasts } from "../src/diff";
 import { keyChips, keyLabels } from "../src/keylabels";
 import { applyPreset } from "../src/presets";
@@ -52,6 +53,20 @@ describe("key overlay", () => {
       { vt: 0, data: "l" }, { vt: 0.05, data: "s" }, { vt: 0.1, data: " " }, { vt: 0.15, data: "-la" },
     ]);
     expect(withSpace.map((c) => c.label)).toEqual(["ls -la"]);
+  });
+  test("limit defaults to one chip at a time", () => {
+    const r = resolveConfig({ output: "x.mp4", keys: true });
+    expect(r.keys?.limit).toBe(1);
+    expect(resolveConfig({ output: "x.mp4", keys: { limit: 3 } }).keys?.limit).toBe(3);
+  });
+});
+
+describe("browser urls", () => {
+  test("scheme added when missing, localhost stays http", () => {
+    expect(normalizeUrl("better-t-stack.dev")).toBe("https://better-t-stack.dev");
+    expect(normalizeUrl("localhost:5173")).toBe("http://localhost:5173");
+    expect(normalizeUrl("http://x.dev")).toBe("http://x.dev");
+    expect(normalizeUrl("about:blank")).toBe("about:blank");
   });
 });
 

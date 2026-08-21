@@ -41,7 +41,7 @@ tcut themes
 | `width` · `height` | — | video size in px; grid is derived and centred inside |
 | `loopOffset` | — | where GIF/WebP loops start: frames or `"50%"` |
 | `maxPause` | — | idle compression at render time: gaps between events longer than this are shortened to this (`"800ms"`) |
-| `keys` | — | `true` or `{ position: "bottom" \| "top", ttl: "1.2s", merge: "350ms" }`: recent key presses as chips |
+| `keys` | — | `true` or `{ position: "bottom" \| "top", ttl: "1.2s", merge: "350ms", limit: 1 }`: key presses as chips; one at a time by default, `limit: 3` keeps a short history |
 | `preset` | — | `readme` (80×20, gif-friendly) · `x` (1280×720) · `youtube` (1920×1080, 60 fps) · `square` (1080×1080); explicit settings win |
 | `browser` | — | record a real browser window (Bun.WebView) with the terminal: `{ url?, width?, height?, fps?, title?, position?: "right" \| "left" \| "top" \| "bottom" \| "overlay", offset?: { x, y } }`. Frames are stored beside the cast (`<name>.browser/`) and composited in mp4/gif/png output; svg/html show the terminal only |
 | `typingSpeed` · `typingJitter` · `seed` | `"50ms"` · 0 · 1 | jitter is seeded, so it's reproducible |
