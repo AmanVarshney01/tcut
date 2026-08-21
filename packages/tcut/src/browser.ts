@@ -58,7 +58,14 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     );
     return next;
   };
-  const evaluate = (js: string, ms: number, label: string): Promise<unknown> => serial(() => within(view.evaluate(js), ms, label));
+  // Never evaluate into a page that is still loading: Chrome leaves such a call pending forever, and one pending
+  // evaluate makes every later one fail ("already pending"). Wait for the navigation to settle first.
+  const evaluate = (js: string, ms: number, label: string): Promise<unknown> =>
+    serial(async () => {
+      const deadline = performance.now() + ms;
+      while (view.loading && performance.now() < deadline) await Bun.sleep(50);
+      return within(view.evaluate(js), Math.max(250, deadline - performance.now()), label);
+    });
   // One screenshot at a time: the periodic sampler and the event-driven samples (after waitFor, at stop) share it.
   let sampling: Promise<void> | null = null;
   const sampleOnce = (): Promise<void> => {
@@ -114,16 +121,16 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
       }
       if (outcome === "failed") navigation = null;
       if (!running) return;
-      const state = await evaluate("document.readyState", 3000, "goto").catch(() => "");
-      // Some backends leave view.url empty; then a complete document is the best signal we have.
+      // No evaluate() here: the view's own loading flag and URL say whether the page arrived (some backends keep
+      // the navigate() promise pending long after the page is up, and may leave view.url empty).
       const href = (view.url ?? "").replace(/\/$/, "");
-      if (state === "complete" && (href === "" || href.startsWith(target))) {
+      if (outcome === "tick" && !view.loading && (href === "" || href.startsWith(target))) {
         currentUrl = url;
         loaded = true;
         return;
       }
       if (performance.now() > deadline) {
-        throw new WaitTimeoutError(`browser.goto(${url})`, config.waitTimeout, `current url: ${view.url ?? "(none)"}, readyState: ${state || "unknown"}`);
+        throw new WaitTimeoutError(`browser.goto(${url})`, config.waitTimeout, `current url: ${view.url ?? "(none)"}, loading: ${view.loading}`);
       }
       await Bun.sleep(250);
     }
