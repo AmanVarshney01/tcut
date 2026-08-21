@@ -32,25 +32,25 @@ describe("application cursor keys and bracketed paste", () => {
     expect(keySequence("up", { appCursor: true })).toBe(`${ESC}OA`);
     expect(keySequence("f5", { appCursor: true })).toBe(`${ESC}[15~`);
   });
-  test("the recorder follows the program's modes", async () => {
-    // Keys go to `read`, not to the shell prompt (readline would treat an arrow as history recall). One command
-    // line drives all three reads so no prompt redraw sits between them.
-    const out = await record(resolveConfig({ output: `${dir}/x.mp4`, cols: 70, rows: 12, endPause: 0, typingSpeed: 0 }), async (t) => {
-      await t.type(
-        "printf '\\033[?1h\\033[?2004h'; IFS= read -rs -n3 a; printf 'A=%q\\n' \"$a\"; IFS= read -rs -n18 b; printf 'B=%q\\n' \"$b\"; printf '\\033[?1l\\033[?2004l'; IFS= read -rs -n3 c; printf 'C=%q\\n' \"$c\"\n",
-      );
+  // One independent session per mode: a single `read` each, so no cross-read byte miscount can desync them.
+  const readKey = async (setup: string, press: (t: import("../src/types").TerminalSession) => Promise<void>, bytes: number): Promise<string[]> => {
+    const out = await record(resolveConfig({ output: `${dir}/x.mp4`, cols: 70, rows: 8, endPause: 0, typingSpeed: 0 }), async (t) => {
+      await t.type(`printf '${setup}'; IFS= read -rs -n${bytes} k; printf 'K=%q\\n' \"$k\"\n`);
       await t.sleep(300);
-      await t.up();
-      await t.wait(/A=\$'\\EOA'/, { scope: "screen" });
-      await t.paste("pasted"); // ESC[200~ + pasted + ESC[201~ = 18 bytes
-      await t.wait(/B=.*200~pasted.*201~/, { scope: "screen" });
-      await t.down();
-      await t.wait(/C=\$'\\E\[B'/, { scope: "screen" });
+      await press(t);
+      await t.wait(/K=/, { scope: "screen" });
     });
-    const inputs = out.events.filter((e) => e[1] === "i").map((e) => e[2]);
-    expect(inputs).toContain(`${ESC}OA`);
-    expect(inputs).toContain(`${ESC}[200~pasted${ESC}[201~`);
-    expect(inputs).toContain(`${ESC}[B`);
+    return out.events.filter((e) => e[1] === "i").map((e) => e[2]);
+  };
+
+  test("cursor keys use SS3 only in application cursor mode", async () => {
+    expect(await readKey("\\033[?1h", (t) => t.up(), 3)).toContain(`${ESC}OA`);
+    expect(await readKey("", (t) => t.down(), 3)).toContain(`${ESC}[B`);
+  }, 20_000);
+
+  test("paste is bracketed when the program enabled it", async () => {
+    expect(await readKey("\\033[?2004h", (t) => t.paste("pasted"), 18)).toContain(`${ESC}[200~pasted${ESC}[201~`);
+    expect(await readKey("", (t) => t.paste("plain"), 5)).toContain("plain");
   }, 20_000);
 });
 
