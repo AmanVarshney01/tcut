@@ -59,23 +59,37 @@ export interface KeyChip {
  * Turn timed input events into chips. Printable keystrokes within `mergeWithin` seconds of each other are merged
  * into one chip (so typing reads as words, not a flood of letters); named keys always get their own chip.
  */
-export function keyChips(inputs: Array<{ vt: number; data: string }>, mergeWithin = 0.35): KeyChip[] {
+export interface ChipBuilder {
+  chips: KeyChip[];
+  push(vt: number, data: string): void;
+}
+
+/** Incremental version of keyChips: feed events as the clock passes them and a word chip grows while it is typed. */
+export function chipBuilder(mergeWithin = 0.35): ChipBuilder {
   const chips: KeyChip[] = [];
   let lastPrintable: KeyChip | null = null;
   let lastTime = -Infinity;
-  for (const { vt, data } of inputs) {
-    for (const label of keyLabels(data)) {
-      const printable = !/^[⏎⇥⌫␣↑↓→←⌃⌥⇧]|^(esc|home|end|del|pgup|pgdn|wheel|mouse)/.test(label);
-      if (printable && lastPrintable && vt - lastTime <= mergeWithin) {
-        lastPrintable.label += label;
-        lastPrintable.at = vt;
-      } else {
-        const chip = { at: vt, label };
-        chips.push(chip);
-        lastPrintable = printable ? chip : null;
+  return {
+    chips,
+    push(vt, data) {
+      for (const label of keyLabels(data)) {
+        const printable = !/^[⏎⇥⌫␣↑↓→←⌃⌥⇧]|^(esc|home|end|del|pgup|pgdn|wheel|mouse)/.test(label);
+        if (printable && lastPrintable && vt - lastTime <= mergeWithin) {
+          lastPrintable.label += label;
+          lastPrintable.at = vt;
+        } else {
+          const chip = { at: vt, label };
+          chips.push(chip);
+          lastPrintable = printable ? chip : null;
+        }
+        lastTime = vt;
       }
-      lastTime = vt;
-    }
-  }
-  return chips;
+    },
+  };
+}
+
+export function keyChips(inputs: Array<{ vt: number; data: string }>, mergeWithin = 0.35): KeyChip[] {
+  const builder = chipBuilder(mergeWithin);
+  for (const { vt, data } of inputs) builder.push(vt, data);
+  return builder.chips;
 }

@@ -6,7 +6,7 @@ import { fitFrame, loopOffsetFrames, rotateFrames } from "../loop";
 import { buildTimeline, withReinjection, type TimedEvent } from "../timeline";
 import { pageAssets } from "./bundle";
 import { createSinks, type Chapter } from "./encoder";
-import { keyChips } from "../keylabels";
+import { chipBuilder } from "../keylabels";
 import { BROWSER_GAP, barHeight, renderHtml, themeOsc } from "./page";
 
 export interface RenderResult {
@@ -97,7 +97,9 @@ export async function render(
   const lite = config.core === "lite";
   const events = lite ? timeline.events : withReinjection(timeline.events, osc);
   // Key overlay chips come from input events; zoom/chapter markers are read as the clock passes them.
-  const chips = config.keys ? keyChips(events.filter((e) => e.type === "i"), config.keys.merge / 1000) : [];
+  const keyEvents = config.keys ? events.filter((e) => e.type === "i") : [];
+  const chipper = chipBuilder((config.keys?.merge ?? 350) / 1000);
+  let keyIdx = 0;
   const chapters: Chapter[] = events
     .filter((e) => e.type === "m" && e.data.startsWith(MARKER.chapter))
     .map((e) => ({ title: e.data.slice(MARKER.chapter.length), start: e.vt }));
@@ -232,7 +234,11 @@ export async function render(
       let chipsChanged = false;
       if (config.keys) {
         const ttl = config.keys.ttl / 1000;
-        const visible = chips.filter((c) => c.at <= time + 1e-9 && time - c.at < ttl).slice(-config.keys.limit).map((c) => c.label);
+        while (keyIdx < keyEvents.length && keyEvents[keyIdx]!.vt <= time + 1e-9) {
+          chipper.push(keyEvents[keyIdx]!.vt, keyEvents[keyIdx]!.data);
+          keyIdx += 1;
+        }
+        const visible = chipper.chips.filter((c) => time - c.at < ttl).slice(-config.keys.limit).map((c) => c.label);
         const key = visible.join("\u0000");
         if (key !== lastChips) {
           await view.evaluate(`window.__vt.keys(${JSON.stringify(visible)})`);

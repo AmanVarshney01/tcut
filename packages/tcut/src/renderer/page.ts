@@ -146,12 +146,17 @@ export function renderHtml(config: ResolvedConfig): string {
     display: ${config.keys ? "flex" : "none"}; justify-content: center; gap: 6px; pointer-events: none; z-index: 5;
   }
   #keys span {
-    font: 600 ${Math.max(12, Math.round(config.font.size * 0.75))}px ${font.family};
-    color: #fff; background: rgba(0,0,0,0.72); border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 6px; padding: 3px 8px; letter-spacing: 0.02em; white-space: pre;
+    font: 600 ${config.keys?.font ?? 15}px ${font.family};
+    color: ${config.keys?.color ?? "#fff"}; background: ${config.keys?.background ?? "rgba(15, 15, 20, 0.85)"};
+    border: 1px solid rgba(255,255,255,0.12); border-radius: ${config.keys?.radius ?? 8}px;
+    padding: 0.4em 0.9em; letter-spacing: 0.02em; white-space: pre;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
   }
-  /* Zoom: the terminal grid is scaled inside its frame; the renderer sets the transform per frame. */
+  /* Zoom: the terminal grid is scaled inside its frame; the renderer sets the transform per frame.
+     The frame clips it so magnified content never spills over the bar or the rounded corners. */
   #zoom { transform-origin: 0 0; will-change: transform; }
+  #frame { overflow: hidden; }
+  #frame > *:not(#zoom) { position: relative; z-index: 2; }
 </style>
 <style id="blink"></style>
 </head>

@@ -56,6 +56,14 @@ export interface KeysConfig {
   merge?: Duration;
   /** How many chips are visible at once. Default 1 (the latest press replaces the previous). */
   limit?: number;
+  /** Chip font size in px. Default ~0.9× the terminal font. */
+  font?: number;
+  /** Chip text color. Default "#fff". */
+  color?: string;
+  /** Chip background (any CSS color). Default "rgba(15, 15, 20, 0.85)". */
+  background?: string;
+  /** Chip corner radius in px. Default 8. */
+  radius?: number;
 }
 
 /** A region of the terminal grid to magnify. */

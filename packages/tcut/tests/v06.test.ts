@@ -5,7 +5,7 @@ import { writeCast } from "../src/cast";
 import { resolveConfig } from "../src/config";
 import { normalizeUrl } from "../src/browser";
 import { diffCasts } from "../src/diff";
-import { keyChips, keyLabels } from "../src/keylabels";
+import { chipBuilder, keyChips, keyLabels } from "../src/keylabels";
 import { applyPreset } from "../src/presets";
 import { record } from "../src/recorder";
 import { render } from "../src/renderer/webview";
@@ -54,10 +54,24 @@ describe("key overlay", () => {
     ]);
     expect(withSpace.map((c) => c.label)).toEqual(["ls -la"]);
   });
+  test("chips build progressively as the clock passes keys", () => {
+    const b = chipBuilder(0.35);
+    b.push(0, "g");
+    b.push(0.1, "i");
+    expect(b.chips.map((c) => c.label)).toEqual(["gi"]); // visible mid-word
+    b.push(0.2, "t");
+    b.push(0.3, "\r");
+    expect(b.chips.map((c) => c.label)).toEqual(["git", "⏎"]);
+  });
   test("limit defaults to one chip at a time", () => {
     const r = resolveConfig({ output: "x.mp4", keys: true });
     expect(r.keys?.limit).toBe(1);
     expect(resolveConfig({ output: "x.mp4", keys: { limit: 3 } }).keys?.limit).toBe(3);
+    const styled = resolveConfig({ output: "x.mp4", keys: { font: 22, background: "#000", radius: 4 } }).keys;
+    expect(styled?.font).toBe(22);
+    expect(styled?.background).toBe("#000");
+    expect(styled?.radius).toBe(4);
+    expect(r.keys?.color).toBe("#fff");
   });
 });
 
