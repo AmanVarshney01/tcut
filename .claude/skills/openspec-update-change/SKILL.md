@@ -5,6 +5,7 @@ allowed-tools: Bash(openspec:*)
 license: MIT
 compatibility: Requires openspec CLI.
 metadata:
+  internal: true
   author: openspec
   version: "1.0"
   generatedBy: "1.6.0"
