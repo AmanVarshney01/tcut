@@ -50,7 +50,7 @@ const Clip: React.FC<{ src: string; caption: string }> = ({ src, caption }) => {
 ## Design notes that make it look pro
 
 - Terminal clips are crisp text: never scale above 100%; scale down slightly (~85–95%) inside a framed card instead
-- Reuse the terminal theme's palette for backgrounds/captions (Catppuccin Mocha bg `#11111b`, fg `#cdd6f4`) so footage and motion design feel like one piece
+- Flat, solid background in the terminal theme's palette (e.g. `#0b0b12`, fg `#e8e8f2`); let the window cards carry the depth via shadow. Skip gradients, glows and dot grids — they fight with the crisp terminal text
 - Title card: type-on monospace headline (slice the string by frame) reads as "terminal-native"
 - End card: the install command in a copy-paste-looking block beats a logo
 - One idea per scene, a big mono headline plus the one line of tcut API that does it; cut on the moment something appears in the clip. A feature tour can run ~70 s; a social cut should stay under 30 s
