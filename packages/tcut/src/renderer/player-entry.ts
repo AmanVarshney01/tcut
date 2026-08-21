@@ -1,12 +1,15 @@
 // Browser-side player for `.html` exports. Uses wterm's lite core (inline WASM) so the file is self-contained.
 import { WasmBridge } from "@wterm/core";
 import { WTerm } from "@wterm/dom";
+import { extractTitle } from "../osc";
 
 interface PlayerData {
   cols: number;
   rows: number;
   duration: number;
   speed: number;
+  /** Follow OSC 0/2 titles from the recording in the window bar. */
+  autoTitle?: boolean;
   events: Array<{ vt: number; type: "o" | "r"; data: string }>;
 }
 
@@ -44,8 +47,16 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
   const applyUntil = (time: number) => {
     while (pointer < data.events.length && data.events[pointer]!.vt <= time) {
       const e = data.events[pointer++]!;
-      if (e.type === "o") term.write(e.data);
-      else if (e.type === "r") {
+      if (e.type === "o") {
+        term.write(e.data);
+        if (data.autoTitle) {
+          const t = extractTitle(e.data);
+          if (t !== null) {
+            const bar = document.querySelector("#bar .title");
+            if (bar) bar.textContent = t;
+          }
+        }
+      } else if (e.type === "r") {
         const [c, r] = e.data.split("x").map(Number);
         if (c! > 0 && r! > 0) term.resize(c!, r!);
       }

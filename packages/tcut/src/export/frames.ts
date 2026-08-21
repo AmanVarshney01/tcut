@@ -1,6 +1,7 @@
 import type { CellData, TerminalCore } from "@wterm/core";
+import { extractTitle } from "../osc";
 import { themeOsc } from "../renderer/page";
-import { loadCore } from "../screen";
+import { loadCore, scrollbackLines } from "../screen";
 import { buildTimeline, withReinjection } from "../timeline";
 import type { Recording, ResolvedConfig, Theme } from "../types";
 
@@ -22,6 +23,8 @@ export interface GridCell {
   fg: string | null;
   bg: string | null;
   flags: number;
+  /** OSC 8 hyperlink target, if the cell is inside one. */
+  link: string | null;
 }
 
 export interface GridFrame {
@@ -52,6 +55,10 @@ export interface GridReplay {
   duration: number;
   cols: number;
   rows: number;
+  /** Last window title the program set (OSC 0/2), if any. */
+  title: string | null;
+  /** Everything shown: scrollback lines followed by the final screen. */
+  transcript: string[];
 }
 
 const ANSI: (keyof Theme)[] = [
@@ -84,7 +91,7 @@ function toGridCell(cell: CellData, theme: Theme): GridCell {
     [fg, bg] = [bg ?? theme.background, fg ?? theme.foreground];
   }
   const text = cell.chars ?? (cell.char === 0 ? " " : String.fromCodePoint(cell.char));
-  return { text, width: cell.width === 2 ? 2 : 1, fg, bg, flags: cell.flags & ~FLAG.reverse };
+  return { text, width: cell.width === 2 ? 2 : 1, fg, bg, flags: cell.flags & ~FLAG.reverse, link: cell.linkUri ?? null };
 }
 
 interface ScreenSnapshot {
@@ -109,7 +116,7 @@ function snapshot(core: TerminalCore, theme: Theme): ScreenSnapshot {
     }
     if (meaningful) {
       rows.set(y, cells);
-      keyParts.push(`${y}:${cells.map((c) => `${c.text}${c.fg ?? ""}${c.bg ?? ""}${c.flags}`).join("")}`);
+      keyParts.push(`${y}:${cells.map((c) => `${c.text}${c.fg ?? ""}${c.bg ?? ""}${c.flags}${c.link ?? ""}`).join("")}`);
     }
   }
   return { rows, key: keyParts.join("\n") };
@@ -133,17 +140,31 @@ export async function replayFrames(rec: Recording, config: ResolvedConfig): Prom
   const frames: GridFrame[] = [];
   let pointer = 0;
   let lastKey: string | null = null;
+  let title: string | null = null;
+  // Synchronized output (mode 2026): while a program is mid-update, keep showing the previous frame — bounded,
+  // so a block that is never closed cannot freeze the video.
+  const maxHeld = Math.ceil(fps / 2);
+  let held = 0;
 
   for (let i = 0; i < totalFrames; i++) {
     const time = i / fps;
     while (pointer < events.length && events[pointer]!.vt <= time + 1e-9) {
       const e = events[pointer++]!;
-      if (e.type === "o") core.writeString(e.data);
-      else if (e.type === "r") {
+      if (e.type === "o") {
+        core.writeString(e.data);
+        const t = extractTitle(e.data);
+        if (t !== null) title = t;
+      } else if (e.type === "r") {
         const [c, r] = e.data.split("x").map(Number);
         if (c! > 0 && r! > 0) core.resize(c!, r!);
       }
     }
+    if (frames.length > 0 && held < maxHeld && core.synchronizedOutput?.()) {
+      held += 1;
+      frames[frames.length - 1]!.hold += 1 / fps;
+      continue;
+    }
+    held = 0;
     const cursor = core.getCursor();
     const { rows, key } = snapshot(core, config.theme);
     const fullKey = `${key}|${cursor.row},${cursor.col},${cursor.visible}|${core.getCols()}x${core.getRows()}`;
@@ -155,5 +176,7 @@ export async function replayFrames(rec: Recording, config: ResolvedConfig): Prom
     frames.push({ time, hold: 1 / fps, cols: core.getCols(), rows: core.getRows(), rows_: rows, cursor });
   }
 
-  return { frames, duration: totalFrames / fps, cols: rec.header.width, rows: rec.header.height };
+  const last = frames[frames.length - 1];
+  const transcript = [...scrollbackLines(core), ...(last ? frameText(last) : [])];
+  return { frames, duration: totalFrames / fps, cols: rec.header.width, rows: rec.header.height, title, transcript };
 }

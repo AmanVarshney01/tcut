@@ -229,7 +229,7 @@ export interface VideoConfig {
   /** Rounded corner radius of the window, px. Default 0 (12 is nice with a margin). */
   borderRadius?: number;
   windowBar?: WindowBar;
-  /** Title shown in the window bar. */
+  /** Title shown in the window bar. `"auto"` follows the title the program sets (OSC 0/2: vim, ssh, …). */
   title?: string;
 }
 
@@ -293,8 +293,8 @@ export type KeyName =
   | `f${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12}`;
 
 export interface WaitOptions {
-  /** Match against the cursor line (default) or the whole visible screen. */
-  scope?: "line" | "screen";
+  /** Match against the cursor line (default), the whole visible screen, or the screen plus everything that scrolled off. */
+  scope?: "line" | "screen" | "scrollback";
   timeout?: Duration;
 }
 
@@ -315,7 +315,7 @@ export interface TerminalSession {
   type(text: string, opts?: TypeOptions): Promise<void>;
   /** Type `command`, press Enter, and wait for the prompt to come back. */
   run(command: string, opts?: RunOptions): Promise<void>;
-  /** Send text instantly, as if pasted. */
+  /** Send text instantly, as if pasted. When the program enabled bracketed paste, the text is wrapped in paste markers. */
   paste(text: string): Promise<void>;
 
   key(name: KeyName, times?: number): Promise<void>;
@@ -385,6 +385,8 @@ export interface TerminalSession {
 
   /** Current visible screen as text (rows joined by "\n"). */
   screen(): string;
+  /** Everything the session has shown so far: lines that scrolled off, then the visible screen. */
+  scrollback(): string;
   /** Text of the cursor line. */
   line(): string;
   cursor(): { x: number; y: number };

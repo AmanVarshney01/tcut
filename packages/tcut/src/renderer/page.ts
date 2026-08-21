@@ -112,7 +112,7 @@ function windowBarHtml(config: ResolvedConfig): string {
   const dot = (color: string) =>
     `<span class="dot" style="${rings ? `border:2px solid ${color}` : `background:${color}`}"></span>`;
   const dots = `<div class="dots">${dot("#ff5f57")}${dot("#febc2e")}${dot("#28c840")}</div>`;
-  const titleHtml = `<div class="title">${escapeHtml(title)}</div>`;
+  const titleHtml = `<div class="title">${escapeHtml(title === "auto" ? "" : title)}</div>`;
   return `<div id="bar" class="${right ? "right" : ""}">${right ? titleHtml + dots : dots + titleHtml}</div>`;
 }
 

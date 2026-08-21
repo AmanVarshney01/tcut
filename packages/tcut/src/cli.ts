@@ -8,6 +8,7 @@ import * as api from "./index";
 import { recordLive } from "./live";
 import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig, type Published } from "./publish";
 import { diffCasts, type DiffResult } from "./diff";
+import { diagnoseCast, formatDoctorReport, type DoctorReport } from "./doctor";
 import { toMs } from "./duration";
 import { concatRecordings, cutRecording, flattenedConfig, rebaseBrowserFrames, recordingDuration, selectChapters } from "./edit";
 import { presetNames, type PresetName } from "./presets";
@@ -39,6 +40,7 @@ Usage:
   tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
   tcut test <path...>                 run scripts in fast mode as tests (no video)
   tcut diff <a.cast> <b.cast>         compare what two recordings show on screen (exit 1 if different)
+  tcut doctor <file.cast>             what the program used, and what tcut cannot show (images, unknown sequences)
   tcut cut <file.cast> --from 2s --to 10s [--cast out.cast] [-o …]   keep part of a recording (by time or --chapters)
   tcut concat <a.cast> <b.cast…> [--gap 500ms] [--cast out.cast] [-o …]   join recordings end to end
   tcut publish <files...> [--open]    upload to your S3-compatible bucket and print share links
@@ -162,6 +164,7 @@ type CliReport =
   | { cast: string; cached: boolean; outputs: OutputFile[]; frames: number; durationSeconds: number }
   | { cast: string; events: number; durationSeconds: number; outputs: OutputFile[] }
   | DiffResult
+  | DoctorReport
   | TestSummary;
 
 /** With --json, the only thing on stdout is one JSON document (results or { error }). */
@@ -513,6 +516,13 @@ async function main(): Promise<void> {
       reportNotes(result.notes);
       log(dim(`  ${result.frames} frames, ${result.durationSeconds.toFixed(1)}s of video in ${elapsed()}`));
       emit({ cast: rest[0], outputs: files, frames: result.frames, durationSeconds: result.durationSeconds });
+      return;
+    }
+    case "doctor": {
+      if (!rest[0]) fail("doctor needs a .cast file");
+      const report = await diagnoseCast(rest[0]);
+      if (!json) for (const line of formatDoctorReport(report)) console.log(line);
+      emit(report);
       return;
     }
     case "cut":

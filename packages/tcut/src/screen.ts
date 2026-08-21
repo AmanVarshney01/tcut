@@ -38,6 +38,23 @@ export interface CursorPosition {
   y: number;
 }
 
+/** Text of every scrollback line, oldest first (trailing blanks trimmed). Offset 0 is the most recent line. */
+export function scrollbackLines(core: TerminalCore): string[] {
+  const count = core.getScrollbackCount();
+  const lines: string[] = [];
+  for (let offset = count - 1; offset >= 0; offset--) {
+    const len = core.getScrollbackLineLen(offset);
+    let text = "";
+    for (let col = 0; col < len; col++) {
+      const cell = core.getScrollbackCell(offset, col);
+      if (cell.width === 0) continue;
+      text += cell.chars ?? (cell.char === 0 ? " " : String.fromCodePoint(cell.char));
+    }
+    lines.push(text.replace(/\s+$/, ""));
+  }
+  return lines;
+}
+
 export class Screen {
   private listeners = new Set<() => void>();
   onResponse: ((data: string) => void) | undefined;
@@ -143,6 +160,33 @@ export class Screen {
 
   usingAltScreen(): boolean {
     return this.core.usingAltScreen();
+  }
+
+  /** DECCKM: the program wants SS3 cursor keys (vim, less, fzf …). */
+  cursorKeysApp(): boolean {
+    return this.core.cursorKeysApp();
+  }
+
+  /** The program asked for bracketed paste (readline, zsh, vim, most TUIs). */
+  bracketedPaste(): boolean {
+    return this.core.bracketedPaste();
+  }
+
+  /** Inside a synchronized-output block (mode 2026): the screen is mid-update and should not be captured. */
+  synchronizedOutput(): boolean {
+    return this.core.synchronizedOutput?.() ?? false;
+  }
+
+  /** Lines that scrolled off the top, oldest first. */
+  scrollback(): string[] {
+    return scrollbackLines(this.core);
+  }
+
+  /** Everything the session has shown: scrollback followed by the visible screen. */
+  transcript(): string {
+    const screen = this.screen().split("\n");
+    while (screen.length && screen[screen.length - 1] === "") screen.pop();
+    return [...this.scrollback(), ...screen].join("\n");
   }
 
   /** 0 when the program has not enabled mouse tracking (so wheel events would be typed as garbage). */

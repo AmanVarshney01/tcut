@@ -45,6 +45,9 @@ export default defineVideo(
 - `t.print(markdown)` / `t.title(text)` — render Markdown captions into the video without typing
 - `t.zoom({ rows: [0, 5], cols: [0, 60], duration: "500ms" })` — magnify a region; `t.zoom(null)` resets
 - `t.chapter("Install")` — real MP4 chapter metadata, and a cut point: `--chapters Install` / `--split-chapters` at render time
+- `t.expect(/…/, { scope: "scrollback" })` sees output that scrolled off; `t.scrollback()` returns the whole transcript; `-o demo.log` writes it
+- Arrows are sent as SS3 when the program enabled application cursor mode, `t.paste()` is bracketed when the program asked — editors behave like with a real terminal; `print("[text](url)")` makes a clickable link in SVG/HTML
+- `title: "auto"` follows OSC titles; `tcut doctor demo.cast` explains what a recording used and what tcut cannot show (inline images)
 - `t.timelapse(async () => { await t.run("bun install") }, { speed: 8 })` — everything inside plays 8× faster (`maxPause` only removes silence; this compresses output)
 - `t.screenshot("shot.png")`, `t.clear()`, `t.resize(cols, rows)`, `t.screen()` / `t.line()` for reading the screen
 - Browser pane: `browser: { position: "right" | "overlay", width }` in config, then `t.browser.goto(url)`, `t.browser.waitFor(/text/)`, `t.browser.click(sel)`, `t.focus("browser" | "terminal")` — records a real WebView beside/over the terminal (dev-server demos)

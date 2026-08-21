@@ -9,14 +9,22 @@ import type { ClipSelection, Recording, RenderProgress, ResolvedConfig } from ".
 
 export type { RenderResult };
 
-const kind = (output: string): "svg" | "html" | "txt" | "raster" => {
+const kind = (output: string): "svg" | "html" | "txt" | "log" | "raster" => {
   if (output.endsWith("/")) return "raster";
   const ext = path.extname(output).toLowerCase();
   if (ext === ".svg") return "svg";
   if (ext === ".html" || ext === ".htm") return "html";
   if (ext === ".txt") return "txt";
+  if (ext === ".log") return "log";
   return "raster";
 };
+
+/** The whole transcript as text: every line that scrolled off, then the final screen. */
+export async function writeLog(rec: Recording, config: ResolvedConfig, file: string): Promise<void> {
+  const replay = await replayFrames(rec, config);
+  await mkdir(path.dirname(path.resolve(file)), { recursive: true });
+  await Bun.write(file, replay.transcript.join("\n") + "\n");
+}
 
 /** The final screen as plain text (what `t.screen()` would return at the end). */
 export async function writeTxt(rec: Recording, config: ResolvedConfig, file: string): Promise<void> {
@@ -38,12 +46,17 @@ export async function renderOutputs(
   const svg = config.output.filter((o) => kind(o) === "svg");
   const html = config.output.filter((o) => kind(o) === "html");
   const txt = config.output.filter((o) => kind(o) === "txt");
+  const logs = config.output.filter((o) => kind(o) === "log");
   const raster = config.output.filter((o) => kind(o) === "raster");
 
   const result: RenderResult = { outputs: [], frames: 0, screenshots: [], durationSeconds: 0 };
 
   for (const file of txt) {
     await writeTxt(rec, config, file);
+    result.outputs.push(file);
+  }
+  for (const file of logs) {
+    await writeLog(rec, config, file);
     result.outputs.push(file);
   }
   for (const file of svg) {

@@ -32,7 +32,26 @@ const keySequences = {
   f12: `${ESC}[24~`,
 } satisfies Record<KeyName, string>;
 
-export function keySequence(name: KeyName): string {
+/** In application cursor mode (DECCKM, used by vim/less/fzf) cursor keys send SS3 instead of CSI. */
+const appCursorSequences = new Map<string, string>([
+  ["up", `${ESC}OA`],
+  ["down", `${ESC}OB`],
+  ["right", `${ESC}OC`],
+  ["left", `${ESC}OD`],
+  ["home", `${ESC}OH`],
+  ["end", `${ESC}OF`],
+]);
+
+export interface KeySequenceOptions {
+  /** The program switched on application cursor mode; arrows/home/end use the SS3 form. */
+  appCursor?: boolean;
+}
+
+export function keySequence(name: KeyName, opts: KeySequenceOptions = {}): string {
+  if (opts.appCursor) {
+    const app = appCursorSequences.get(name);
+    if (app) return app;
+  }
   const seq = keySequences[name];
   if (seq === undefined) {
     throw new Error(`Unknown key "${name}". Known keys: ${Object.keys(keySequences).join(", ")}`);

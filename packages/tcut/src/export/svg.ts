@@ -54,7 +54,7 @@ export function svgGeometry(config: ResolvedConfig, cols: number, rows: number):
   };
 }
 
-function windowBar(config: ResolvedConfig, g: Geometry): string {
+function windowBar(config: ResolvedConfig, g: Geometry, title: string): string {
   if (config.windowBar === "none") return "";
   const rings = config.windowBar.startsWith("rings");
   const right = config.windowBar.endsWith("Right");
@@ -64,10 +64,10 @@ function windowBar(config: ResolvedConfig, g: Geometry): string {
   const dots = colors
     .map((c, i) => `<circle cx="${num(startX + i * 20)}" cy="${num(y)}" r="6" ${rings ? `fill="none" stroke="${c}" stroke-width="2"` : `fill="${c}"`}/>`)
     .join("");
-  const title = config.title
-    ? `<text x="${num(g.frameX + g.frameW / 2)}" y="${num(y + 4)}" text-anchor="middle" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="${config.theme.foreground}" opacity="0.7">${esc(config.title)}</text>`
+  const titleText = title
+    ? `<text x="${num(g.frameX + g.frameW / 2)}" y="${num(y + 4)}" text-anchor="middle" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="${config.theme.foreground}" opacity="0.7">${esc(title)}</text>`
     : "";
-  return dots + title;
+  return dots + titleText;
 }
 
 function styleAttrs(cell: GridCell, defaultFg: string): string {
@@ -103,22 +103,27 @@ function frameMarkup(frame: GridFrame, config: ResolvedConfig, g: Geometry): str
     }
     flushBg(x);
 
-    // Text runs with identical style
+    // Text runs with identical style (and link); OSC 8 links become real <a> elements
     const spans: string[] = [];
     x = 0;
-    let run: { x: number; text: string; style: string } | null = null;
+    let run: { x: number; text: string; style: string; link: string | null } | null = null;
+    const flushRun = () => {
+      if (!run || !run.text.trim()) return;
+      const span = `<tspan x="${num(run.x * g.cellW)}"${run.style}>${esc(run.text.replace(/\s+$/, ""))}</tspan>`;
+      spans.push(run.link ? `<a href="${esc(run.link)}">${span}</a>` : span);
+    };
     for (const cell of cells) {
       const blank = cell.text === " " && !(cell.flags & (FLAG.underline | FLAG.strike));
       const style = blank ? "" : styleAttrs(cell, theme.foreground);
-      if (run && (run.style === style || (blank && run.text.length > 0))) {
+      if (run && ((run.style === style && run.link === cell.link) || (blank && run.text.length > 0 && run.link === null))) {
         run.text += cell.text;
       } else {
-        if (run && run.text.trim()) spans.push(`<tspan x="${num(run.x * g.cellW)}"${run.style}>${esc(run.text.replace(/\s+$/, ""))}</tspan>`);
-        run = blank ? null : { x, text: cell.text, style };
+        flushRun();
+        run = blank ? null : { x, text: cell.text, style, link: cell.link };
       }
       x += cell.width;
     }
-    if (run && run.text.trim()) spans.push(`<tspan x="${num(run.x * g.cellW)}"${run.style}>${esc(run.text.replace(/\s+$/, ""))}</tspan>`);
+    flushRun();
     if (spans.length) parts.push(`<text y="${num(y * g.cellH + baseline)}">${spans.join("")}</text>`);
   }
 
@@ -189,7 +194,7 @@ text{white-space:pre;dominant-baseline:auto}
 ${config.marginFill === "transparent" ? "" : `<rect width="100%" height="100%" fill="${config.marginFill}"/>`}
 ${shadowDefs(config)}
 <rect x="${num(g.frameX)}" y="${num(g.frameY)}" width="${num(g.frameW)}" height="${num(g.frameH)}" rx="${config.borderRadius}" fill="${theme.background}"${config.shadow ? ' filter="url(#shadow)"' : ""}/>
-${windowBar(config, g)}
+${windowBar(config, g, config.title === "auto" ? (replay.title ?? "") : config.title)}
 <clipPath id="term"><rect x="${num(g.termX)}" y="${num(g.termY)}" width="${num(g.termW)}" height="${num(g.termH)}"/></clipPath>
 <g clip-path="url(#term)"><g transform="translate(${num(g.termX)} ${num(g.termY)})"><g class="strip" xml:space="preserve">
 ${frames}

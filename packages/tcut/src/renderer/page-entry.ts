@@ -27,13 +27,14 @@ interface BatchEvent {
 }
 
 let term: WTerm | null = null;
+let core: TerminalCore | null = null;
 
 const paint = (): Promise<boolean> =>
   new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))));
 
 const api = {
   async boot(opts: BootOptions): Promise<boolean> {
-    const core: TerminalCore =
+    core =
       opts.core === "lite"
         ? await WasmBridge.load()
         : await GhosttyCore.load({
@@ -176,6 +177,19 @@ const api = {
   },
 
   /** Page background behind the window (the margin fill). The renderer swaps it to matte transparent output. */
+  /** Window-bar title (used when the config says `title: "auto"` and the program sets one). */
+  title(text: string): boolean {
+    const el = document.querySelector("#bar .title");
+    if (!el) return false;
+    el.textContent = text;
+    return true;
+  },
+
+  /** Inside a synchronized-output block (mode 2026): the screen is mid-update and should not be captured. */
+  syncing(): boolean {
+    return core?.synchronizedOutput?.() ?? false;
+  },
+
   background(color: string): Promise<boolean> {
     document.documentElement.style.background = color;
     document.body.style.background = color;

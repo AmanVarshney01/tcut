@@ -20,7 +20,7 @@ function windowBar(config: ResolvedConfig): string {
   const right = config.windowBar.endsWith("Right");
   const dot = (c: string) => `<span class="dot" style="${rings ? `border:2px solid ${c}` : `background:${c}`}"></span>`;
   const dots = `<div class="dots">${dot("#ff5f57")}${dot("#febc2e")}${dot("#28c840")}</div>`;
-  const title = `<div class="title">${escapeHtml(config.title)}</div>`;
+  const title = `<div class="title">${escapeHtml(config.title === "auto" ? "" : config.title)}</div>`;
   return `<div id="bar" class="${right ? "right" : ""}">${right ? title + dots : dots + title}</div>`;
 }
 
@@ -36,6 +36,7 @@ export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise
     rows: rec.header.height,
     duration,
     speed: 1,
+    autoTitle: config.title === "auto",
     events: events.filter((e) => e.type === "o" || e.type === "r").map(({ vt, type, data }) => ({ vt, type, data })),
   };
   // "</script>" inside the JSON would terminate the data block; escape it.

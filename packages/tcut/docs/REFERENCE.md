@@ -11,6 +11,7 @@ tcut record <script.ts>           record only (.cast)
 tcut render <file.cast>           render a cast (tcut's or asciinema's)
 tcut test <paths…>                run scripts as tests
 tcut diff <a.cast> <b.cast> [--at s] [--images dir]   compare screen text of two recordings; exit 1 if different
+tcut doctor <file.cast>           what the program used (alt screen, mouse, bracketed paste, app cursor keys, sync output, links, titles) and what tcut cannot show (inline images, unknown sequences)
 tcut cut <file.cast> --from 2s --to 10s [--chapters a,b] [--cast out.cast] [-o …]   keep part of a recording (a new .cast, plus outputs if -o)
 tcut concat <a.cast> <b.cast…> [--gap 500ms] [--cast out.cast] [-o …]   join recordings of the same size end to end
 tcut publish <files…> [--open]    upload to your S3-compatible bucket, print links
@@ -18,7 +19,7 @@ tcut publish --setup              configure endpoint/bucket/keys (~/.config/tcut
 tcut init [name] [--template basic|tour|test]
 tcut themes
 
--o, --output <path>   repeatable: .mp4 .webm .gif .webp .svg .html .png .jpg .txt (final screen as text) or a directory/
+-o, --output <path>   repeatable: .mp4 .webm .gif .webp .svg .html .png .jpg .txt (final screen as text) .log (whole transcript incl. scrollback) or a directory/
 --theme <name>        any of ~600 names (`tcut themes [query]`), matched loosely: "Gruvbox Dark" = gruvbox-dark
 --font <family>  --font-size <px>  --line-height <x>  --letter-spacing <px>
 --fps <n>  --speed <x>  --padding <px>  --margin <px>  --margin-fill <color>  --radius <px>
@@ -51,7 +52,7 @@ tcut themes
 | `typingSpeed` · `typingJitter` · `seed` | `"50ms"` · 0 · 1 | jitter is seeded, so it's reproducible |
 | `theme` | `"catppuccin-mocha"` | any bundled theme name (~600, loose matching) or a full theme object |
 | `font` | JetBrains Mono 20 px | `{ family, size, lineHeight, letterSpacing }` |
-| `windowBar` · `title` · `padding` · `margin` · `marginFill` · `borderRadius` | `"none"` · `""` · 24 · 0 · bg · 0 | window chrome. `marginFill: "transparent"` gives real alpha in PNG/WebP/GIF/WebM/SVG/HTML (MP4/JPEG use the theme background) |
+| `windowBar` · `title` · `padding` · `margin` · `marginFill` · `borderRadius` | `"none"` · `""` · 24 · 0 · bg · 0 | window chrome. `title: "auto"` follows the title the program sets (OSC 0/2 — vim, ssh, your own `printf '\033]0;…\a'`) in mp4/gif/png, HTML and SVG (SVG shows the last one). `marginFill: "transparent"` gives real alpha in PNG/WebP/GIF/WebM/SVG/HTML (MP4/JPEG use the theme background) |
 | `shadow` | — | `true` or `{ x: 0, y: 18, blur: 50, color: "#000000", opacity: 0.45 }`: drop shadow under the window(s), also in SVG. Sets `margin` to 40 unless you set one |
 | `watermark` | — | `"© text"` or `{ text \| image: "logo.png", position: "bottom-right" \| "top-left" \| … \| "center", opacity: 0.6, size: 14 (text px) \| 28 (image height px), color, margin: 16 }`; drawn over the picture in every format |
 | `cursor` | `{ blink: true, period: 1000 }` | |
@@ -62,14 +63,15 @@ tcut themes
 **`t`**
 
 - Type: `run(cmd)` · `type(text)` · `paste(text)` · `enter()` `tab()` `backspace()` `escape()` `space()` `up()` `down()` `left()` `right()` `home()` `end()` `pageUp()` `pageDown()` (all take a count) · `ctrl("c")` · `alt("b")` · `shift("tab")` · `scrollUp(n)` `scrollDown(n)` (mouse wheel; needs a program with mouse tracking) · `key("f5")` · `raw(bytes)`
-- Wait: `sleep("500ms")` · `wait(/re/, { scope: "line" | "screen" })` — default waits for the prompt
-- Assert: `expect(/re/)` — throws with a screen dump
+- Wait: `sleep("500ms")` · `wait(/re/, { scope: "line" | "screen" | "scrollback" })` — default waits for the prompt; `scrollback` also searches lines that scrolled off
+- Assert: `expect(/re/)` — throws with a screen dump; `expect(/re/, { scope: "scrollback" })` for output that is no longer visible
+- Fidelity: arrows/home/end switch to the SS3 form when the program turned on application cursor mode (vim, less, fzf); `paste()` uses bracketed paste when the program enabled it (readline, zsh, editors), so autoindent doesn't stair-step; Markdown links in `print()` captions become real OSC 8 hyperlinks
 - Shape the video: `hide(async () => …)` cuts a section · `screenshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`
 - Zoom: `zoom({ rows: [a, b], cols: [a, b], duration: "400ms", padding: 1 })` magnifies a region (animated on the render clock); `zoom(null)` resets.
 - Chapters: `chapter("name")` writes mp4 chapter metadata (`ffprobe -show_chapters`), appears in `--json`, and is a cut point: `--chapters Zoom,Intro` renders only those (in that order), `--split-chapters` writes one file per chapter (`demo-01-intro.mp4`, …).
 - Timelapse: `timelapse(async () => { await t.run("bun install") }, { speed: 8 })` plays everything inside 8× faster — `maxPause` only squeezes silence, this squeezes output too. Nests.
 - Captions: `print(markdown)` renders Markdown to ANSI (via @wterm/markdown) straight into the recording, not the shell: headings, bold, lists, code, links. `title(text, { pause })` is a heading + rule + pause. Use at a prompt, not inside a TUI.
-- Look: `screen()` · `line()` · `cursor()` · `cols` · `rows`
+- Look: `screen()` · `line()` · `scrollback()` (everything shown so far: scrolled-off lines + screen) · `cursor()` · `cols` · `rows`
 - Browser pane (when `browser` is configured): `browser.goto(url)` (waits for the page, retries while a dev server starts) · `browser.waitFor(/text/)` · `browser.click(selector)` · `browser.reload()` · `browser.evaluate(js)` · `focus("terminal" | "browser")` (overlay layout: which window is in front; recorded as a marker)
 
 Tip for dev servers: start them with output redirected (`bun run dev </dev/null >/tmp/dev.log 2>&1 &`) so their logs don't repaint over a TUI, and detach stdin so the background job isn't stopped.
@@ -115,6 +117,12 @@ Installs two skills: `tcut` (recording terminal videos) and `tcut-remotion` (com
 motion-designed launch videos with [Remotion](https://remotion.dev)). Every command also takes `--json`
 (one JSON document on stdout, `{ "error" }` on failure) and never prompts; [llms.txt](https://tcut.amanv.dev/llms.txt)
 is the condensed reference.
+
+## Rendering fidelity
+
+- **Hyperlinks**: OSC 8 links (from programs, or Markdown links in captions) are clickable in the HTML player and the SVG (`<a href>` around the text).
+- **Synchronized output** (mode 2026): while a program is mid-repaint, the previous complete frame is held (bounded to half a second), so TUIs that use it never show torn frames.
+- `.log` output writes the whole transcript — scrollback then the final screen — for docs or assertions.
 
 ## How it works, briefly
 

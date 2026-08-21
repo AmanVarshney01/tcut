@@ -4,6 +4,7 @@ import { MARKER } from "./cast";
 import { toMs } from "./duration";
 import { ExpectationError, MissingRequirementError, WaitTimeoutError } from "./errors";
 import { altSequence, ctrlSequence, keySequence, shiftSequence, wheelSequence } from "./keys";
+import { linkifyMarkdown } from "./osc";
 import { Screen } from "./screen";
 import type {
   BrowserSession,
@@ -195,7 +196,8 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
 
   const renderMarkdown = (markdown: string): string => {
     const renderer = new MarkdownRenderer({ width: Math.max(20, cols - 2) });
-    return renderer.push(markdown.endsWith("\n") ? markdown : markdown + "\n") + renderer.flush();
+    const linked = linkifyMarkdown(markdown);
+    return renderer.push(linked.endsWith("\n") ? linked : linked + "\n") + renderer.flush();
   };
 
   const print = async (markdown: string): Promise<void> => {
@@ -232,7 +234,13 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     }
   };
 
-  const key = (name: KeyName, times = 1): Promise<void> => pressKey(keySequence(name), times);
+  const key = (name: KeyName, times = 1): Promise<void> => pressKey(keySequence(name, { appCursor: screen.cursorKeysApp() }), times);
+
+  /** Bracketed paste when the program asked for it, so editors treat the text as a paste (no auto-indent storms). */
+  const paste = async (text: string): Promise<void> => {
+    await screen.settle();
+    await raw(screen.bracketedPaste() ? `\x1b[200~${text}\x1b[201~` : text);
+  };
 
   const scroll = async (direction: "up" | "down", times: number): Promise<void> => {
     await screen.settle();
@@ -247,8 +255,8 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     }
   };
 
-  const matches = (pattern: RegExp, scope: "line" | "screen"): boolean =>
-    pattern.test(scope === "screen" ? screen.screen() : screen.line());
+  const matches = (pattern: RegExp, scope: "line" | "screen" | "scrollback"): boolean =>
+    pattern.test(scope === "scrollback" ? screen.transcript() : scope === "screen" ? screen.screen() : screen.line());
 
   const toRegExp = (pattern: RegExp | string): RegExp =>
     pattern instanceof RegExp ? pattern : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
@@ -350,7 +358,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
   const session: TerminalSession = {
     type,
     run,
-    paste: (text) => raw(text),
+    paste,
     key,
     enter: (n) => key("enter", n),
     tab: (n) => key("tab", n),
@@ -413,6 +421,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
       push("m", `${MARKER.chapter}${name}`);
     },
     screen: () => screen.screen(),
+    scrollback: () => screen.transcript(),
     line: () => screen.line(),
     cursor: () => screen.cursor(),
     get cols() {

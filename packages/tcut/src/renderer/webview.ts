@@ -9,6 +9,7 @@ import { pageAssets } from "./bundle";
 import { createSinks, type Chapter } from "./encoder";
 import { chipBuilder } from "../keylabels";
 import { BROWSER_GAP, barHeight, opaqueFill, renderHtml, themeOsc } from "./page";
+import { extractTitle } from "../osc";
 import { decodePng, encodePng, luminance, matte, parseHex } from "./png";
 import { createWebView } from "./view";
 
@@ -198,6 +199,11 @@ export async function render(
     let lastPng: Uint8Array | null = null;
     let lastAlphaPng: Uint8Array | null = null;
     let lastBlink: boolean | null = null;
+    const autoTitle = config.title === "auto";
+    let shownTitle = "";
+    // Synchronized output (mode 2026): hold the previous frame while a program is mid-update, bounded to half a second.
+    const maxHeld = Math.ceil(fps / 2);
+    let held = 0;
     const setFill = (color: string) => view.evaluate(`window.__vt.background(${JSON.stringify(color)})`);
 
     for (let frame = 0; frame < totalFrames; frame++) {
@@ -219,6 +225,21 @@ export async function render(
         const id = ++batchId;
         batches.set(id, JSON.stringify(drawable.map(({ type, data }) => ({ type, data }))));
         await view.evaluate(`window.__vt.applyUrl('/batch/${id}')`);
+        if (autoTitle) {
+          for (const e of drawable) {
+            const t = e.type === "o" ? extractTitle(e.data) : null;
+            if (t !== null && t !== shownTitle) {
+              shownTitle = t;
+              await view.evaluate(`window.__vt.title(${JSON.stringify(t)})`);
+            }
+          }
+        }
+        if (lastPng && held < maxHeld && (await view.evaluate("window.__vt.syncing()")) === true) {
+          held += 1;
+          dirty = false; // mid-update: reuse the last complete frame
+        } else {
+          held = 0;
+        }
       }
       if (browserFrame) {
         await view.evaluate(`window.__vt.browserFrame(${JSON.stringify(`/bframe/${encodeURIComponent(browserFrame.data)}`)})`);
