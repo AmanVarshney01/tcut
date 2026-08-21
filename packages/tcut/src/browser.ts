@@ -58,13 +58,12 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     );
     return next;
   };
-  // Never evaluate into a page that is still loading: Chrome leaves such a call pending forever, and one pending
-  // evaluate makes every later one fail ("already pending"). Wait for the navigation to settle first.
+  // A page that answers an evaluate is a page worth sampling (view.loading is not reliable on every backend).
   const evaluate = (js: string, ms: number, label: string): Promise<unknown> =>
     serial(async () => {
-      const deadline = performance.now() + ms;
-      while (view.loading && performance.now() < deadline) await Bun.sleep(50);
-      return within(view.evaluate(js), Math.max(250, deadline - performance.now()), label);
+      const result = await within(view.evaluate(js), ms, label);
+      loaded = true;
+      return result;
     });
   // One screenshot at a time: the periodic sampler and the event-driven samples (after waitFor, at stop) share it.
   let sampling: Promise<void> | null = null;
@@ -124,7 +123,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
       // No evaluate() here: the view's own loading flag and URL say whether the page arrived (some backends keep
       // the navigate() promise pending long after the page is up, and may leave view.url empty).
       const href = (view.url ?? "").replace(/\/$/, "");
-      if (outcome === "tick" && !view.loading && (href === "" || href.startsWith(target))) {
+      if (outcome === "tick" && (href.startsWith(target) || (!view.loading && href === ""))) {
         currentUrl = url;
         loaded = true;
         return;
@@ -172,6 +171,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     async stop() {
       // A session shorter than the browser's start-up (cold Chrome on CI) should still show the page once.
       if (frames.length === 0 && initialLoad) await Promise.race([initialLoad, Bun.sleep(5000)]);
+      if (!loaded && bcfg.url) await evaluate("document.readyState", 2000, "probe").catch(() => undefined); // marks loaded if the page answers
       running = false;
       await sampler;
       await sampleOnce(); // final state of the page
