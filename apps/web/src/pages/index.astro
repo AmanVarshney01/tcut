@@ -57,6 +57,25 @@ const examples = [
           <CopyCommand command="bun add -g termcut" />
         </div>
         <p class="mt-2 text-sm text-ink-3">Bun ≥ 1.4. ffmpeg for MP4/GIF; SVG and HTML need nothing else. Or a <a href={`${GITHUB}/releases`}>standalone binary</a>.</p>
+        <figure class="mt-8">
+          <video
+            class="promo block w-full rounded-lg bg-desk-2"
+            src="/promo.mp4"
+            poster={promoPoster.src}
+            width="1920"
+            height="1080"
+            controls
+            muted
+            loop
+            playsinline
+            preload="metadata"
+            aria-label="tcut feature tour: scripted recording, themes, browser overlay, Claude Code, captions, zoom, CI"
+          ></video>
+          <figcaption class="mt-2 font-mono text-xs text-ink-3">
+            75 s tour. Every terminal clip is a tcut recording, composed in <a href="https://remotion.dev">Remotion</a> — a build artifact, not a screen grab.
+            The <code>tcut-remotion</code> skill documents the pipeline.
+          </figcaption>
+        </figure>
       </section>
 
       <figure>
@@ -116,26 +135,6 @@ const examples = [
       </section>
 
       <section>
-        <h2 class="text-xl">Made with tcut</h2>
-        <p class="mt-3 text-ink-2">
-          Every terminal clip in the video is a tcut recording, composed in <a href="https://remotion.dev">Remotion</a>: the script lit up line by line against
-          its own output, one cast re-rendered in nine themes, a browser overlaid on nvim, Claude Code, Markdown captions, zoom, <code>tcut test</code> and
-          <code>tcut diff</code>. The footage is a build artifact — change a script or a theme, re-run, and the whole video re-renders. The
-          <code>tcut-remotion</code> skill documents the pipeline.
-        </p>
-        <video
-          class="mt-5 w-full rounded-lg"
-          src="/promo.mp4"
-          poster={promoPoster.src}
-          controls
-          muted
-          playsinline
-          preload="none"
-          aria-label="tcut launch video: a tour of every feature, composed with Remotion"
-        ></video>
-      </section>
-
-      <section>
         <h2 class="text-xl">Compared with VHS</h2>
         <p class="mt-3 text-ink-2">
           <a href="https://github.com/charmbracelet/vhs">VHS</a> is Go, a <code>.tape</code> DSL, ttyd, Chrome and ffmpeg. tcut is TypeScript, Bun and
@@ -181,6 +180,13 @@ const examples = [
   </div>
 
   <script>
+    // Autoplay the tour only where it is cheap and welcome: wide screens, no reduced-motion preference.
+    const promo = document.querySelector<HTMLVideoElement>("video.promo");
+    if (promo && matchMedia("(min-width: 640px) and (prefers-reduced-motion: no-preference)").matches) {
+      promo.autoplay = true;
+      promo.play().catch(() => {});
+    }
+
     const toggle = document.querySelector<HTMLButtonElement>(".theme-toggle");
     toggle?.addEventListener("click", () => {
       const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
