@@ -48,10 +48,18 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
   // Sampling starts once a page has loaded: headless Chrome never resolves a screenshot of the initial blank
   // view, and a hung screenshot blocks every later command on that view.
   let loaded = false;
-  /** Extra time allowed while the browser has never answered: a cold Chrome on a CI runner can take ~20 s to come up. */
-  const STARTUP_GRACE = 20_000;
+  /** Extra time allowed while the browser has never answered: a cold Chrome on a fresh Windows runner can take 20–40 s. */
+  const STARTUP_GRACE = 45_000;
   const startedAt = performance.now();
-  const startupDeadline = (deadline: number): number => (loaded ? deadline : Math.max(deadline, startedAt + STARTUP_GRACE));
+  let startupNoted = false;
+  const startupDeadline = (deadline: number): number => {
+    if (loaded) return deadline;
+    if (!startupNoted && performance.now() > startedAt + 5000) {
+      startupNoted = true;
+      log("waiting for the browser to start…");
+    }
+    return Math.max(deadline, startedAt + STARTUP_GRACE);
+  };
   // A view runs one evaluate() at a time; goto's probes, waitFor and the script's own evaluate calls take turns.
   let chain: Promise<unknown> = Promise.resolve();
   const serial = <T,>(fn: () => Promise<T>): Promise<T> => {

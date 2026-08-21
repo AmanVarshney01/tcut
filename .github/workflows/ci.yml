@@ -110,7 +110,8 @@ jobs:
           which bash sh ffmpeg chrome google-chrome || true
           ls "/c/Program Files/Google/Chrome/Application/chrome.exe" || true
       # Typecheck runs on macOS and Linux; tsc on the Windows runner costs a minute for the same answer.
-      # Chrome's first launch on a fresh runner takes ~20 s; the probe absorbs that (and tcut's startup grace covers it).
+      - name: Warm up Chrome (first launch on a fresh runner takes 20–40 s; --screenshot exits promptly)
+        run: timeout 45 "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --no-first-run --screenshot=warm.png --window-size=320,240 about:blank >/dev/null 2>&1 || true
       - name: Probe WebView behaviour (diagnostic, never fails the job)
         continue-on-error: true
         run: |
