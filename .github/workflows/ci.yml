@@ -111,8 +111,11 @@ jobs:
           ls "/c/Program Files/Google/Chrome/Application/chrome.exe" || true
       # Typecheck runs on macOS and Linux; tsc on the Windows runner costs a minute for the same answer.
       # Chrome's first launch on a fresh runner takes ~20 s; the probe absorbs that (and tcut's startup grace covers it).
-      - name: Probe WebView behaviour
-        run: TCUT_DEBUG_CHROME=1 bun scripts/probe-webview.ts 2>&1 | grep -v -E "^\[[0-9:/.]+:(INFO|WARNING)" | head -60
+      - name: Probe WebView behaviour (diagnostic, never fails the job)
+        continue-on-error: true
+        run: |
+          TCUT_DEBUG_CHROME=1 bun scripts/probe-webview.ts > probe.log 2>&1 || true
+          grep -E "^[0-9]+\.[0-9]{3}s " probe.log || cat probe.log | tail -40
       - name: Test
         run: bun test
       - name: Build and smoke-test the Windows binary
