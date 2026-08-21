@@ -35,7 +35,7 @@ describe("application cursor keys and bracketed paste", () => {
   // One independent session per mode: a single `read` each, so no cross-read byte miscount can desync them.
   const readKey = async (setup: string, press: (t: import("../src/types").TerminalSession) => Promise<void>, bytes: number): Promise<string[]> => {
     const out = await record(resolveConfig({ output: `${dir}/x.mp4`, cols: 70, rows: 8, endPause: 0, typingSpeed: 0 }), async (t) => {
-      await t.type(`printf '${setup}'; IFS= read -rs -n${bytes} k; printf 'K=%q\\n' \"$k\"\n`);
+      await t.type(`printf '${setup}'; IFS= read -rs -n${bytes} k; printf 'K=%q\\n' "$k"\n`);
       await t.sleep(300);
       await press(t);
       await t.wait(/K=/, { scope: "screen" });
