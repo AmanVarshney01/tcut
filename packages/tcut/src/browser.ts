@@ -48,10 +48,10 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
   // Sampling starts once a page has loaded: headless Chrome never resolves a screenshot of the initial blank
   // view, and a hung screenshot blocks every later command on that view.
   let loaded = false;
-  // Screenshots start as soon as a navigation has been issued: headless Chrome defers rendering (and with it the
-  // page's execution context) until something asks for a frame — a screenshot of the pristine blank view, however,
-  // never resolves, so never sample before navigate() was called.
-  let navigating = false;
+  /** Extra time allowed while the browser has never answered: a cold Chrome on a CI runner can take ~20 s to come up. */
+  const STARTUP_GRACE = 20_000;
+  const startedAt = performance.now();
+  const startupDeadline = (deadline: number): number => (loaded ? deadline : Math.max(deadline, startedAt + STARTUP_GRACE));
   // A view runs one evaluate() at a time; goto's probes, waitFor and the script's own evaluate calls take turns.
   let chain: Promise<unknown> = Promise.resolve();
   const serial = <T,>(fn: () => Promise<T>): Promise<T> => {
@@ -72,7 +72,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
   // One screenshot at a time: the periodic sampler and the event-driven samples (after waitFor, at stop) share it.
   let sampling: Promise<void> | null = null;
   const sampleOnce = (): Promise<void> => {
-    if (!navigating) return Promise.resolve();
+    if (!loaded) return Promise.resolve();
     sampling ??= (async () => {
       try {
         const png = (await within(view.screenshot({ encoding: "buffer" }), 5000, "screenshot")) as Uint8Array;
@@ -92,7 +92,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
   const sampler = (async () => {
     while (running) {
       await sampleOnce();
-      await Bun.sleep(navigating ? 1000 / bcfg.fps : 50);
+      await Bun.sleep(loaded ? 1000 / bcfg.fps : 50);
     }
   })();
 
@@ -109,7 +109,6 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     for (;;) {
       if (!running) return; // stop() closed the view mid-retry; abort quietly
       try {
-        navigating = true;
         navigation ??= view.navigate(url).then(
         () => "ok" as const,
           (cause: unknown) => (/pending/i.test(String(cause)) ? ("pending" as const) : ("failed" as const)),
@@ -133,7 +132,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
         loaded = true;
         return;
       }
-      if (performance.now() > deadline) {
+      if (performance.now() > startupDeadline(deadline)) {
         throw new WaitTimeoutError(`browser.goto(${url})`, config.waitTimeout, `current url: ${view.url ?? "(none)"}, loading: ${view.loading}`);
       }
       await Bun.sleep(250);
@@ -157,7 +156,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
           await sampleOnce(); // the frame the script waited for, captured the moment it appeared
           return;
         }
-        if (performance.now() > deadline) throw new WaitTimeoutError(`${regex} in the browser page`, timeout, text.slice(0, 2000));
+        if (performance.now() > startupDeadline(deadline)) throw new WaitTimeoutError(`${regex} in the browser page`, timeout, text.slice(0, 2000));
         await Bun.sleep(150);
       }
     },
@@ -175,7 +174,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
     evaluate: (js) => evaluate(js, 10000, "evaluate"),
     async stop() {
       // A session shorter than the browser's start-up (cold Chrome on CI) should still show the page once.
-      if (frames.length === 0 && initialLoad) await Promise.race([initialLoad, Bun.sleep(5000)]);
+      if (frames.length === 0 && initialLoad) await Promise.race([initialLoad, Bun.sleep(Math.max(0, startupDeadline(0) - performance.now()))]);
       if (!loaded && bcfg.url) await evaluate("document.readyState", 2000, "probe").catch(() => undefined); // marks loaded if the page answers
       running = false;
       await sampler;

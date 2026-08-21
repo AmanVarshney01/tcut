@@ -104,6 +104,8 @@ jobs:
           ls "/c/Program Files/Google/Chrome/Application/chrome.exe" || true
       - name: Typecheck
         run: bun run typecheck
+      - name: Warm up Chrome (first launch on a fresh runner is slow)
+        run: timeout 60 "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --no-first-run --dump-dom about:blank >/dev/null 2>&1 || true
       - name: Probe WebView behaviour
         run: TCUT_DEBUG_CHROME=1 bun scripts/probe-webview.ts 2>&1 | grep -v -E "^\[[0-9:/.]+:(INFO|WARNING)" | head -60
       - name: Test
