@@ -15,7 +15,7 @@ import { renderOutputs } from "./render";
 import { generateScript } from "./scriptgen";
 import { runScriptTests, type TestSummary } from "./testing";
 import { findThemes, themeNames } from "./themes";
-import type { BrowserConfig, ClipSelection, CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
+import type { BrowserConfig, ClipSelection, CoreName, Recording, ResolvedConfig, ThemeName, VideoConfig, WindowBar } from "./types";
 import { Video, attachBrowserFrames, castConfig, isVideo, renderCast } from "./video";
 
 // Let user scripts `import { defineVideo } from "tcut"` (or "termcut", the npm package name) regardless of
@@ -524,13 +524,13 @@ async function main(): Promise<void> {
       const castOut = values.cast ?? (joining ? path.join(path.dirname(rest[0]!), "concat.cast") : rest[0]!.replace(/\.cast$/, "") + "-cut.cast");
       const overrides = overridesFromFlags();
       delete overrides.cast;
-      const parts: Array<{ rec: Awaited<ReturnType<typeof readCast>>; config: ReturnType<typeof castConfig> }> = [];
+      const parts: Array<{ rec: Recording; config: ResolvedConfig }> = [];
       for (const [i, file] of rest.entries()) {
         const rec = await readCast(file);
         const config = applyOverrides(castConfig(rec, file, values.output), overrides);
         parts.push({ rec: await rebaseBrowserFrames(rec, file, castOut, joining ? `${i}-` : ""), config });
       }
-      let out: Awaited<ReturnType<typeof readCast>>;
+      let out: Recording;
       if (joining) {
         out = concatRecordings(parts, { gap: seconds("gap") ?? 0 });
       } else {
