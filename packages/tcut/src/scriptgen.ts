@@ -1,4 +1,5 @@
 import path from "node:path";
+import { keySequence } from "./keys";
 import type { Recording } from "./types";
 
 export interface ScriptGenOptions {
@@ -20,7 +21,9 @@ type Op =
   | { kind: "key"; name: string; times: number }
   | { kind: "ctrl"; letter: string; times: number }
   | { kind: "alt"; key: string; times: number }
-  | { kind: "raw"; data: string }
+  | { kind: "fkey"; name: string; times: number }
+  | { kind: "shift"; key: string; times: number }
+  | { kind: "raw"; data: string; comment?: string }
   | { kind: "sleep"; ms: number };
 
 const NAMED = new Map<string, string>([
@@ -45,6 +48,35 @@ const NAMED = new Map<string, string>([
   ["\x1b[5~", "pageUp"],
   ["\x1b[6~", "pageDown"],
 ]);
+
+/** F-keys by the bytes a terminal sends (`ESC O P` … `ESC [24~`), so they replay as `t.key("f5")`: one write, never ESC + key. */
+const FKEYS = new Map(Array.from({ length: 12 }, (_, i) => [keySequence(`f${i + 1}` as `f${1}`), `f${i + 1}`] as const));
+
+const MODIFIER_NAMES = new Map([
+  ["2", "shift"],
+  ["3", "alt"],
+  ["5", "ctrl"],
+  ["6", "ctrl+shift"],
+  ["7", "ctrl+alt"],
+]);
+const MODIFIED_KEYS = new Map([
+  ["A", "up"],
+  ["B", "down"],
+  ["C", "right"],
+  ["D", "left"],
+  ["H", "home"],
+  ["F", "end"],
+]);
+
+/** `ESC [1;3D` → { modifier: "alt", key: "left" } (xterm modifier encoding), or null. */
+function modifiedKey(token: string): { modifier: string; key: string } | null {
+  if (!token.startsWith("\x1b[1;")) return null;
+  const m = /^(\d)([A-DHF])$/.exec(token.slice(4));
+  if (!m) return null;
+  const modifier = MODIFIER_NAMES.get(m[1]!);
+  const key = MODIFIED_KEYS.get(m[2]!);
+  return modifier && key ? { modifier, key } : null;
+}
 
 /** Split a raw input chunk into individual key tokens (escape sequences, control chars, printable runs). */
 export function tokenize(input: string): string[] {
@@ -160,8 +192,12 @@ export function eventsToOps(rec: Recording, opts: ScriptGenOptions): Op[] {
         pushKey({ kind: "ctrl", letter, times: 1 });
       } else if (token.length === 2 && token[0] === "\x1b") {
         pushKey({ kind: "alt", key: token[1]!, times: 1 });
+      } else if (FKEYS.has(token)) {
+        pushKey({ kind: "fkey", name: FKEYS.get(token)!, times: 1 });
       } else {
-        ops.push({ kind: "raw", data: token });
+        const mod = modifiedKey(token);
+        if (mod?.modifier === "shift") pushKey({ kind: "shift", key: mod.key, times: 1 });
+        else ops.push({ kind: "raw", data: token, ...(mod && { comment: `${mod.modifier}+${mod.key}` }) });
       }
     }
   }
@@ -186,8 +222,12 @@ function opToLine(op: Op): string {
       return op.times > 1 ? `await t.ctrl(${q(op.letter)}, ${op.times});` : `await t.ctrl(${q(op.letter)});`;
     case "alt":
       return op.times > 1 ? `await t.alt(${q(op.key)}, ${op.times});` : `await t.alt(${q(op.key)});`;
+    case "fkey":
+      return op.times > 1 ? `await t.key(${q(op.name)}, ${op.times});` : `await t.key(${q(op.name)});`;
+    case "shift":
+      return op.times > 1 ? `await t.shift(${q(op.key)}, ${op.times});` : `await t.shift(${q(op.key)});`;
     case "raw":
-      return `await t.raw(${q(op.data)});`;
+      return `await t.raw(${q(op.data)});${op.comment ? ` // ${op.comment}` : ""}`;
     case "sleep":
       return `await t.sleep(${formatMs(op.ms)});`;
   }

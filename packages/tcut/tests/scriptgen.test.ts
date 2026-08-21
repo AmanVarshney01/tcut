@@ -19,6 +19,33 @@ describe("tokenize", () => {
     expect(tokenize("\x1bb")).toEqual(["\x1bb"]); // alt+b
     expect(tokenize("\x7f\x7f")).toEqual(["\x7f", "\x7f"]);
   });
+
+  test("combined keys stay combined: alt, F-keys and modified arrows replay as single writes", () => {
+    const rec: Recording = {
+      header: { version: 2, width: 80, height: 24 },
+      events: [
+        [0, "i", "\x1bb"],
+        [0.1, "i", "\x1b[15~"],
+        [0.2, "i", "\x1bOP"],
+        [0.3, "i", "\x1b[1;2D"],
+        [0.4, "i", "\x1b[1;3D"],
+        [0.5, "i", "\r"],
+        [1, "m", "end"],
+      ],
+    };
+    const lines = generateScript(rec, { output: ["x.gif"], cleanShell: false })
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith("await t.") && !l.startsWith("await t.sleep"));
+    expect(lines).toEqual([
+      'await t.alt("b");',
+      'await t.key("f5");',
+      'await t.key("f1");',
+      'await t.shift("left");',
+      'await t.raw("\\u001b[1;3D"); // alt+left',
+      "await t.enter();",
+    ]);
+  });
 });
 
 describe("eventsToOps", () => {
