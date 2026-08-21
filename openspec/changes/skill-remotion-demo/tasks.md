@@ -1,0 +1,6 @@
+- [x] Research skills.sh discovery rules (skills/<name>/SKILL.md, name+description frontmatter)
+- [x] Write skills/tcut/SKILL.md
+- [x] Write skills/tcut-remotion/SKILL.md
+- [x] Build Remotion promo demo from tcut clips and render it (~/dev/test/promo/out/promo.mp4)
+- [x] Verify `npx skills add AmanVarshney01/tcut` finds both skills
+- [x] Update README, website, llms.txt; deploy
