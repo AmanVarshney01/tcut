@@ -45,8 +45,24 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
   let currentUrl = bcfg.url ?? "about:blank";
   let lastHash = "";
   let running = true;
+  // Sampling starts once a page has loaded: headless Chrome never resolves a screenshot of the initial blank
+  // view, and a hung screenshot blocks every later command on that view.
+  let loaded = false;
+  /** The page's own idea of where it is — `view.url` is not populated by every backend. */
+  const pageHref = (): Promise<string> =>
+    within(view.evaluate("location.href"), 3000, "probe")
+      .then((v) => String(v ?? ""))
+      .catch(() => "");
   const sampler = (async () => {
     while (running) {
+      if (!loaded) {
+        const href = await pageHref();
+        if (href && href !== "about:blank") loaded = true;
+        else {
+          await Bun.sleep(100);
+          continue;
+        }
+      }
       try {
         const png = (await within(view.screenshot({ encoding: "buffer" }), 5000, "screenshot")) as Uint8Array;
         const hash = Bun.hash(png).toString(16);
@@ -84,13 +100,16 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
       const outcome = await Promise.race([navigation, Bun.sleep(750).then(() => "tick" as const)]);
       if (outcome === "ok") {
         currentUrl = url;
+        loaded = true;
         return;
       }
       if (outcome === "failed") navigation = null;
       if (!running) return;
       const state = await within(view.evaluate("document.readyState"), 3000, "goto").catch(() => "");
-      if (state === "complete" && (view.url ?? "").replace(/\/$/, "").startsWith(target)) {
+      const href = (view.url || (await pageHref())).replace(/\/$/, "");
+      if (state === "complete" && href.startsWith(target)) {
         currentUrl = url;
+        loaded = true;
         return;
       }
       if (performance.now() > deadline) {
@@ -117,7 +136,19 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
         await Bun.sleep(150);
       }
     },
-    click: (selector) => within(view.click(selector), 10000, "click"),
+    /** Real input emulation first; if the browser's actionability checks stall, a DOM click still drives the page. */
+    click: async (selector) => {
+      try {
+        await within(view.click(selector), 3000, "click");
+      } catch {
+        const hit = await within(
+          view.evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; el.click(); return true; })()`),
+          5000,
+          "click",
+        );
+        if (hit !== true) throw new Error(`browser.click: no element matches ${selector}`);
+      }
+    },
     reload: () => within(view.reload(), 30000, "reload").catch((err) => (/pending/i.test(String(err)) ? undefined : Promise.reject(err))),
     evaluate: (js) => within(view.evaluate(js), 10000, "evaluate"),
     async stop() {
