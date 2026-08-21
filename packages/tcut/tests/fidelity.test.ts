@@ -116,6 +116,7 @@ describe("doctor", () => {
     expect(r.features).toMatchObject({ altScreen: true, mouseTracking: true, bracketedPaste: true, hyperlinks: 1, titles: ["htop"] });
     expect(r.unsupported.map((u) => u.name)).toEqual(["kitty-graphics"]);
     expect(r.markers.chapters).toBe(1);
-    expect(r.warnings.some((w) => /Kitty/.test(w))).toBe(true);
+    expect(r.warnings.some((w) => /full-screen program exited/.test(w))).toBe(true); // ?1049h…?1049l flashed by
+    expect(r.warnings.some((w) => /Kitty/.test(w))).toBe(false); // unsupported protocols are reported once, not echoed as warnings
   });
 });

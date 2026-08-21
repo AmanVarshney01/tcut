@@ -45,6 +45,8 @@ function unhandledSummary(seqs: Array<{ final: string }>): UnhandledSequenceSumm
 export async function diagnoseRecording(rec: Recording, castPath = rec.source ?? "(memory)"): Promise<DoctorReport> {
   const output = rec.events.filter((e) => e[1] === "o").map((e) => e[2]);
   const outputText = output.join("");
+  // "Ever used" must not depend on state sampling: a mode entered and left inside one chunk still counts.
+  const requested = (code: string): boolean => outputText.includes(`\x1b[?${code}h`);
   const links = new Set<string>();
   const titles: string[] = [];
   let altScreen = false;
@@ -66,11 +68,11 @@ export async function diagnoseRecording(rec: Recording, castPath = rec.source ??
     core.writeString(data);
     const t = extractTitle(data);
     if (t !== null && titles[titles.length - 1] !== t) titles.push(t);
-    altScreen ||= core.usingAltScreen();
-    mouse ||= (core.mouseTracking?.() ?? 0) !== 0;
-    paste ||= core.bracketedPaste();
-    appCursor ||= core.cursorKeysApp();
-    sync ||= core.synchronizedOutput?.() ?? false;
+    altScreen ||= core.usingAltScreen() || requested("1049") || requested("47");
+    mouse ||= (core.mouseTracking?.() ?? 0) !== 0 || requested("1000") || requested("1002") || requested("1003");
+    paste ||= core.bracketedPaste() || requested("2004");
+    appCursor ||= core.cursorKeysApp() || requested("1");
+    sync ||= (core.synchronizedOutput?.() ?? false) || requested("2026");
     for (let y = 0; y < core.getRows(); y++) {
       for (let x = 0; x < core.getCols(); x++) {
         const uri = core.getCell(y, x).linkUri;
@@ -91,8 +93,8 @@ export async function diagnoseRecording(rec: Recording, castPath = rec.source ??
     screenshots: rec.events.filter((e) => e[1] === "m" && e[2].startsWith(MARKER.screenshot)).length,
     browserFrames: rec.events.filter((e) => e[1] === "b").length,
   };
-  const unsupported = unsupportedProtocols(outputText);
-  const warnings = unsupported.map((u) => `${u.note} (${u.count}×)`);
+  const unsupported = unsupportedProtocols(outputText); // shown on their own report lines; not repeated as warnings
+  const warnings: string[] = [];
   if (altScreen && rec.events.some((e) => e[1] === "o" && e[2].includes("\x1b[?1049l"))) {
     warnings.push("A full-screen program exited; text it left on the primary screen is normal — use t.hide(() => t.clear()) to tidy the video");
   }
