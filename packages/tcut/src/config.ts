@@ -15,8 +15,14 @@ export function defaultPromptPattern(prompt: string): RegExp {
   return new RegExp(`${escapeRegExp(prompt.trimEnd())}\\s*$`);
 }
 
+/** Size of one terminal cell in CSS pixels. */
+export interface CellSize {
+  w: number;
+  h: number;
+}
+
 /** Approximate cell size before anything is measured (JetBrains Mono / Menlo are ~0.6em wide). */
-export function estimateCell(font: { size: number; lineHeight: number; letterSpacing: number }): { w: number; h: number } {
+export function estimateCell(font: { size: number; lineHeight: number; letterSpacing: number }): CellSize {
   return { w: Math.round(font.size * 0.6 * 100) / 100 + font.letterSpacing, h: Math.ceil(font.size * font.lineHeight) };
 }
 

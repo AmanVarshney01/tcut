@@ -4,7 +4,7 @@ import { resolveConfig } from "../src/config";
 import { recordLive } from "../src/live";
 import { record } from "../src/recorder";
 import { eventsToOps, generateScript, tokenize } from "../src/scriptgen";
-import type { Recording } from "../src/types";
+import type { Recording, Script } from "../src/types";
 
 const rec = (inputs: Array<[number, string]>): Recording => ({
   header: { version: 2, width: 80, height: 24, bunVideo: resolveConfig({ output: "x.mp4" }) },
@@ -70,7 +70,7 @@ describe("generateScript", () => {
     const live = recordLive(resolveConfig({ output: "/tmp/tcut-sg/x.mp4" }), {
       cols: 60,
       rows: 12,
-      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdin,
       stdout: { write: () => undefined },
     });
     await Bun.sleep(700);
@@ -83,8 +83,8 @@ describe("generateScript", () => {
 
     // Execute the generated body against the scripted recorder.
     const body = /async \(t\) => \{([\s\S]*)\n  \},\n\);/.exec(src)![1]!;
-    const script = new Function("t", `return (async () => {${body.replace(/await t\.sleep\("1s"\);\s*$/, "")}})();`) as (t: unknown) => Promise<void>;
-    const replay = await record(resolveConfig({ output: "/tmp/tcut-sg/x.mp4", endPause: 0, typingSpeed: 0 }), script as never);
+    const script = new Function("t", `return (async () => {${body.replace(/await t\.sleep\("1s"\);\s*$/, "")}})();`) as Script;
+    const replay = await record(resolveConfig({ output: "/tmp/tcut-sg/x.mp4", endPause: 0, typingSpeed: 0 }), script);
     const out = replay.events.filter((e) => e[1] === "o").map((e) => e[2]).join("");
     expect(out).toContain("round-trip-23");
   }, 30_000);

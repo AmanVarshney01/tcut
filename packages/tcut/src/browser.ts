@@ -17,7 +17,7 @@ export function normalizeUrl(url: string): string {
 }
 
 const toRegExp = (pattern: RegExp | string): RegExp =>
-  typeof pattern === "string" ? new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : pattern;
+  pattern instanceof RegExp ? pattern : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
 /**
  * A Bun.WebView sampled on the recording clock, shared by scripted and live recording. Only changed frames are
@@ -25,7 +25,7 @@ const toRegExp = (pattern: RegExp | string): RegExp =>
  */
 export function startBrowserCapture(config: ResolvedConfig, stamp: () => number, log: (m: string) => void = () => {}): BrowserCapture {
   if (!config.browser) throw new Error("startBrowserCapture needs config.browser");
-  if (typeof Bun.WebView !== "function") throw new Error("The browser pane needs Bun.WebView (Bun >= 1.4).");
+  if (!Bun.WebView) throw new Error("The browser pane needs Bun.WebView (Bun >= 1.4).");
   const bcfg = config.browser;
 
   // Default pane size: match the terminal window (estimated from the font metrics) unless given.
@@ -75,7 +75,7 @@ export function startBrowserCapture(config: ResolvedConfig, stamp: () => number,
       try {
         navigation ??= view.navigate(url).then(
         () => "ok" as const,
-          (err: unknown) => (/pending/i.test(String(err)) ? ("pending" as const) : ("failed" as const)),
+          (cause: unknown) => (/pending/i.test(String(cause)) ? ("pending" as const) : ("failed" as const)),
         );
       } catch {
         return; // navigate threw synchronously: the view is closed

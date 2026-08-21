@@ -47,15 +47,19 @@ function parse(name: string, text: string): Record<string, string> | null {
   const foreground = hex(props.foreground ?? "");
   if (!background || !foreground) return null;
   for (let i = 0; i < 16; i++) if (!palette[i]) return null;
-  const theme: Record<string, string> = { name, background, foreground };
+  const entries: [string, string][] = [
+    ["name", name],
+    ["background", background],
+    ["foreground", foreground],
+  ];
   const cursor = hex(props["cursor-color"] ?? "");
-  if (cursor) theme.cursor = cursor;
+  if (cursor) entries.push(["cursor", cursor]);
   const cursorText = hex(props["cursor-text"] ?? "");
-  if (cursorText) theme.cursorAccent = cursorText;
+  if (cursorText) entries.push(["cursorAccent", cursorText]);
   const selection = hex(props["selection-background"] ?? "");
-  if (selection) theme.selectionBackground = selection;
-  KEYS.forEach((k, i) => (theme[k] = palette[i]!));
-  return theme;
+  if (selection) entries.push(["selectionBackground", selection]);
+  KEYS.forEach((k, i) => entries.push([k, palette[i]!]));
+  return Object.fromEntries(entries);
 }
 
 const tmp = await mkdtemp(path.join(tmpdir(), "tcut-themes-"));

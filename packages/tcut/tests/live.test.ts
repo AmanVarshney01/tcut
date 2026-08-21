@@ -16,7 +16,7 @@ describe("live recording", () => {
       cols: 40,
       rows: 10,
       stdin: null,
-      stdout: { write: (d) => chunks.push(typeof d === "string" ? d : new TextDecoder().decode(d)) },
+      stdout: { write: (d) => chunks.push(d instanceof Uint8Array ? new TextDecoder().decode(d) : d) },
     });
     const out = rec.events.filter((e) => e[1] === "o").map((e) => e[2]).join("");
     expect(out).toContain("live-\x1b[32mok\x1b[0m");

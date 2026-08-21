@@ -20,6 +20,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
+    "lint": "oxlint",
     "demo": "bun run --cwd packages/tcut demo",
     "media": "bun run --cwd apps/web media",
     "deploy": "turbo run deploy -F @tcut/infra --",
@@ -29,8 +30,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
+    "@oxlint/plugins": "1.79.0",
     "@tcut/config": "workspace:*",
     "@types/node": "catalog:",
+    "oxlint": "1.79.0",
     "turbo": "^2.10.7",
     "typescript": "catalog:"
   },

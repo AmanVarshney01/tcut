@@ -23,28 +23,28 @@ type Op =
   | { kind: "raw"; data: string }
   | { kind: "sleep"; ms: number };
 
-const NAMED: Record<string, string> = {
-  "\r": "enter",
-  "\n": "enter",
-  "\t": "tab",
-  "\x7f": "backspace",
-  "\x1b": "escape",
-  "\x1b[A": "up",
-  "\x1b[B": "down",
-  "\x1b[C": "right",
-  "\x1b[D": "left",
-  "\x1bOA": "up",
-  "\x1bOB": "down",
-  "\x1bOC": "right",
-  "\x1bOD": "left",
-  "\x1b[H": "home",
-  "\x1b[F": "end",
-  "\x1b[1~": "home",
-  "\x1b[4~": "end",
-  "\x1b[3~": "delete",
-  "\x1b[5~": "pageUp",
-  "\x1b[6~": "pageDown",
-};
+const NAMED = new Map<string, string>([
+  ["\r", "enter"],
+  ["\n", "enter"],
+  ["\t", "tab"],
+  ["\x7f", "backspace"],
+  ["\x1b", "escape"],
+  ["\x1b[A", "up"],
+  ["\x1b[B", "down"],
+  ["\x1b[C", "right"],
+  ["\x1b[D", "left"],
+  ["\x1bOA", "up"],
+  ["\x1bOB", "down"],
+  ["\x1bOC", "right"],
+  ["\x1bOD", "left"],
+  ["\x1b[H", "home"],
+  ["\x1b[F", "end"],
+  ["\x1b[1~", "home"],
+  ["\x1b[4~", "end"],
+  ["\x1b[3~", "delete"],
+  ["\x1b[5~", "pageUp"],
+  ["\x1b[6~", "pageDown"],
+]);
 
 /** Split a raw input chunk into individual key tokens (escape sequences, control chars, printable runs). */
 export function tokenize(input: string): string[] {
@@ -53,15 +53,16 @@ export function tokenize(input: string): string[] {
   while (i < input.length) {
     const ch = input[i]!;
     if (ch === "\x1b") {
-      // CSI: ESC [ params final  |  SS3: ESC O x  |  Alt+key: ESC x
-      const csi = /^\x1b\[[0-9;?]*[A-Za-z~]/.exec(input.slice(i));
-      const ss3 = /^\x1bO[A-Za-z]/.exec(input.slice(i));
+      // CSI: ESC [ params final  |  SS3: ESC O x  |  Alt+key: ESC x  (matched after the ESC we already hold)
+      const rest = input.slice(i + 1);
+      const csi = /^\[[0-9;?]*[A-Za-z~]/.exec(rest);
+      const ss3 = /^O[A-Za-z]/.exec(rest);
       if (csi) {
-        tokens.push(csi[0]);
-        i += csi[0].length;
+        tokens.push(ch + csi[0]);
+        i += csi[0].length + 1;
       } else if (ss3) {
-        tokens.push(ss3[0]);
-        i += ss3[0].length;
+        tokens.push(ch + ss3[0]);
+        i += ss3[0].length + 1;
       } else if (i + 1 < input.length) {
         tokens.push(input.slice(i, i + 2));
         i += 2;
@@ -139,7 +140,7 @@ export function eventsToOps(rec: Recording, opts: ScriptGenOptions): Op[] {
         pendingText += token;
         continue;
       }
-      const named = NAMED[token];
+      const named = NAMED.get(token);
       if (named === "enter") {
         if (opts.cleanShell && pendingText.trim()) {
           const command = pendingText;

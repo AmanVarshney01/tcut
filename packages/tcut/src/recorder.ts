@@ -106,15 +106,15 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
   };
 
   const setup = shellSetup(config);
-  const env: Record<string, string> = {
-    ...process.env,
+  const { PROMPT_COMMAND: _userPromptCommand, ...inheritedEnv } = process.env; // a user PROMPT_COMMAND would repaint over the clean prompt
+  const env = {
+    ...inheritedEnv,
     TERM: "xterm-256color",
     COLORTERM: "truecolor",
     LANG: process.env.LANG ?? "en_US.UTF-8",
     ...setup.env,
     ...config.env,
   };
-  delete env.PROMPT_COMMAND;
 
   let exited = false;
   const proc = Bun.spawn(setup.cmd, {
@@ -160,7 +160,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
   const raw = async (data: string | Uint8Array): Promise<void> => {
     ensureAlive();
     terminal.write(data);
-    push("i", typeof data === "string" ? data : decoder.decode(data));
+    push("i", data instanceof Uint8Array ? decoder.decode(data) : data);
   };
 
   /** Put text on screen as if the terminal had printed it: into the cast and the screen model, not the PTY. */
@@ -227,7 +227,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     pattern.test(scope === "screen" ? screen.screen() : screen.line());
 
   const toRegExp = (pattern: RegExp | string): RegExp =>
-    typeof pattern === "string" ? new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : pattern;
+    pattern instanceof RegExp ? pattern : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
   const waitFor = async (
     description: string,

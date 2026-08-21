@@ -1,3 +1,4 @@
+import type { CellSize } from "../config";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { MARKER } from "../cast";
@@ -25,7 +26,7 @@ interface ZoomRect {
 }
 
 /** Grid region (inclusive rows/cols, padded by `padding` cells) → px rect relative to the terminal grid. */
-function zoomRect(spec: { rows?: [number, number]; cols?: [number, number]; padding?: number }, cols: number, rows: number, cell: { w: number; h: number }): ZoomRect {
+function zoomRect(spec: { rows?: [number, number]; cols?: [number, number]; padding?: number }, cols: number, rows: number, cell: CellSize): ZoomRect {
   const pad = spec.padding ?? 1;
   const r0 = Math.max(0, (spec.rows?.[0] ?? 0) - pad);
   const r1 = Math.min(rows - 1, (spec.rows?.[1] ?? rows - 1) + pad);
@@ -56,7 +57,7 @@ export async function render(
   config: ResolvedConfig,
   onProgress?: (p: RenderProgress) => void,
 ): Promise<RenderResult> {
-  if (typeof Bun.WebView !== "function") {
+  if (!Bun.WebView) {
     throw new Error("Bun.WebView is not available in this Bun version. tcut needs Bun >= 1.4.");
   }
 
@@ -126,7 +127,7 @@ export async function render(
     await view.evaluate(`window.__vt.boot(${JSON.stringify(boot)})`);
     if (!lite) await view.evaluate("window.__vt.writeUrl('/theme')");
 
-    const cell = (await view.evaluate("window.__vt.measure()")) as { w: number; h: number };
+    const cell = (await view.evaluate("window.__vt.measure()")) as CellSize;
     if (!cell || !(cell.w > 0) || !(cell.h > 0)) throw new Error("Could not measure terminal cell size");
 
     const termW = Math.ceil(rec.header.width * cell.w);

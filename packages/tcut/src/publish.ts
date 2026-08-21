@@ -61,19 +61,19 @@ export function publicUrlFor(cfg: PublishConfig, key: string): string {
   return `${base}/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-const MIME: Record<string, string> = {
-  ".mp4": "video/mp4",
-  ".webm": "video/webm",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".svg": "image/svg+xml",
-  ".html": "text/html; charset=utf-8",
-  ".cast": "application/x-asciicast",
-  ".txt": "text/plain; charset=utf-8",
-};
+const MIME = new Map<string, string>([
+  [".mp4", "video/mp4"],
+  [".webm", "video/webm"],
+  [".gif", "image/gif"],
+  [".webp", "image/webp"],
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".svg", "image/svg+xml"],
+  [".html", "text/html; charset=utf-8"],
+  [".cast", "application/x-asciicast"],
+  [".txt", "text/plain; charset=utf-8"],
+]);
 
 export async function contentHash(file: string): Promise<string> {
   const hasher = new Bun.CryptoHasher("sha256");
@@ -111,7 +111,7 @@ export interface PublishOptions {
 
 async function upload(cfg: PublishConfig, file: string, key: string): Promise<void> {
   const s3 = client(cfg);
-  const type = MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream";
+  const type = MIME.get(path.extname(file).toLowerCase()) ?? "application/octet-stream";
   try {
     await s3.write(key, Bun.file(file), { type, acl: "public-read" });
   } catch (err) {
@@ -151,21 +151,19 @@ function hmac(key: Uint8Array | string, data: string): Uint8Array {
 }
 const sha256Hex = (data: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(data).digest("hex");
 
-export function signV4(cfg: PublishConfig, method: string, url: URL, body: string, now = new Date()): Record<string, string> {
+export function signV4(cfg: PublishConfig, method: string, url: URL, body: string, now = new Date()) {
   const region = cfg.region ?? "us-east-1";
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const date = amzDate.slice(0, 8);
   const payloadHash = sha256Hex(body);
-  const headers: Record<string, string> = {
+  const headers = {
     host: url.host,
     "x-amz-content-sha256": payloadHash,
     "x-amz-date": amzDate,
   };
-  const signedHeaders = Object.keys(headers).sort().join(";");
-  const canonicalHeaders = Object.keys(headers)
-    .sort()
-    .map((h) => `${h}:${headers[h]!.trim()}\n`)
-    .join("");
+  const sortedHeaders = Object.entries(headers).sort(([a], [b]) => (a < b ? -1 : 1));
+  const signedHeaders = sortedHeaders.map(([h]) => h).join(";");
+  const canonicalHeaders = sortedHeaders.map(([h, v]) => `${h}:${v.trim()}\n`).join("");
   const canonicalQuery = [...url.searchParams.entries()]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)

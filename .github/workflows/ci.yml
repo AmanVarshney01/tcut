@@ -54,6 +54,17 @@ jobs:
             packages/tcut/out/demo.html
             packages/tcut/dist/tcut
 
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+
   web:
     runs-on: ubuntu-latest
     timeout-minutes: 10

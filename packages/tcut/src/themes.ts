@@ -134,7 +134,7 @@ export type BuiltinThemeName = keyof typeof builtinThemes;
 const generated = generatedJson as Record<string, Theme>;
 
 /** All themes by slug: the generated bundle, with the built-ins overriding colliding names. */
-export const themes: Record<string, Theme> = { ...generated, ...builtinThemes };
+export const themes = Object.assign({}, generated, builtinThemes);
 
 export const themeNames: string[] = Object.keys(themes).sort();
 
@@ -153,15 +153,13 @@ export function findThemes(query: string): string[] {
 
 export function resolveTheme(theme: ThemeName | Theme | undefined): Theme {
   if (!theme) return builtinThemes["catppuccin-mocha"];
-  if (typeof theme === "string") {
-    const found = themes[themeSlug(theme)];
-    if (!found) {
-      const near = findThemes(theme.split(/[\s-]+/)[0] ?? theme).slice(0, 5);
-      throw new Error(
-        `Unknown theme "${theme}". ${near.length ? `Did you mean: ${near.join(", ")}?` : ""} Run \`tcut themes [query]\` to list all ${themeNames.length}.`.trim(),
-      );
-    }
-    return found;
+  if (theme instanceof Object) return theme; // an inline Theme object
+  const found = themes[themeSlug(theme)];
+  if (!found) {
+    const near = findThemes(theme.split(/[\s-]+/)[0] ?? theme).slice(0, 5);
+    throw new Error(
+      `Unknown theme "${theme}". ${near.length ? `Did you mean: ${near.join(", ")}?` : ""} Run \`tcut themes [query]\` to list all ${themeNames.length}.`.trim(),
+    );
   }
-  return theme;
+  return found;
 }

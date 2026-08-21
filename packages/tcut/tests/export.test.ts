@@ -88,7 +88,7 @@ describe("renderOutputs dispatcher", () => {
     expect(result.outputs.sort()).toEqual(outputs.sort());
     for (const out of outputs) expect(Bun.file(out).size).toBeGreaterThan(0);
     const png = new Uint8Array(await Bun.file(path.join(dir, "last.png")).arrayBuffer());
-    expect([...png.slice(1, 4)].map((b) => String.fromCharCode(b)).join("")).toBe("PNG");
+    expect(Array.from(png.slice(1, 4), (b) => String.fromCharCode(b)).join("")).toBe("PNG");
     const jpg = new Uint8Array(await Bun.file(path.join(dir, "last.jpg")).arrayBuffer());
     expect(jpg[0]).toBe(0xff);
     expect(jpg[1]).toBe(0xd8);

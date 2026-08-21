@@ -69,8 +69,7 @@ export class Video {
     if (!(await file.exists())) return undefined;
     const hasher = new Bun.CryptoHasher("sha256");
     hasher.update(await file.arrayBuffer());
-    const subset: Record<string, unknown> = {};
-    for (const key of RECORD_KEYS) subset[key] = this.config[key];
+    const subset = Object.fromEntries(RECORD_KEYS.map((key) => [key, this.config[key]]));
     hasher.update(JSON.stringify(subset));
     return hasher.digest("hex");
   }
@@ -132,8 +131,9 @@ export function defineVideo(config: VideoConfig, script: Script): Video {
   return new Video(config, script);
 }
 
-export function isVideo(value: unknown): value is Video {
-  return typeof value === "object" && value !== null && (value as { __bunVideo?: unknown }).__bunVideo === true;
+/** True for a `defineVideo()` result — checked by brand, so a Video built by another copy of tcut still counts. */
+export function isVideo<T>(value: T): value is T & Video {
+  return value instanceof Object && "__bunVideo" in value && value.__bunVideo === true;
 }
 
 /** Render an existing .cast file (from tcut or asciinema) with the given settings. */

@@ -6,12 +6,12 @@ import { writeCast } from "./cast";
 import { resolveConfig } from "./config";
 import * as api from "./index";
 import { recordLive } from "./live";
-import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig } from "./publish";
-import { diffCasts } from "./diff";
+import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig, type Published } from "./publish";
+import { diffCasts, type DiffResult } from "./diff";
 import { presetNames, type PresetName } from "./presets";
 import { renderOutputs } from "./render";
 import { generateScript } from "./scriptgen";
-import { runScriptTests } from "./testing";
+import { runScriptTests, type TestSummary } from "./testing";
 import { findThemes, themeNames } from "./themes";
 import type { BrowserConfig, CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
 import { Video, attachBrowserFrames, isVideo, renderCast } from "./video";
@@ -129,8 +129,24 @@ const { values, positionals } = parseArgs({
 
 const json = values.json === true;
 const quiet = values.quiet === true || json;
+interface OutputFile {
+  path: string;
+  bytes: number;
+}
+
+/** Every shape `--json` can print (one document on stdout; failures print `{ error, type }` instead). */
+type CliReport =
+  | { published: Published[] }
+  | { cast: string; script: string | null; events: number; durationSeconds: number }
+  | { cast: string; script: string | null; outputs: OutputFile[]; frames: number; durationSeconds: number }
+  | { cast: string; cached: boolean; events: number; durationSeconds: number }
+  | { cast: string; outputs: OutputFile[]; frames: number; durationSeconds: number }
+  | { cast: string; cached: boolean; outputs: OutputFile[]; frames: number; durationSeconds: number }
+  | DiffResult
+  | TestSummary;
+
 /** With --json, the only thing on stdout is one JSON document (results or { error }). */
-const emit = (data: unknown) => {
+const emit = (data: CliReport) => {
   if (json) process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 };
 const useColor = process.stdout.isTTY === true && !process.env.NO_COLOR;
@@ -248,14 +264,14 @@ async function fileSize(file: string): Promise<string> {
 
 const ok = (what: string, detail = "") => log(`${green("✔")} ${what}${detail ? ` ${dim(detail)}` : ""}`);
 
-async function reportOutputs(outputs: string[], screenshots: string[]): Promise<Array<{ path: string; bytes: number }>> {
+async function reportOutputs(outputs: string[], screenshots: string[]): Promise<OutputFile[]> {
   for (const out of outputs) ok(`wrote ${out}`, await fileSize(out));
   for (const shot of screenshots) ok(`screenshot ${shot}`);
   return Promise.all([...outputs, ...screenshots].map(async (p) => ({ path: p, bytes: (await Bun.file(p).exists()) ? Bun.file(p).size : 0 })));
 }
 
-const TEMPLATES: Record<string, (name: string) => string> = {
-  basic: (name) => `import { defineVideo } from "tcut";
+const TEMPLATES = new Map<string, (name: string) => string>([
+  ["basic", (name) => `import { defineVideo } from "tcut";
 
 export default defineVideo(
   {
@@ -275,8 +291,8 @@ export default defineVideo(
     await t.sleep("2s");
   },
 );
-`,
-  tour: (name) => `import { defineVideo } from "tcut";
+`],
+  ["tour", (name) => `import { defineVideo } from "tcut";
 
 export default defineVideo(
   {
@@ -310,8 +326,8 @@ export default defineVideo(
     await t.sleep("1.5s");
   },
 );
-`,
-  test: (name) => `import { defineVideo } from "tcut";
+`],
+  ["test", (name) => `import { defineVideo } from "tcut";
 
 // Run with: tcut test ${name}.tcut.ts   (fast mode: no sleeps, no typing delay)
 export default defineVideo(
@@ -330,8 +346,8 @@ export default defineVideo(
     await t.expect(/ok/);
   },
 );
-`,
-};
+`],
+]);
 
 async function main(): Promise<void> {
   if (values.help || positionals.length === 0) {
@@ -353,7 +369,7 @@ async function main(): Promise<void> {
     }
     case "publish": {
       if (values.setup) {
-        const ask = async (label: string, flag: string | undefined, fallback: string, secret = false): Promise<string> => {
+        const ask = async (label: string, flag: string | undefined, fallback: string): Promise<string> => {
           if (flag) return flag;
           if (!process.stdin.isTTY) return fallback;
           const answer = prompt(`${label}${fallback ? ` [${fallback}]` : ""}:`) ?? "";
@@ -364,9 +380,9 @@ async function main(): Promise<void> {
           endpoint: await ask("S3 endpoint", values.endpoint, existing?.endpoint ?? "https://s3.amanv.cloud"),
           bucket: await ask("Bucket", values.bucket, existing?.bucket ?? "tcut"),
           accessKeyId: await ask("Access key", values["access-key"], existing?.accessKeyId ?? ""),
-          secretAccessKey: await ask("Secret key", values["secret-key"], existing?.secretAccessKey ?? "", true),
+          secretAccessKey: await ask("Secret key", values["secret-key"], existing?.secretAccessKey ?? ""),
           region: values.region ?? existing?.region ?? "us-east-1",
-          ...(values["public-url"] || existing?.publicUrl ? { publicUrl: values["public-url"] ?? existing?.publicUrl } : {}),
+          publicUrl: values["public-url"] || existing?.publicUrl || undefined,
         };
         if (!cfg.accessKeyId || !cfg.secretAccessKey) fail("publish --setup needs --access-key and --secret-key (or run it in a terminal to be prompted)");
         const result = await ensurePublicBucket(cfg, log);
@@ -392,8 +408,8 @@ async function main(): Promise<void> {
     case "init": {
       const name = rest[0] ?? "demo";
       const template = values.template ?? "basic";
-      const make = TEMPLATES[template];
-      if (!make) fail(`Unknown template "${template}". Available: ${Object.keys(TEMPLATES).join(", ")}`);
+      const make = TEMPLATES.get(template);
+      if (!make) fail(`Unknown template "${template}". Available: ${[...TEMPLATES.keys()].join(", ")}`);
       const base = name.replace(/\.(video|tcut)\.ts$|\.ts$/, "");
       const file = name.endsWith(".ts") ? name : template === "test" ? `${base}.tcut.ts` : `${base}.video.ts`;
       if (await Bun.file(file).exists()) fail(`${file} already exists`);
@@ -485,9 +501,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  const message = err instanceof Error ? err.message : String(err);
-  if (json) process.stdout.write(JSON.stringify({ error: message, type: err instanceof Error ? err.name : "Error" }) + "\n");
+main().catch((cause: unknown) => {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  if (json) process.stdout.write(JSON.stringify({ error: message, type: cause instanceof Error ? cause.name : "Error" }) + "\n");
   else console.error(`\n${red("error:")} ${message}`);
   process.exit(1);
 });

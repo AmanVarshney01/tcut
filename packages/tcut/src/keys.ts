@@ -2,7 +2,7 @@ import type { KeyName } from "./types";
 
 const ESC = "\x1b";
 
-const keySequences: Record<KeyName, string> = {
+const keySequences = {
   enter: "\r",
   tab: "\t",
   backspace: "\x7f",
@@ -30,7 +30,7 @@ const keySequences: Record<KeyName, string> = {
   f10: `${ESC}[21~`,
   f11: `${ESC}[23~`,
   f12: `${ESC}[24~`,
-};
+} satisfies Record<KeyName, string>;
 
 export function keySequence(name: KeyName): string {
   const seq = keySequences[name];
@@ -51,27 +51,27 @@ export function ctrlSequence(key: string): string {
   throw new Error(`Cannot send Ctrl+${key}`);
 }
 
-const shiftedNamed: Record<string, string> = {
-  tab: `${ESC}[Z`,
-  up: `${ESC}[1;2A`,
-  down: `${ESC}[1;2B`,
-  right: `${ESC}[1;2C`,
-  left: `${ESC}[1;2D`,
-  home: `${ESC}[1;2H`,
-  end: `${ESC}[1;2F`,
-  delete: `${ESC}[3;2~`,
-  pageUp: `${ESC}[5;2~`,
-  pageDown: `${ESC}[6;2~`,
-  enter: "\r",
-  space: " ",
-};
+const shiftedNamed = new Map<string, string>([
+  ["tab", `${ESC}[Z`],
+  ["up", `${ESC}[1;2A`],
+  ["down", `${ESC}[1;2B`],
+  ["right", `${ESC}[1;2C`],
+  ["left", `${ESC}[1;2D`],
+  ["home", `${ESC}[1;2H`],
+  ["end", `${ESC}[1;2F`],
+  ["delete", `${ESC}[3;2~`],
+  ["pageUp", `${ESC}[5;2~`],
+  ["pageDown", `${ESC}[6;2~`],
+  ["enter", "\r"],
+  ["space", " "],
+]);
 
 /** Shift+<key>: back-tab, shifted navigation keys (xterm modifier 2), or an uppercased character. */
 export function shiftSequence(key: string): string {
-  const named = shiftedNamed[key];
+  const named = shiftedNamed.get(key);
   if (named) return named;
   if (key.length === 1) return key.toUpperCase();
-  throw new Error(`Cannot send Shift+${key}. Known: ${Object.keys(shiftedNamed).join(", ")}, or a single character.`);
+  throw new Error(`Cannot send Shift+${key}. Known: ${[...shiftedNamed.keys()].join(", ")}, or a single character.`);
 }
 
 /** SGR mouse wheel event (button 64 = up, 65 = down) at a 1-based cell position. */

@@ -3,7 +3,7 @@ import type { VideoConfig } from "./types";
 export type PresetName = "readme" | "x" | "youtube" | "square";
 
 /** Opinionated bundles applied *under* whatever the config sets explicitly. */
-export const presets: Record<PresetName, Partial<VideoConfig>> = {
+export const presets = {
   // Small, loops well, reads at README width.
   readme: { cols: 80, rows: 20, fps: 30, font: { size: 18 }, padding: 20, margin: 0, borderRadius: 8, windowBar: "none", typingSpeed: "40ms" },
   // 16:9 at the size X/Twitter serves without downscaling.
@@ -12,7 +12,7 @@ export const presets: Record<PresetName, Partial<VideoConfig>> = {
   youtube: { width: 1920, height: 1080, fps: 60, font: { size: 26 }, padding: 32, margin: 40, borderRadius: 14, windowBar: "colorful", typingSpeed: "35ms", typingJitter: 0.3 },
   // 1:1 for feeds.
   square: { width: 1080, height: 1080, fps: 30, font: { size: 22 }, padding: 24, margin: 32, borderRadius: 14, windowBar: "colorful", typingSpeed: "35ms" },
-};
+} satisfies Record<PresetName, Partial<VideoConfig>>;
 
 export const presetNames = Object.keys(presets) as PresetName[];
 

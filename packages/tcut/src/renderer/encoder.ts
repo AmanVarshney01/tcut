@@ -70,7 +70,7 @@ function ffmpegCandidates(): string[] {
     Bun.which("ffmpeg"),
     "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg",
     "/usr/local/opt/ffmpeg-full/bin/ffmpeg",
-  ].filter((p): p is string => typeof p === "string" && p.length > 0);
+  ].filter((p): p is string => p !== undefined && p !== null && p.length > 0);
   return [...new Set(list)];
 }
 
@@ -121,12 +121,12 @@ export async function hasEncoder(...candidates: string[]): Promise<string | null
 
 type FfmpegFormat = Exclude<Format, "png-sequence" | "png" | "jpeg">;
 
-const REQUIRED_ENCODERS: Record<FfmpegFormat, { candidates: string[]; hint: string }> = {
+const REQUIRED_ENCODERS = {
   mp4: { candidates: ["libx264"], hint: "an ffmpeg build with libx264" },
   webm: { candidates: ["libvpx-vp9"], hint: "an ffmpeg build with libvpx" },
   gif: { candidates: ["gif"], hint: "an ffmpeg build with the gif encoder" },
   webp: { candidates: ["libwebp_anim", "libwebp"], hint: "an ffmpeg build with libwebp (Homebrew: `brew install ffmpeg-full`)" },
-};
+} satisfies Record<FfmpegFormat, { candidates: string[]; hint: string }>;
 
 async function requireEncoder(format: FfmpegFormat, output: string): Promise<EncoderMatch> {
   const { candidates, hint } = REQUIRED_ENCODERS[format];

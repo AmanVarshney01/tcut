@@ -76,7 +76,13 @@ function toGridCell(cell: CellData, theme: Theme): GridCell {
   return { text, width: cell.width === 2 ? 2 : 1, fg, bg, flags: cell.flags & ~FLAG.reverse };
 }
 
-function snapshot(core: TerminalCore, theme: Theme): { rows: Map<number, GridCell[]>; key: string } {
+interface ScreenSnapshot {
+  rows: Map<number, GridCell[]>;
+  /** Content fingerprint: identical screens share a key, so identical frames are deduplicated. */
+  key: string;
+}
+
+function snapshot(core: TerminalCore, theme: Theme): ScreenSnapshot {
   const rows = new Map<number, GridCell[]>();
   const keyParts: string[] = [];
   const cols = core.getCols();

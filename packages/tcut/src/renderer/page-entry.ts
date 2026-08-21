@@ -3,6 +3,14 @@
 import { WasmBridge, type TerminalCore } from "@wterm/core";
 import { WTerm } from "@wterm/dom";
 import { GhosttyCore } from "@wterm/ghostty";
+import type { CellSize } from "../config";
+
+declare global {
+  interface Window {
+    /** The renderer (webview.ts) drives the page through this object. */
+    __vt: typeof api;
+  }
+}
 
 interface BootOptions {
   cols: number;
@@ -49,11 +57,8 @@ const api = {
     return true;
   },
 
-  measure(): { w: number; h: number } {
-    const t = term as unknown as { _charWidth?: number; _rowHeight?: number } | null;
-    if (t && t._charWidth && t._rowHeight && t._charWidth > 0 && t._rowHeight > 0) {
-      return { w: t._charWidth, h: t._rowHeight };
-    }
+  measure(): CellSize {
+    // The same probe WTerm uses internally (a hidden .term-row with one "W" span), so the numbers match its layout.
     const row = document.createElement("div");
     row.className = "term-row";
     row.style.cssText = "position:absolute;visibility:hidden";
@@ -178,4 +183,4 @@ const api = {
   },
 };
 
-(window as unknown as { __vt: typeof api }).__vt = api;
+window.__vt = api;

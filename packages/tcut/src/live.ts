@@ -3,6 +3,16 @@ import { MARKER } from "./cast";
 import { shellSetup } from "./recorder";
 import type { CastEvent, Recording, ResolvedConfig } from "./types";
 
+/** What live recording needs from a keystroke source: `process.stdin`, or any readable stream (a PassThrough in tests). */
+export interface LiveStdin {
+  isTTY?: boolean;
+  setRawMode?(mode: boolean): unknown;
+  resume(): unknown;
+  pause(): unknown;
+  on(event: "data", listener: (chunk: Buffer | string) => void): unknown;
+  off(event: "data", listener: (chunk: Buffer | string) => void): unknown;
+}
+
 export interface LiveOptions {
   /** Run this command instead of the configured clean shell. */
   command?: string[];
@@ -12,7 +22,7 @@ export interface LiveOptions {
   /** Where to mirror the session (default: this process's stdout). */
   stdout?: { write(data: Uint8Array | string): unknown };
   /** Keystroke source (default: this process's stdin, switched to raw mode when it is a TTY). */
-  stdin?: NodeJS.ReadStream | null;
+  stdin?: LiveStdin | null;
   log?: (message: string) => void;
 }
 
@@ -40,7 +50,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
 
   const browser = config.browser ? startBrowserCapture({ ...config, cols, rows }, stamp, log) : null;
   const setup = opts.command ? { cmd: opts.command, env: {} } : shellSetup(config);
-  const env: Record<string, string> = {
+  const env = {
     ...process.env,
     TERM: "xterm-256color",
     COLORTERM: "truecolor",
@@ -74,11 +84,11 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
   const terminal = proc.terminal;
   if (!terminal) throw new Error("Bun.spawn did not return a terminal. Is this Bun >= 1.4?");
 
-  const isTTY = Boolean(stdin && (stdin as NodeJS.ReadStream).isTTY);
+  const isTTY = Boolean(stdin?.isTTY);
   const onData = (chunk: Buffer | string): void => {
     if (exited || terminal.closed) return;
     terminal.write(chunk);
-    push("i", typeof chunk === "string" ? chunk : chunk.toString("utf8"));
+    push("i", chunk instanceof Uint8Array ? chunk.toString("utf8") : chunk);
   };
   const onResize = (): void => {
     const c = process.stdout.columns ?? cols;
@@ -89,7 +99,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
   };
 
   if (stdin) {
-    if (isTTY) stdin.setRawMode(true);
+    if (isTTY) stdin.setRawMode?.(true);
     stdin.resume();
     stdin.on("data", onData);
   }
@@ -101,10 +111,11 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
     push("m", MARKER.end);
   } finally {
     await browser?.stop();
-    (process as unknown as { off(event: string, fn: () => void): void }).off("SIGWINCH", onResize); // newer @types/bun drop the signal overload on off()
+    const emitter: NodeJS.EventEmitter = process; // @types/bun's process.off() lacks the signal overload; the generic emitter has it
+    emitter.off("SIGWINCH", onResize);
     if (stdin) {
       stdin.off("data", onData);
-      if (isTTY) stdin.setRawMode(false);
+      if (isTTY) stdin.setRawMode?.(false);
       stdin.pause();
     }
     try {

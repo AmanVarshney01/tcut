@@ -32,6 +32,12 @@ export async function loadCore(core: CoreName = "ghostty"): Promise<TerminalCore
  * Headless terminal model backed by libghostty (WASM). The recorder feeds every PTY chunk through it so
  * `wait()` / `expect()` / `run()` look at the actual screen instead of a raw byte stream.
  */
+/** Zero-based cursor cell. */
+export interface CursorPosition {
+  x: number;
+  y: number;
+}
+
 export class Screen {
   private listeners = new Set<() => void>();
   onResponse: ((data: string) => void) | undefined;
@@ -47,8 +53,8 @@ export class Screen {
   }
 
   write(data: string | Uint8Array): void {
-    if (typeof data === "string") this.core.writeString(data);
-    else this.core.writeRaw(data);
+    if (data instanceof Uint8Array) this.core.writeRaw(data);
+    else this.core.writeString(data);
     this.drainResponses();
     for (const listener of this.listeners) listener();
   }
@@ -87,7 +93,7 @@ export class Screen {
     return this.core.getRows();
   }
 
-  cursor(): { x: number; y: number } {
+  cursor(): CursorPosition {
     const c = this.core.getCursor();
     return { x: c.col, y: c.row };
   }

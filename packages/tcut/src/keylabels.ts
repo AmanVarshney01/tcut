@@ -1,37 +1,37 @@
 import { tokenize } from "./scriptgen";
 
-const NAMED: Record<string, string> = {
-  "\r": "⏎",
-  "\n": "⏎",
-  "\t": "⇥",
-  "\x1b[Z": "⇧⇥",
-  "\x7f": "⌫",
-  "\x1b": "esc",
-  "\x1b[A": "↑",
-  "\x1b[B": "↓",
-  "\x1b[C": "→",
-  "\x1b[D": "←",
-  "\x1bOA": "↑",
-  "\x1bOB": "↓",
-  "\x1bOC": "→",
-  "\x1bOD": "←",
-  "\x1b[1;2A": "⇧↑",
-  "\x1b[1;2B": "⇧↓",
-  "\x1b[1;2C": "⇧→",
-  "\x1b[1;2D": "⇧←",
-  "\x1b[H": "home",
-  "\x1b[F": "end",
-  "\x1b[3~": "del",
-  "\x1b[5~": "pgup",
-  "\x1b[6~": "pgdn",
-};
+const NAMED = new Map<string, string>([
+  ["\r", "⏎"],
+  ["\n", "⏎"],
+  ["\t", "⇥"],
+  ["\x1b[Z", "⇧⇥"],
+  ["\x7f", "⌫"],
+  ["\x1b", "esc"],
+  ["\x1b[A", "↑"],
+  ["\x1b[B", "↓"],
+  ["\x1b[C", "→"],
+  ["\x1b[D", "←"],
+  ["\x1bOA", "↑"],
+  ["\x1bOB", "↓"],
+  ["\x1bOC", "→"],
+  ["\x1bOD", "←"],
+  ["\x1b[1;2A", "⇧↑"],
+  ["\x1b[1;2B", "⇧↓"],
+  ["\x1b[1;2C", "⇧→"],
+  ["\x1b[1;2D", "⇧←"],
+  ["\x1b[H", "home"],
+  ["\x1b[F", "end"],
+  ["\x1b[3~", "del"],
+  ["\x1b[5~", "pgup"],
+  ["\x1b[6~", "pgdn"],
+]);
 
 /** Human-readable labels for a raw input chunk: printable runs stay words, control sequences become symbols. */
 export function keyLabels(input: string): string[] {
   const labels: string[] = [];
   for (const token of tokenize(input)) {
     if (token === " ") { labels.push(" "); continue; }
-    const named = NAMED[token];
+    const named = NAMED.get(token);
     if (named) {
       labels.push(named);
     } else if (token.length === 1 && token.charCodeAt(0) < 32) {
@@ -39,7 +39,8 @@ export function keyLabels(input: string): string[] {
     } else if (token.length === 2 && token[0] === "\x1b") {
       labels.push(`⌥${token[1]}`);
     } else if (token.startsWith("\x1b[<")) {
-      labels.push(/M$/.test(token) && /^\x1b\[<6[45]/.test(token) ? "wheel" : "mouse");
+      const wheel = token.endsWith("M") && (token.startsWith("\x1b[<64") || token.startsWith("\x1b[<65"));
+      labels.push(wheel ? "wheel" : "mouse");
     } else if (token.startsWith("\x1b")) {
       labels.push("esc…");
     } else {

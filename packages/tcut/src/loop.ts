@@ -1,14 +1,9 @@
 /** Resolve a `loopOffset` (frame count or "N%") to a frame index in `[0, total)`. */
 export function loopOffsetFrames(total: number, value: number | string | undefined): number {
   if (!value || total <= 1) return 0;
-  let frames: number;
-  if (typeof value === "string") {
-    const m = /^\s*(\d+(?:\.\d+)?)\s*(%?)\s*$/.exec(value);
-    if (!m) throw new Error(`Invalid loopOffset "${value}" (use a frame count or a percentage like "50%")`);
-    frames = m[2] ? Math.round((Number(m[1]) / 100) * total) : Math.round(Number(m[1]));
-  } else {
-    frames = Math.round(value);
-  }
+  const m = /^\s*(-?\d+(?:\.\d+)?)\s*(%?)\s*$/.exec(String(value));
+  if (!m) throw new Error(`Invalid loopOffset "${value}" (use a frame count or a percentage like "50%")`);
+  const frames = m[2] ? Math.round((Number(m[1]) / 100) * total) : Math.round(Number(m[1]));
   return ((frames % total) + total) % total;
 }
 
@@ -16,6 +11,16 @@ export function loopOffsetFrames(total: number, value: number | string | undefin
 export function rotateFrames<T>(frames: T[], offset: number): T[] {
   if (offset <= 0 || offset >= frames.length) return frames;
   return [...frames.slice(offset), ...frames.slice(0, offset)];
+}
+
+/** Where the terminal grid sits inside the frame, and the final (even-sized) video dimensions. */
+export interface FrameFit {
+  frameW: number;
+  frameH: number;
+  padX: number;
+  padY: number;
+  width: number;
+  height: number;
 }
 
 /** Place the terminal grid inside a frame of the requested size (or wrap it tightly when no size is requested). */
@@ -27,7 +32,7 @@ export function fitFrame(opts: {
   bar: number;
   width?: number;
   height?: number;
-}): { frameW: number; frameH: number; padX: number; padY: number; width: number; height: number } {
+}): FrameFit {
   const even = (n: number) => (n % 2 === 0 ? n : n + 1);
   let frameW = opts.termW + opts.padding * 2;
   let frameH = opts.termH + opts.padding * 2 + opts.bar;
