@@ -97,6 +97,34 @@ const api = {
     return true;
   },
 
+  /** Key overlay: show these chips (empty array hides them). */
+  keys(labels: string[]): boolean {
+    const el = document.getElementById("keys");
+    if (!el) return false;
+    el.replaceChildren(...labels.map((l) => Object.assign(document.createElement("span"), { textContent: l })));
+    return true;
+  },
+
+  /** Zoom: scale the terminal so the px rect (relative to the grid) fills the grid box; null resets. */
+  zoom(rect: { x: number; y: number; w: number; h: number } | null): Promise<boolean> {
+    const el = document.getElementById("zoom")!;
+    const term = document.getElementById("term")!;
+    if (!rect) {
+      el.style.transform = "";
+    } else {
+      const W = term.clientWidth;
+      const H = term.clientHeight;
+      const scale = Math.min(W / rect.w, H / rect.h);
+      // Centre the region; clamp so we never show outside the grid.
+      let tx = (W - rect.w * scale) / 2 - rect.x * scale;
+      let ty = (H - rect.h * scale) / 2 - rect.y * scale;
+      tx = Math.min(0, Math.max(W - W * scale, tx));
+      ty = Math.min(0, Math.max(H - H * scale, ty));
+      el.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    }
+    return paint();
+  },
+
   /** Overlay layout: which window is in front. */
   focus(target: "terminal" | "browser"): boolean {
     document.getElementById("stage")?.classList.toggle("front-browser", target === "browser");

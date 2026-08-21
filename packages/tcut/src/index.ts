@@ -16,6 +16,11 @@ export { publishFiles, loadPublishConfig, savePublishConfig, ensurePublicBucket,
 export type { PublishConfig, Published, PublishOptions } from "./publish";
 export { readCast, writeCast, parseCast, serializeCast } from "./cast";
 export { buildTimeline } from "./timeline";
+export { presets, presetNames, applyPreset } from "./presets";
+export { diffCasts } from "./diff";
+export type { DiffOptions, DiffResult } from "./diff";
+export { keyLabels, keyChips } from "./keylabels";
+export { startBrowserCapture } from "./browser";
 export { resolveConfig } from "./config";
 export { WaitTimeoutError, ExpectationError } from "./recorder";
 export type * from "./types";

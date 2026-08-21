@@ -5,7 +5,8 @@ import type { Recording, RenderProgress, ResolvedConfig } from "../types";
 import { fitFrame, loopOffsetFrames, rotateFrames } from "../loop";
 import { buildTimeline, withReinjection, type TimedEvent } from "../timeline";
 import { pageAssets } from "./bundle";
-import { createSinks } from "./encoder";
+import { createSinks, type Chapter } from "./encoder";
+import { keyChips } from "../keylabels";
 import { BROWSER_GAP, barHeight, renderHtml, themeOsc } from "./page";
 
 export interface RenderResult {
@@ -13,6 +14,41 @@ export interface RenderResult {
   frames: number;
   screenshots: string[];
   durationSeconds: number;
+  chapters?: Chapter[];
+}
+
+interface ZoomRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Grid region (inclusive rows/cols, padded by `padding` cells) → px rect relative to the terminal grid. */
+function zoomRect(spec: { rows?: [number, number]; cols?: [number, number]; padding?: number }, cols: number, rows: number, cell: { w: number; h: number }): ZoomRect {
+  const pad = spec.padding ?? 1;
+  const r0 = Math.max(0, (spec.rows?.[0] ?? 0) - pad);
+  const r1 = Math.min(rows - 1, (spec.rows?.[1] ?? rows - 1) + pad);
+  const c0 = Math.max(0, (spec.cols?.[0] ?? 0) - pad);
+  const c1 = Math.min(cols - 1, (spec.cols?.[1] ?? cols - 1) + pad);
+  return { x: c0 * cell.w, y: r0 * cell.h, w: (c1 - c0 + 1) * cell.w, h: (r1 - r0 + 1) * cell.h };
+}
+
+const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+
+/** Where the zoom is at `time`, interpolating from → to over [start, start + duration]. null = no zoom. */
+function currentZoom(from: ZoomRect | null, to: ZoomRect | null, start: number, duration: number, time: number, full?: ZoomRect): ZoomRect | null {
+  if (from === null && to === null) return null;
+  const p = duration <= 0 ? 1 : Math.min(1, Math.max(0, (time - start) / duration));
+  if (p >= 1) return to;
+  const e = easeInOut(p);
+  const a = from ?? to!; // from null = "unzoomed": treat as the target's containing box expanded; approximate with target
+  const b = to ?? from!;
+  const lerp = (u: number, v: number) => u + (v - u) * e;
+  // Zooming from/to "no zoom" needs the full grid rect; callers pass it via `full` when known.
+  const A = from ?? full ?? a;
+  const B = to ?? full ?? b;
+  return { x: lerp(A.x, B.x), y: lerp(A.y, B.y), w: lerp(A.w, B.w), h: lerp(A.h, B.h) };
 }
 
 export async function render(
@@ -57,9 +93,14 @@ export async function render(
     },
   });
 
-  const timeline = buildTimeline(rec.events, config.playbackSpeed);
+  const timeline = buildTimeline(rec.events, config.playbackSpeed, { keepInput: Boolean(config.keys), maxPause: config.maxPause });
   const lite = config.core === "lite";
   const events = lite ? timeline.events : withReinjection(timeline.events, osc);
+  // Key overlay chips come from input events; zoom/chapter markers are read as the clock passes them.
+  const chips = config.keys ? keyChips(events.filter((e) => e.type === "i"), config.keys.merge / 1000) : [];
+  const chapters: Chapter[] = events
+    .filter((e) => e.type === "m" && e.data.startsWith(MARKER.chapter))
+    .map((e) => ({ title: e.data.slice(MARKER.chapter.length), start: e.vt }));
   const fps = config.fps;
   const totalFrames = Math.max(1, Math.ceil(timeline.duration * fps) + 1);
   const blinkPeriod = config.cursor.period / 1000;
@@ -124,7 +165,15 @@ export async function render(
     await view.resize(width, height);
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
 
-    const sinks = await createSinks(config.output, fps);
+    const sinks = await createSinks(config.output, fps, { chapters, durationSeconds: timeline.duration });
+    const cellPx = cell;
+    const fullRect: ZoomRect = { x: 0, y: 0, w: termW, h: termH };
+    let zoomFrom: ZoomRect | null = null;
+    let zoomTo: ZoomRect | null = null;
+    let zoomStart = 0;
+    let zoomDuration = 0;
+    let zoomApplied: string | null = null;
+    let lastChips = "";
     // loopOffset rotates the frame order for looping outputs; those frames are buffered and flushed at the end.
     const loopSinks = config.loopOffset ? sinks.filter((s) => s.loops) : [];
     const streamSinks = sinks.filter((s) => !loopSinks.includes(s));
@@ -146,7 +195,7 @@ export async function render(
       const shots = batch.filter((e) => e.type === "m" && e.data.startsWith(MARKER.screenshot));
       const browserFrame = hasBrowser ? batch.filter((e) => e.type === "b").at(-1) : undefined;
       const focusChanged = hasBrowser && batch.some((e) => e.type === "m" && e.data.startsWith(MARKER.focus));
-      const dirty = lastPng === null || drawable.length > 0 || blinkOn !== lastBlink || browserFrame !== undefined || focusChanged;
+      let dirty = lastPng === null || drawable.length > 0 || blinkOn !== lastBlink || browserFrame !== undefined || focusChanged;
 
       if (drawable.length > 0) {
         const id = ++batchId;
@@ -160,10 +209,42 @@ export async function render(
       if (focus) {
         await view.evaluate(`window.__vt.focus(${JSON.stringify(focus.data.slice(MARKER.focus.length))})`);
       }
+
+      // Zoom markers start an animation on the render clock; interpolate until it lands.
+      const zoomMarker = batch.filter((e) => e.type === "m" && e.data.startsWith(MARKER.zoom)).at(-1);
+      if (zoomMarker) {
+        const spec = JSON.parse(zoomMarker.data.slice(MARKER.zoom.length)) as null | { rows?: [number, number]; cols?: [number, number]; duration?: number; padding?: number };
+        zoomFrom = currentZoom(zoomFrom, zoomTo, zoomStart, zoomDuration, time, fullRect);
+        zoomTo = spec ? zoomRect(spec, rec.header.width, rec.header.height, cellPx) : null;
+        zoomStart = time;
+        zoomDuration = (spec?.duration ?? 400) / 1000;
+      }
+      const zoomNow = currentZoom(zoomFrom, zoomTo, zoomStart, zoomDuration, time, fullRect);
+      const zoomKey = zoomNow ? `${zoomNow.x.toFixed(1)},${zoomNow.y.toFixed(1)},${zoomNow.w.toFixed(1)},${zoomNow.h.toFixed(1)}` : "";
+      let zoomChanged = false;
+      if (zoomKey !== zoomApplied) {
+        await view.evaluate(`window.__vt.zoom(${zoomNow ? JSON.stringify(zoomNow) : "null"})`);
+        zoomApplied = zoomKey;
+        zoomChanged = true;
+      }
+
+      // Key chips visible at this instant.
+      let chipsChanged = false;
+      if (config.keys) {
+        const ttl = config.keys.ttl / 1000;
+        const visible = chips.filter((c) => c.at <= time + 1e-9 && time - c.at < ttl).slice(-6).map((c) => c.label);
+        const key = visible.join("\u0000");
+        if (key !== lastChips) {
+          await view.evaluate(`window.__vt.keys(${JSON.stringify(visible)})`);
+          lastChips = key;
+          chipsChanged = true;
+        }
+      }
       if (blinkOn !== lastBlink) {
         await view.evaluate(`window.__vt.cursor(${blinkOn})`);
         lastBlink = blinkOn;
       }
+      if (zoomChanged || chipsChanged) dirty = true;
       if (dirty) {
         lastPng = (await view.screenshot({ encoding: "buffer" })) as Uint8Array;
       }
@@ -185,7 +266,7 @@ export async function render(
       for (const png of rotated) for (const sink of loopSinks) await sink.frame(png);
     }
     for (const sink of sinks) await sink.finish();
-    return { outputs: sinks.map((s) => s.target), frames: totalFrames, screenshots, durationSeconds: timeline.duration };
+    return { outputs: sinks.map((s) => s.target), frames: totalFrames, screenshots, durationSeconds: timeline.duration, chapters };
   } finally {
     view.close();
     server.stop(true);

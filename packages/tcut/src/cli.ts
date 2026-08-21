@@ -7,12 +7,14 @@ import { resolveConfig } from "./config";
 import * as api from "./index";
 import { recordLive } from "./live";
 import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig } from "./publish";
+import { diffCasts } from "./diff";
+import { presetNames, type PresetName } from "./presets";
 import { renderOutputs } from "./render";
 import { generateScript } from "./scriptgen";
 import { runScriptTests } from "./testing";
 import { findThemes, themeNames } from "./themes";
-import type { CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
-import { Video, isVideo, renderCast } from "./video";
+import type { BrowserConfig, CoreName, ThemeName, VideoConfig, WindowBar } from "./types";
+import { Video, attachBrowserFrames, isVideo, renderCast } from "./video";
 
 // Let user scripts `import { defineVideo } from "tcut"` (or "termcut", the npm package name) regardless of
 // where they live or whether this is the compiled binary (no node_modules there): resolve the bare specifier
@@ -34,6 +36,7 @@ Usage:
   tcut record <script.ts> [options]   record only (writes the .cast)
   tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
   tcut test <path...>                 run scripts in fast mode as tests (no video)
+  tcut diff <a.cast> <b.cast>         compare what two recordings show on screen (exit 1 if different)
   tcut publish <files...> [--open]    upload to your S3-compatible bucket and print share links
   tcut publish --setup                configure the bucket (RustFS, MinIO, R2, S3 …) — once
   tcut init [name] [--template t]     scaffold a new script (basic | tour | test)
@@ -51,6 +54,12 @@ Options (override the script's config):
       --cols <n> --rows <n>  terminal grid (rec: defaults to your terminal's size)
       --width <px> --height <px>  video size; the grid is derived and centred inside
       --loop-offset <n|N%> where GIF/WebP loops start
+      --max-pause <dur>    idle compression: cap gaps between events (e.g. 800ms)
+      --keys               show recent key presses as chips
+      --preset <name>      readme | x | youtube | square
+      --browser <url>      rec: record a browser window too (--browser-position right|left|top|bottom|overlay)
+      --at <seconds>       diff: compare the screen at this time instead of the end
+      --images <dir>       diff: also write a.png / b.png
       --cast <path>        where to read/write the .cast
       --record-only        stop after writing the cast
       --no-script          rec: don't write the editable <name>.video.ts next to the cast
@@ -89,6 +98,13 @@ const { values, positionals } = parseArgs({
     width: { type: "string" },
     height: { type: "string" },
     "loop-offset": { type: "string" },
+    "max-pause": { type: "string" },
+    keys: { type: "boolean" },
+    preset: { type: "string" },
+    browser: { type: "string" },
+    "browser-position": { type: "string" },
+    at: { type: "string" },
+    images: { type: "string" },
     cast: { type: "string" },
     "record-only": { type: "boolean" },
     "no-script": { type: "boolean" },
@@ -169,6 +185,17 @@ function overridesFromFlags(): Partial<VideoConfig> {
   if (values.width !== undefined) o.width = num("width");
   if (values.height !== undefined) o.height = num("height");
   if (values["loop-offset"] !== undefined) o.loopOffset = values["loop-offset"];
+  if (values["max-pause"] !== undefined) o.maxPause = values["max-pause"];
+  if (values.keys) o.keys = true;
+  if (values.preset) {
+    if (!presetNames.includes(values.preset as PresetName)) fail(`--preset must be one of ${presetNames.join(", ")}`);
+    o.preset = values.preset as PresetName;
+  }
+  if (values.browser) {
+    const position = values["browser-position"] as BrowserConfig["position"] | undefined;
+    if (position && !["right", "left", "top", "bottom", "overlay"].includes(position)) fail("--browser-position must be right, left, top, bottom or overlay");
+    o.browser = { url: values.browser, ...(position && { position }) };
+  }
   return o;
 }
 
@@ -388,7 +415,9 @@ async function main(): Promise<void> {
         rows: overrides.rows ?? (sized ? config.rows : undefined),
       });
       await mkdir(path.dirname(path.resolve(config.cast)), { recursive: true });
+      await attachBrowserFrames(recording, path.resolve(config.cast));
       await writeCast(config.cast, recording);
+      recording.source = path.resolve(config.cast);
       log("");
       ok(`wrote ${config.cast}`, `${recording.events.length} events, ${(recording.header.duration ?? 0).toFixed(1)}s`);
       if (!values["no-script"]) {
@@ -422,6 +451,20 @@ async function main(): Promise<void> {
       emit({ cast: rest[0], outputs: files, frames: result.frames, durationSeconds: result.durationSeconds });
       return;
     }
+    case "diff": {
+      if (rest.length < 2) fail("diff needs two .cast files");
+      const result = await diffCasts(rest[0]!, rest[1]!, { at: values.at !== undefined ? num("at") : undefined, images: values.images });
+      emit(result);
+      if (!json) {
+        if (result.equal) ok("screens match");
+        else {
+          for (const line of result.lines) log(line.startsWith("- ") ? red(line) : line.startsWith("+ ") ? green(line) : dim(line));
+          if (result.images) log(dim(`  images: ${result.images.a}  ${result.images.b}`));
+        }
+      }
+      process.exit(result.equal ? 0 : 1);
+    }
+    // eslint-disable-next-line no-fallthrough -- process.exit above never returns
     case "test": {
       if (rest.length === 0) fail("test needs at least one script file or directory");
       const summary = await runScriptTests(rest, json ? () => {} : (line) => console.log(line));

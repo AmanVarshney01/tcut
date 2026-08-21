@@ -48,6 +48,26 @@ export interface FontConfig {
   letterSpacing?: number;
 }
 
+export interface KeysConfig {
+  position?: "bottom" | "top";
+  /** How long a chip stays visible, e.g. "1.2s". */
+  ttl?: Duration;
+  /** Printable keys pressed within this window merge into one chip. Default "350ms". */
+  merge?: Duration;
+}
+
+/** A region of the terminal grid to magnify. */
+export interface ZoomRegion {
+  /** Inclusive row range, 0-based. Default: all rows. */
+  rows?: [number, number];
+  /** Inclusive column range, 0-based. Default: all columns. */
+  cols?: [number, number];
+  /** Animation length on the render clock. Default "400ms". */
+  duration?: Duration;
+  /** Inner padding around the region, in cells. Default 1. */
+  padding?: number;
+}
+
 /** A browser window recorded next to the terminal (Bun.WebView). */
 export interface BrowserConfig {
   /** Page to open when recording starts (may also be opened later with `t.browser.goto`). */
@@ -115,6 +135,12 @@ export interface VideoConfig {
   height?: number;
   /** Where looping outputs (GIF, WebP) start: a frame number or a percentage like "50%". */
   loopOffset?: number | string;
+  /** Idle compression: at render time, gaps between events longer than this are shortened to this. */
+  maxPause?: Duration;
+  /** Show recent key presses as chips. `true` = bottom centre, 1.2 s. */
+  keys?: boolean | KeysConfig;
+  /** A named bundle of defaults applied under explicit settings: readme | x | youtube | square. */
+  preset?: "readme" | "x" | "youtube" | "square";
 
   /** Frames per second of the output. Default 60. */
   fps?: number;
@@ -169,6 +195,8 @@ export interface ResolvedConfig {
   width?: number;
   height?: number;
   loopOffset?: number | string;
+  maxPause?: number;
+  keys?: Required<KeysConfig> & { ttl: number; merge: number };
   fps: number;
   typingSpeed: number;
   typingJitter: number;
@@ -286,6 +314,10 @@ export interface TerminalSession {
   print(markdown: string): Promise<void>;
   /** A title card: big heading + rule, then a pause (default "1.5s"). */
   title(text: string, opts?: { pause?: Duration }): Promise<void>;
+  /** Magnify a region of the terminal (animated at render time); `zoom(null)` resets. */
+  zoom(region: ZoomRegion | null): Promise<void>;
+  /** Named chapter: becomes mp4 chapter metadata and shows up in `--json` output. */
+  chapter(name: string): Promise<void>;
   /** The recorded browser window; throws if `browser` is not configured. */
   readonly browser: BrowserSession;
   /** Overlay layout: bring the terminal or the browser window to the front (recorded as a marker). */

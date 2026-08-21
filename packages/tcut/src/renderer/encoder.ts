@@ -1,5 +1,6 @@
 import type { FileSink, Subprocess } from "bun";
 import { mkdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 export interface FrameSink {
@@ -138,8 +139,26 @@ async function requireEncoder(format: FfmpegFormat, output: string): Promise<Enc
   return found;
 }
 
-function ffmpegArgs(format: Format, fps: number, output: string, encoder: string): string[] {
+export interface Chapter {
+  title: string;
+  /** Start time, seconds. */
+  start: number;
+}
+
+/** ffmpeg metadata file with [CHAPTER] blocks (milliseconds timebase). */
+export function chaptersMetadata(chapters: Chapter[], durationSeconds: number): string {
+  const lines = [";FFMETADATA1"];
+  chapters.forEach((ch, i) => {
+    const start = Math.round(ch.start * 1000);
+    const end = Math.round((chapters[i + 1]?.start ?? durationSeconds) * 1000);
+    lines.push("[CHAPTER]", "TIMEBASE=1/1000", `START=${start}`, `END=${Math.max(end, start + 1)}`, `title=${ch.title.replace(/[\\=;#\n]/g, " ")}`);
+  });
+  return lines.join("\n") + "\n";
+}
+
+function ffmpegArgs(format: Format, fps: number, output: string, encoder: string, metadataFile?: string): string[] {
   const input = ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(fps), "-i", "pipe:0"];
+  if (metadataFile && format === "mp4") input.push("-i", metadataFile, "-map_metadata", "1");
   const evenSize = "scale=trunc(iw/2)*2:trunc(ih/2)*2";
   switch (format) {
     case "mp4":
@@ -183,9 +202,10 @@ class FfmpegSink implements FrameSink {
     format: Format,
     fps: number,
     match: EncoderMatch,
+    metadataFile?: string,
   ) {
     this.loops = format === "gif" || format === "webp";
-    this.proc = Bun.spawn([match.binary, ...ffmpegArgs(format, fps, target, match.encoder)], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
+    this.proc = Bun.spawn([match.binary, ...ffmpegArgs(format, fps, target, match.encoder, metadataFile)], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
     this.stdin = this.proc.stdin;
     this.stderr = new Response(this.proc.stderr).text();
   }
@@ -234,8 +254,13 @@ export async function ensureFfmpeg(): Promise<void> {
   );
 }
 
-export async function createSinks(outputs: string[], fps: number): Promise<FrameSink[]> {
+export async function createSinks(outputs: string[], fps: number, opts: { chapters?: Chapter[]; durationSeconds?: number } = {}): Promise<FrameSink[]> {
   const sinks: FrameSink[] = [];
+  let metadataFile: string | undefined;
+  if (opts.chapters && opts.chapters.length > 0) {
+    metadataFile = path.join(tmpdir(), `tcut-chapters-${process.pid}-${Math.random().toString(36).slice(2)}.txt`);
+    await Bun.write(metadataFile, chaptersMetadata(opts.chapters, opts.durationSeconds ?? 0));
+  }
   for (const output of outputs) {
     const format = detectFormat(output);
     if (format === "png-sequence") {
@@ -251,7 +276,7 @@ export async function createSinks(outputs: string[], fps: number): Promise<Frame
     await ensureFfmpeg();
     const match = await requireEncoder(format as FfmpegFormat, output);
     await mkdir(path.dirname(path.resolve(output)), { recursive: true });
-    sinks.push(new FfmpegSink(output, format, fps, match));
+    sinks.push(new FfmpegSink(output, format, fps, match, metadataFile));
   }
   return sinks;
 }

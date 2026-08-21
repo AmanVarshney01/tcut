@@ -1,11 +1,11 @@
 import { MarkdownRenderer } from "@wterm/markdown";
+import { startBrowserCapture, type BrowserCapture } from "./browser";
 import { MARKER } from "./cast";
-import { WINDOW_BAR_HEIGHT, estimateCell } from "./config";
-import { formatMs, toMs } from "./duration";
+import { toMs } from "./duration";
+import { ExpectationError, WaitTimeoutError } from "./errors";
 import { altSequence, ctrlSequence, keySequence, shiftSequence, wheelSequence } from "./keys";
 import { Screen } from "./screen";
 import type {
-  BrowserFrame,
   BrowserSession,
   CastEvent,
   Duration,
@@ -20,19 +20,7 @@ import type {
   WaitOptions,
 } from "./types";
 
-export class WaitTimeoutError extends Error {
-  constructor(what: string, timeoutMs: number, screen: string) {
-    super(`Timed out after ${formatMs(timeoutMs)} waiting for ${what}.\n\n--- screen ---\n${screen}\n--------------`);
-    this.name = "WaitTimeoutError";
-  }
-}
-
-export class ExpectationError extends Error {
-  constructor(what: string, screen: string) {
-    super(`Expected ${what} to match.\n\n--- screen ---\n${screen}\n--------------`);
-    this.name = "ExpectationError";
-  }
-}
+export { WaitTimeoutError, ExpectationError } from "./errors";
 
 /** Deterministic PRNG (mulberry32) so typing jitter is reproducible. */
 function mulberry32(seed: number): () => number {
@@ -154,103 +142,8 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     if (!exited && !terminal.closed) terminal.write(response);
   };
 
-  // Optional browser pane: a WebView sampled on the recording clock; only changed frames are kept.
-  let browserSession: (BrowserSession & { frames: BrowserFrame[]; stop(): Promise<void> }) | null = null;
-  if (config.browser) {
-    if (typeof Bun.WebView !== "function") throw new Error("The browser pane needs Bun.WebView (Bun >= 1.4).");
-    const bcfg = config.browser;
-    // Default pane height: what the terminal window will measure (estimated from the font metrics).
-    const est = estimateCell(config.font);
-    const termFrameH = Math.round(config.rows * est.h + config.padding * 2 + (config.windowBar === "none" ? 0 : WINDOW_BAR_HEIGHT));
-    const termFrameW = Math.round(config.cols * est.w + config.padding * 2);
-    const stacked = bcfg.position === "top" || bcfg.position === "bottom";
-    const paneW = stacked ? termFrameW : bcfg.width;
-    const paneH = bcfg.height || (stacked || bcfg.position === "overlay" ? 480 : termFrameH);
-    const view = new Bun.WebView({ width: paneW, height: paneH });
-    const frames: BrowserFrame[] = [];
-    // WebView calls can stall (page never fires load, evaluate on a navigating page); never let them hang a recording.
-    const within = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
-      Promise.race([promise, Bun.sleep(ms).then(() => Promise.reject(new Error(`browser.${label} did not finish within ${ms}ms`)))]);
-    let currentUrl = bcfg.url ?? "about:blank";
-    let lastHash = "";
-    let running = true;
-    const sampler = (async () => {
-      while (running) {
-        try {
-          const png = (await within(view.screenshot({ encoding: "buffer" }), 5000, "screenshot")) as Uint8Array;
-          const hash = Bun.hash(png).toString(16);
-          if (hash !== lastHash) {
-            lastHash = hash;
-            frames.push({ time: stamp(), png });
-          }
-        } catch {
-          /* view busy or closed */
-        }
-        await Bun.sleep(1000 / bcfg.fps);
-      }
-    })();
-    /**
-     * Navigate and wait for the page to be there. Dev servers may still be starting (connection refused → retry)
-     * or may take a long first load (Vite pre-bundling, then a reload), so success is judged by the document's
-     * readyState at the target URL rather than by the navigate() promise alone.
-     */
-    const goto = async (url: string): Promise<void> => {
-      const deadline = performance.now() + config.waitTimeout;
-      const target = url.replace(/\/$/, "");
-      let navigation: Promise<"ok" | "pending" | "failed"> | null = null;
-      for (;;) {
-        navigation ??= view.navigate(url).then(
-          () => "ok" as const,
-          (err: unknown) => (/pending/i.test(String(err)) ? ("pending" as const) : ("failed" as const)),
-        );
-        const outcome = await Promise.race([navigation, Bun.sleep(750).then(() => "tick" as const)]);
-        if (outcome === "ok") {
-          currentUrl = url;
-          return;
-        }
-        if (outcome === "failed") navigation = null; // e.g. connection refused: the server isn't up yet
-        const state = await within(view.evaluate("document.readyState"), 3000, "goto").catch(() => "");
-        if (state === "complete" && (view.url ?? "").replace(/\/$/, "").startsWith(target)) {
-          currentUrl = url;
-          return;
-        }
-        if (performance.now() > deadline) {
-          throw new WaitTimeoutError(`browser.goto(${url})`, config.waitTimeout, `current url: ${view.url ?? "(none)"}, readyState: ${state || "unknown"}`);
-        }
-        await Bun.sleep(250);
-      }
-    };
-    browserSession = {
-      frames,
-      get url() {
-        return currentUrl;
-      },
-      goto,
-      async waitFor(pattern, waitOpts = {}) {
-        const regex = toRegExp(pattern);
-        const deadline = performance.now() + toMs(waitOpts.timeout, config.waitTimeout);
-        for (;;) {
-          const text = String((await within(view.evaluate("document.body ? document.body.innerText : ''"), 5000, "waitFor").catch(() => "")) ?? "");
-          if (regex.test(text)) return;
-          if (performance.now() > deadline) throw new WaitTimeoutError(`${regex} in the browser page`, toMs(waitOpts.timeout, config.waitTimeout), text.slice(0, 2000));
-          await Bun.sleep(150);
-        }
-      },
-      click: (selector) => within(view.click(selector), 10000, "click"),
-      reload: () => within(view.reload(), 30000, "reload").catch((err) => (/pending/i.test(String(err)) ? undefined : Promise.reject(err))),
-      evaluate: (js) => within(view.evaluate(js), 10000, "evaluate"),
-      async stop() {
-        running = false;
-        await sampler;
-        try {
-          view.close();
-        } catch {
-          /* closed */
-        }
-      },
-    };
-    if (bcfg.url) await goto(bcfg.url).catch((err) => log(String(err)));
-  }
+  // Optional browser pane (shared with live recording): a WebView sampled on the recording clock.
+  const browserSession: BrowserCapture | null = config.browser ? startBrowserCapture(config, stamp, log) : null;
 
   const sleep = async (duration: Duration): Promise<void> => {
     const ms = toMs(duration);
@@ -469,6 +362,14 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     focus: async (target) => {
       await screen.settle();
       push("m", `${MARKER.focus}${target}`);
+    },
+    zoom: async (region) => {
+      await screen.settle();
+      push("m", `${MARKER.zoom}${region ? JSON.stringify({ ...region, duration: region.duration === undefined ? undefined : toMs(region.duration) }) : "null"}`);
+    },
+    chapter: async (name) => {
+      await screen.settle();
+      push("m", `${MARKER.chapter}${name}`);
     },
     screen: () => screen.screen(),
     line: () => screen.line(),

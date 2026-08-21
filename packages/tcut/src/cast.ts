@@ -42,5 +42,7 @@ export const MARKER = {
   show: "show",
   screenshot: "screenshot:",
   focus: "focus:",
+  zoom: "zoom:",
+  chapter: "chapter:",
   end: "end",
 } as const;

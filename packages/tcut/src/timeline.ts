@@ -2,7 +2,7 @@ import { MARKER } from "./cast";
 import type { CastEvent } from "./types";
 
 export interface TimedEvent {
-  /** Time on the visible (hide-collapsed, speed-adjusted) timeline, seconds. */
+  /** Time on the visible (hide-collapsed, speed-adjusted, idle-compressed) timeline, seconds. */
   vt: number;
   type: CastEvent[1];
   data: string;
@@ -13,16 +13,22 @@ export interface Timeline {
   duration: number;
 }
 
+export interface TimelineOptions {
+  /** Keep `i` (input) events; the renderer needs them for the key overlay. Default false. */
+  keepInput?: boolean;
+  /** Cap any gap between consecutive events to this many seconds (idle compression). */
+  maxPause?: number;
+}
+
 /**
- * Collapse hidden intervals and apply playback speed. Hidden events keep their relative order but all land
- * on the instant the hide started, so the first visible frame after `show` reflects their combined effect.
- * Input (`i`) events are dropped: the PTY already echoed them.
+ * Collapse hidden intervals, apply playback speed, optionally cap idle gaps. Hidden events keep their relative
+ * order but all land on the instant the hide started, so the first visible frame after `show` reflects their
+ * combined effect. Input (`i`) events are dropped unless `keepInput`: the PTY already echoed them.
  */
-export function buildTimeline(events: CastEvent[], playbackSpeed: number): Timeline {
+export function buildTimeline(events: CastEvent[], playbackSpeed: number, opts: TimelineOptions = {}): Timeline {
   const out: TimedEvent[] = [];
   let hiddenSince: number | null = null;
   let removed = 0;
-  let duration = 0;
 
   for (const [t, type, data] of events) {
     if (type === "m" && data === MARKER.hide) {
@@ -36,12 +42,25 @@ export function buildTimeline(events: CastEvent[], playbackSpeed: number): Timel
       }
       continue;
     }
-    if (type === "i") continue;
+    if (type === "i" && !opts.keepInput) continue;
     const visible = hiddenSince === null ? t - removed : hiddenSince - removed;
-    const vt = visible / playbackSpeed;
-    out.push({ vt, type, data });
-    if (vt > duration) duration = vt;
+    out.push({ vt: visible / playbackSpeed, type, data });
   }
+
+  if (opts.maxPause !== undefined && opts.maxPause >= 0) {
+    // Walk forward; whenever the next event is further away than maxPause, pull everything after it closer.
+    let shift = 0;
+    let prev: number | null = null;
+    for (const e of out) {
+      const original = e.vt;
+      if (prev !== null && original - prev > opts.maxPause) shift += original - prev - opts.maxPause;
+      prev = original;
+      e.vt = original - shift;
+    }
+  }
+
+  let duration = 0;
+  for (const e of out) if (e.vt > duration) duration = e.vt;
   return { events: out, duration };
 }
 

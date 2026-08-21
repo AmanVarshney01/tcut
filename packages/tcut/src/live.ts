@@ -1,3 +1,4 @@
+import { startBrowserCapture } from "./browser";
 import { MARKER } from "./cast";
 import { shellSetup } from "./recorder";
 import type { CastEvent, Recording, ResolvedConfig } from "./types";
@@ -37,6 +38,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
     events.push([stamp(), type, data]);
   };
 
+  const browser = config.browser ? startBrowserCapture({ ...config, cols, rows }, stamp, log) : null;
   const setup = opts.command ? { cmd: opts.command, env: {} } : shellSetup(config);
   const env: Record<string, string> = {
     ...process.env,
@@ -98,6 +100,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
     await Promise.race([exitedPromise, proc.exited]);
     push("m", MARKER.end);
   } finally {
+    await browser?.stop();
     (process as unknown as { off(event: string, fn: () => void): void }).off("SIGWINCH", onResize); // newer @types/bun drop the signal overload on off()
     if (stdin) {
       stdin.off("data", onData);
@@ -126,5 +129,6 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
       bunVideo: { ...config, cols, rows },
     },
     events,
+    ...(browser && { browserFrames: browser.frames }),
   };
 }

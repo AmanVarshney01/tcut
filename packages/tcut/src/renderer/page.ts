@@ -140,6 +140,18 @@ export function renderHtml(config: ResolvedConfig): string {
     overflow: hidden;
   }
   #term .term-row { overflow: hidden; }
+  /* Key overlay: chips for recent key presses, driven by the renderer on the render clock. */
+  #keys {
+    position: absolute; left: 0; right: 0; ${config.keys?.position === "top" ? "top" : "bottom"}: ${Math.max(10, config.padding - 6)}px;
+    display: ${config.keys ? "flex" : "none"}; justify-content: center; gap: 6px; pointer-events: none; z-index: 5;
+  }
+  #keys span {
+    font: 600 ${Math.max(12, Math.round(config.font.size * 0.75))}px ${font.family};
+    color: #fff; background: rgba(0,0,0,0.72); border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 6px; padding: 3px 8px; letter-spacing: 0.02em; white-space: pre;
+  }
+  /* Zoom: the terminal grid is scaled inside its frame; the renderer sets the transform per frame. */
+  #zoom { transform-origin: 0 0; will-change: transform; }
 </style>
 <style id="blink"></style>
 </head>
@@ -147,7 +159,8 @@ export function renderHtml(config: ResolvedConfig): string {
 <div id="stage">
 <div id="frame">
   ${windowBarHtml(config)}
-  <div id="term"></div>
+  <div id="zoom"><div id="term"></div></div>
+  <div id="keys"></div>
 </div>
 ${
   config.browser

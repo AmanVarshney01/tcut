@@ -14,8 +14,9 @@ Docs: https://github.com/AmanVarshney01/tcut · Reference: https://github.com/Am
 tcut <script.ts> [-o out…] [--theme t] [--width px --height px] [--json]   record + render
 tcut record <script.ts>                                                  cast only
 tcut render <file.cast> [-o out…] [--theme t] [--speed x] [--json]       re-render (no shell is run)
-tcut rec [-- command…] [-o out…]                                         live session (TTY); writes .cast + editable .video.ts
+tcut rec [-- command…] [-o out…] [--browser url]                         live session (TTY); writes .cast + editable .video.ts
 tcut test <files|dirs…> [--json]                                         run scripts fast (no sleeps/typing delay), exit 1 if any expect() fails
+tcut diff a.cast b.cast [--at s] [--images dir] [--json]                 screen-text regression check, exit 1 on difference
 tcut publish <files…> [--json] · tcut publish --setup --endpoint U --bucket B --access-key K --secret-key S   S3-compatible upload
 tcut init [name] [--template basic|tour|test] · tcut themes [query]
 Outputs by extension: .mp4 .webm .gif .webp (ffmpeg) · .svg .html (no deps) · .png .jpg (final frame) · dir/ (PNG frames)
@@ -33,9 +34,9 @@ export default defineVideo(
     await t.sleep("1s");
   },
 );
-t methods: run type paste enter tab backspace delete escape space up down left right home end pageUp pageDown ctrl("c") alt("b") shift("tab") scrollUp scrollDown key("f5") raw sleep wait expect hide screenshot(path) marker resize clear print(markdown) title(text) screen() line() cursor()
+t methods: run type paste enter tab backspace delete escape space up down left right home end pageUp pageDown ctrl("c") alt("b") shift("tab") scrollUp scrollDown key("f5") raw sleep wait expect hide screenshot(path) marker resize clear print(markdown) title(text) zoom({rows,cols}) zoom(null) chapter(name) focus(target) screen() line() cursor()
 Captions: print("## Step 1\nSome **bold**") shows rendered Markdown in the terminal (written to the recording only, never typed into the shell); title("Text") = big heading + rule + pause. Call them at a shell prompt.
-Config: output shell prompt cols rows width height fps typingSpeed typingJitter seed playbackSpeed waitTimeout endPause quantize core cache font{family,size,lineHeight,letterSpacing} theme cursor{blink,period} padding margin marginFill borderRadius windowBar title loopOffset cast browser{url,width,height,fps,title,position:right|left|top|bottom|overlay,offset{x,y}}
+Config: output shell prompt cols rows width height preset(readme|x|youtube|square) maxPause(idle compression) keys(key overlay) fps typingSpeed typingJitter seed playbackSpeed waitTimeout endPause quantize core cache font{family,size,lineHeight,letterSpacing} theme cursor{blink,period} padding margin marginFill borderRadius windowBar title loopOffset cast browser{url,width,height,fps,title,position:right|left|top|bottom|overlay,offset{x,y}}
 Browser pane (scripted mode): t.browser.goto(url) / waitFor(/text/) / click(sel) / reload() / evaluate(js); t.focus("browser"|"terminal") for overlay z-order. Composited into mp4/gif/png only. Start dev servers as `cmd </dev/null >/tmp/dev.log 2>&1 &` (logs would repaint over TUIs; stdin must be detached or the job stops).
 
 ## Writing robust scripts for TUIs

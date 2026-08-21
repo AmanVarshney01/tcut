@@ -1,5 +1,6 @@
 import path from "node:path";
 import { toMs } from "./duration";
+import { applyPreset } from "./presets";
 import { resolveTheme } from "./themes";
 import type { ResolvedConfig, VideoConfig } from "./types";
 
@@ -21,7 +22,8 @@ export function estimateCell(font: { size: number; lineHeight: number; letterSpa
 
 export const WINDOW_BAR_HEIGHT = 36;
 
-export function resolveConfig(config: VideoConfig): ResolvedConfig {
+export function resolveConfig(input: VideoConfig): ResolvedConfig {
+  const config = applyPreset(input);
   const outputs = Array.isArray(config.output) ? config.output : [config.output];
   if (outputs.length === 0) throw new Error("config.output must name at least one output");
 
@@ -60,6 +62,14 @@ export function resolveConfig(config: VideoConfig): ResolvedConfig {
     ...(config.width !== undefined && { width: config.width }),
     ...(config.height !== undefined && { height: config.height }),
     ...(config.loopOffset !== undefined && { loopOffset: config.loopOffset }),
+    ...(config.maxPause !== undefined && { maxPause: toMs(config.maxPause) / 1000 }),
+    ...(config.keys && {
+      keys: {
+        position: (config.keys === true ? undefined : config.keys.position) ?? "bottom",
+        ttl: toMs(config.keys === true ? undefined : config.keys.ttl, 1200),
+        merge: toMs(config.keys === true ? undefined : config.keys.merge, 350),
+      },
+    }),
     fps: config.fps ?? 60,
     typingSpeed: toMs(config.typingSpeed, 50),
     typingJitter: Math.min(1, Math.max(0, config.typingJitter ?? 0)),
