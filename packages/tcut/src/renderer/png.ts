@@ -1,7 +1,7 @@
 // A minimal PNG codec for the renderer. Bun.WebView screenshots come in as opaque PNGs and Bun.Image has no raw
 // pixel access, so transparent output needs its own decode → matte → encode step. 8-bit RGB/RGBA, non-interlaced.
-// node:zlib rather than Bun.inflateSync/deflateSync: PNG needs zlib-framed streams and Bun's defaults are raw deflate.
-import { deflateSync, inflateSync } from "node:zlib";
+// PNG streams are zlib-framed; Bun's inflateSync reads that with windowBits 15, and deflateSync's raw output gets the
+// two-byte header and Adler-32 trailer added here (Bun only — no node:zlib).
 
 /** Straight (non-premultiplied) RGBA pixels, row-major. */
 export interface RgbaImage {
@@ -16,8 +16,31 @@ const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 
 const readU32 = (b: Uint8Array, o: number): number => ((b[o]! << 24) | (b[o + 1]! << 16) | (b[o + 2]! << 8) | b[o + 3]!) >>> 0;
 
-function concat(parts: Uint8Array[]): Uint8Array {
-  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+function adler32(bytes: Uint8Array): number {
+  let a = 1;
+  let b = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    a = (a + bytes[i]!) % 65521;
+    b = (b + a) % 65521;
+  }
+  return ((b << 16) | a) >>> 0;
+}
+
+/** Raw DEFLATE from Bun.deflateSync wrapped as a zlib stream (RFC 1950): CMF/FLG header + data + Adler-32. */
+function zlibDeflate(raw: Uint8Array<ArrayBuffer>, level: 1 | 6 = 1): Uint8Array {
+  const body = Bun.deflateSync(raw, { level });
+  const out = new Uint8Array(2 + body.length + 4);
+  out[0] = 0x78;
+  out[1] = level === 1 ? 0x01 : 0x9c;
+  out.set(body, 2);
+  new DataView(out.buffer).setUint32(2 + body.length, adler32(raw));
+  return out;
+}
+
+const zlibInflate = (data: Uint8Array<ArrayBuffer>): Uint8Array => Bun.inflateSync(data, { windowBits: 15 });
+
+function concat(parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(new ArrayBuffer(parts.reduce((n, p) => n + p.length, 0)));
   let o = 0;
   for (const p of parts) {
     out.set(p, o);
@@ -83,7 +106,7 @@ export function decodePng(png: Uint8Array): RgbaImage {
   }
   const bpp = colorType === 6 ? 4 : 3;
   const stride = width * bpp;
-  const raw = inflateSync(concat(idat));
+  const raw = zlibInflate(concat(idat));
   const out = new Uint8Array(width * height * 4);
   let prev = new Uint8Array(stride);
   let row = new Uint8Array(stride);
@@ -133,7 +156,7 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
 /** Encode straight RGBA as an 8-bit PNG (filter 0; speed matters more than size — ffmpeg re-encodes anyway). */
 export function encodePng(img: RgbaImage): Uint8Array {
   const stride = img.width * 4;
-  const raw = new Uint8Array((stride + 1) * img.height);
+  const raw = new Uint8Array(new ArrayBuffer((stride + 1) * img.height));
   for (let y = 0; y < img.height; y++) {
     raw[y * (stride + 1)] = 0;
     raw.set(img.data.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
@@ -144,7 +167,7 @@ export function encodePng(img: RgbaImage): Uint8Array {
   v.setUint32(4, img.height);
   ihdr[8] = 8; // bit depth
   ihdr[9] = 6; // RGBA
-  return concat([new Uint8Array(SIGNATURE), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw, { level: 1 })), chunk("IEND", new Uint8Array(0))]);
+  return concat([new Uint8Array(SIGNATURE), chunk("IHDR", ihdr), chunk("IDAT", zlibDeflate(raw)), chunk("IEND", new Uint8Array(0))]);
 }
 
 export function parseHex(color: string): Rgb {
