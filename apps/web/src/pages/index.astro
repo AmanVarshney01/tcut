@@ -18,17 +18,47 @@ const EXAMPLES = `${GITHUB}/tree/main/packages/tcut/examples`;
 const script = `import { defineVideo } from "tcut";
 
 export default defineVideo({ output: ["demo.mp4", "demo.gif"] }, async (t) => {
-  await t.run("bun --version");        // type, Enter, wait for the prompt
+  await t.run("bun --version");      // types it, presses Enter, waits for the prompt
   await t.run("ls -la");
-  await t.expect(/package\\.json/);     // assert on the screen
+  await t.expect(/package\\.json/);   // asserts on the screen — the demo is a test
+  await t.snapshot("files.png");     // a still of this exact moment
   await t.sleep("1.5s");
 });`;
+
+// What a script can do, one line each. The term is the real API name.
+const api = [
+  ["run()", "waits for your prompt to come back, not for a timer"],
+  ["expect()", "asserts on the screen, including lines that already scrolled away"],
+  ["hide()", "runs setup off-camera; the state stays"],
+  ["snapshot()", "a PNG or SVG still of that exact moment, on every render"],
+  ["chapter()", "mp4 chapters, and cut points for --chapters / --split-chapters"],
+  ["print()", "Markdown captions rendered into the terminal, nothing typed"],
+  ["zoom()", "magnifies a region; keys: true shows what was pressed"],
+  ["timelapse()", "fast-forwards an install or a build, not just the silence"],
+  ["browser", "a real browser window beside or over the terminal"],
+  ["tcut test", "runs every script as a test: no delays, just the assertions"],
+] as const;
+
+const faithful = [
+  "Arrow keys and pastes arrive exactly as the running program asked: application cursor mode, bracketed paste.",
+  "Links printed with OSC 8 stay clickable in SVG and HTML.",
+  "Frames are never torn: synchronized-output blocks are captured whole.",
+  "tcut doctor demo.cast explains what a recording used, and what would not survive a GIF.",
+];
 
 const examples = [
   { src: btsGif, alt: "bun create better-t-stack answered with arrow keys", label: "bun create better-t-stack, driven with arrow keys" },
   { src: claudeGif, alt: "Claude Code's interactive TUI editing a file", label: "Claude Code, the interactive TUI, end to end" },
   { src: lazygitGif, alt: "lazygit navigated with the keyboard", label: "lazygit" },
-  { src: nvimGif, alt: "Neovim editing App.tsx with a browser window overlaid showing the page update", label: "nvim + a real browser window (overlay), Vite HMR" },
+  { src: nvimGif, alt: "Neovim editing App.tsx with a browser window overlaid showing the page update", label: "nvim + a real browser window, Vite HMR" },
+];
+
+const vhs = [
+  ["Scripts are TypeScript", "loops, imports, shared scenes, autocomplete — instead of a .tape DSL."],
+  ["Waits on the screen", "run() returns when your prompt is back; VHS sleeps for a guessed duration."],
+  ["Record once, render forever", "a new theme, size or format never re-runs the shell. VHS screenshots Chrome live, so output depends on machine speed."],
+  ["Demos are tests", "expect() asserts on the screen; tcut test runs them in CI."],
+  ["Same emulator as your terminal", "Ghostty's core in WASM, 607 of its themes, plus SVG and HTML outputs that need no ffmpeg or browser."],
 ];
 ---
 
@@ -47,17 +77,18 @@ const examples = [
       </nav>
     </header>
 
-    <main class="mt-14 space-y-16">
-      <section>
-        <h1 class="text-[1.6rem] leading-tight sm:text-[1.85rem]">Turn a terminal session into a video.</h1>
-        <p class="mt-3 max-w-[40rem] text-ink-2">
-          Record it live or script it in TypeScript. Render to MP4, GIF, WebM, SVG or HTML. Same recording, same pixels, every time.
+    <main>
+      <!-- Hero: the claim, the install line, the tour. -->
+      <section class="mt-16 sm:mt-20">
+        <h1 class="text-[2rem] leading-[1.15] sm:text-[2.5rem]">Terminal videos,<br />written in TypeScript<span class="text-amber">_</span></h1>
+        <p class="prose-measure mt-5 text-[1.05rem] text-ink-2">
+          Record a session live, or script it. Render it to MP4, GIF, WebM, SVG or HTML. Same recording, same pixels, every time.
         </p>
-        <div class="mt-6">
+        <div class="mt-7 max-w-[28rem]">
           <CopyCommand command="bun add -g termcut" />
         </div>
-        <p class="mt-2 text-sm text-ink-3">Bun ≥ 1.4. ffmpeg for MP4/GIF; SVG and HTML need nothing else. Or a <a href={`${GITHUB}/releases`}>standalone binary</a>.</p>
-        <figure class="mt-8">
+        <p class="mt-2.5 text-sm text-ink-3">Bun ≥ 1.4. ffmpeg for MP4/GIF; SVG and HTML need nothing else. Or a <a href={`${GITHUB}/releases`}>standalone binary</a>.</p>
+        <figure class="mt-10">
           <video
             class="promo block w-full rounded-lg bg-desk-2"
             src="/promo.mp4"
@@ -71,62 +102,83 @@ const examples = [
             preload="metadata"
             aria-label="tcut feature tour: scripted recording, themes, browser overlay, Claude Code, captions, zoom, CI"
           ></video>
-          <figcaption class="mt-2 font-mono text-xs text-ink-3">
-            75 s tour. Every terminal clip is a tcut recording, composed in <a href="https://remotion.dev">Remotion</a> — a build artifact, not a screen grab.
-            The <code>tcut-remotion</code> skill documents the pipeline.
+          <figcaption class="mt-2.5 font-mono text-xs text-ink-3">
+            75 s tour. Every clip is a tcut recording, composed in <a href="https://remotion.dev">Remotion</a> — a build artifact, not a screen grab.
           </figcaption>
         </figure>
       </section>
 
-      <figure>
+      <!-- The signature: tcut recording tcut, as real text you can select. -->
+      <figure class="mt-14">
         <div class="demo-svg overflow-hidden rounded-lg" set:html={demoSvg} />
-        <figcaption class="mt-2 font-mono text-xs text-ink-3">
-          demo.svg, {Math.round(facts.svgBytes / 1024)} KB — real text, not pixels: select it, copy it. tcut recording tcut, {facts.totalFrames} frames,{" "}
-          {facts.uniqueFrames} unique.
+        <figcaption class="mt-2.5 font-mono text-xs text-ink-3">
+          demo.svg, {Math.round(facts.svgBytes / 1024)} KB. Real text, not pixels: select it, copy it. tcut recording tcut, {facts.totalFrames} frames, {facts.uniqueFrames} unique.
         </figcaption>
       </figure>
 
-      <section class="space-y-8">
-        <h2 class="text-xl">Record</h2>
-
-        <div>
-          <p class="text-ink-2">Live. A clean shell opens; type; exit. You get the recording and a script of what you typed.</p>
-          <div class="mt-3"><Code code={`tcut rec -o demo.gif\ntcut rec -o demo.mp4 -- npm create vite   # just one command`} lang="sh" theme="catppuccin-mocha" /></div>
+      <section class="section">
+        <h2>Record</h2>
+        <div class="mt-6 grid gap-10 sm:grid-cols-2 sm:gap-8">
+          <div>
+            <h3 class="font-mono text-[0.95rem] font-medium">Live</h3>
+            <p class="mt-2 text-ink-2">A clean shell opens. Type, exit. You get the recording and a script of what you typed.</p>
+            <div class="mt-4"><Code code={`tcut rec -o demo.gif\ntcut rec -- npm create vite`} lang="sh" theme="catppuccin-mocha" /></div>
+          </div>
+          <div>
+            <h3 class="font-mono text-[0.95rem] font-medium">Scripted</h3>
+            <p class="mt-2 text-ink-2">Plain TypeScript. Loops, helpers and imports all work. Save it, run it, commit it.</p>
+            <div class="mt-4"><Code code={`tcut demo.video.ts`} lang="sh" theme="catppuccin-mocha" /></div>
+          </div>
         </div>
+        <div class="mt-8"><Code code={script} lang="ts" theme="catppuccin-mocha" /></div>
 
-        <div>
-          <p class="text-ink-2">
-            Scripted. Plain TypeScript, so loops, helpers and imports work. <code>run()</code> waits for your prompt to come back, not for a timer; <code>expect()</code> makes the demo a test — including against output
-            that already scrolled away. Arrow keys and pastes arrive exactly as the running program asked (application cursor mode, bracketed paste), hyperlinks stay clickable in SVG/HTML, and{" "}
-            <code>tcut doctor demo.cast</code> explains what a recording used.
-            <code>print()</code> renders Markdown captions into the terminal without typing anything, and <code>browser: {"{ position: \"overlay\" }"}</code> records a real browser window beside or over the terminal, for dev-server demos.
-          </p>
-          <div class="mt-3"><Code code={script} lang="ts" theme="catppuccin-mocha" /></div>
-          <div class="mt-3"><Code code={`tcut demo.video.ts`} lang="sh" theme="catppuccin-mocha" /></div>
-        </div>
+        <dl class="api mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+          {
+            api.map(([term, what]) => (
+              <div>
+                <dt><code>{term}</code></dt>
+                <dd class="text-ink-2">{what}</dd>
+              </div>
+            ))
+          }
+        </dl>
+        <p class="mt-6 text-sm text-ink-3">The full surface is in the <a href={REFERENCE}>reference</a>.</p>
       </section>
 
-      <section>
-        <h2 class="text-xl">Render again</h2>
-        <p class="mt-3 text-ink-2">
-          Recording and rendering are separate. Every recording is an asciicast; frames are computed on a virtual clock. Change the theme, the size or the format without running anything again — or cut, join and split by chapter, still on the
-          cast, so it works for SVG as much as MP4. Add a shadow, a watermark or a transparent background the same way. 607 themes, Ghostty's collection.
+      <section class="section">
+        <h2>Render again</h2>
+        <p class="prose-measure mt-4 text-ink-2">
+          Recording and rendering are separate. A recording is an asciicast; frames are computed on a virtual clock. So a new theme, size or format never re-runs a shell — and cuts, joins and chapter splits happen on the recording, which is why they work for SVG just as well as MP4.
         </p>
-        <div class="mt-3">
+        <div class="mt-5">
           <Code
-            code={`tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg -o demo.html\ntcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4\ntcut render demo.cast --from 2s --to 10s --shadow --watermark "@you" -o clip.gif\ntcut render demo.cast --split-chapters --margin-fill transparent -o demo.webm\ntcut concat intro.cast demo.cast --gap 500ms -o launch.mp4\ntcut publish demo.gif     # to your own S3-compatible bucket`}
+            code={`tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg -o demo.html
+tcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4
+tcut render demo.cast --from 2s --to 10s --shadow --watermark "@you" -o clip.gif
+tcut render demo.cast --split-chapters --margin-fill transparent -o demo.webm
+tcut concat intro.cast demo.cast --gap 500ms -o launch.mp4
+tcut publish demo.gif     # to your own S3-compatible bucket`}
             lang="sh"
             theme="catppuccin-mocha"
           />
         </div>
+        <p class="mt-4 font-mono text-sm text-ink-3">mp4 · gif · webm · webp · svg · html · png · txt — 607 themes, Ghostty's collection</p>
       </section>
 
-      <section>
-        <h2 class="text-xl">Examples</h2>
-        <p class="mt-3 text-ink-2">
-          tcut waits on the rendered screen, so it can drive anything a person can: menus, prompts, agents that think for ten seconds. All recorded by tcut; scripts in <a href={EXAMPLES}>examples/</a>.
+      <section class="section">
+        <h2>Faithful to the terminal</h2>
+        <p class="prose-measure mt-4 text-ink-2">The emulator is Ghostty's core, so what tcut sees is what your terminal would show — and what it records is what the program actually received.</p>
+        <ul class="bullets mt-5 text-ink-2">
+          {faithful.map((line) => <li>{line}</li>)}
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Examples</h2>
+        <p class="prose-measure mt-4 text-ink-2">
+          tcut waits on the rendered screen, so it can drive anything a person can: menus, prompts, agents that think for ten seconds. Scripts in <a href={EXAMPLES}>examples/</a>.
         </p>
-        <div class="mt-5 grid gap-6 sm:grid-cols-2">
+        <div class="mt-6 grid gap-6 sm:grid-cols-2">
           {
             examples.map((e) => (
               <figure>
@@ -138,36 +190,32 @@ const examples = [
         </div>
       </section>
 
-      <section>
-        <h2 class="text-xl">Compared with VHS</h2>
-        <p class="mt-3 text-ink-2">
-          <a href="https://github.com/charmbracelet/vhs">VHS</a> is Go, a <code>.tape</code> DSL, ttyd, Chrome and ffmpeg. tcut is TypeScript, Bun and
-          Ghostty's terminal core (libghostty in WASM). What that changes:
+      <section class="section">
+        <h2>Compared with VHS</h2>
+        <p class="prose-measure mt-4 text-ink-2">
+          <a href="https://github.com/charmbracelet/vhs">VHS</a> is the reference point and the inspiration. Where tcut differs:
         </p>
-        <ul class="mt-4 space-y-2 text-ink-2">
-          <li>Scripts are TypeScript: loops, imports, shared scenes, autocomplete.</li>
-          <li><code>run()</code> waits for your actual prompt instead of a <code>Sleep</code>; <code>wait()</code> matches the rendered screen, not raw bytes.</li>
-          <li><code>expect()</code> asserts on the screen, and <code>tcut test</code> runs your demos as tests.</li>
-          <li>Record once to a <code>.cast</code>, render forever: new theme, size or format without re-running a shell. VHS screenshots Chrome live, so output depends on machine speed.</li>
-          <li><code>tcut rec</code> keeps the exact recording and writes an editable script of what you typed.</li>
-          <li>Outputs add animated SVG and a single-file HTML player, neither needs ffmpeg or a browser.</li>
-          <li>607 themes from Ghostty's collection; the same colours as your terminal, because the emulator is the same.</li>
-          <li>A real browser window beside or over the terminal, for dev-server demos.</li>
-          <li>Publish to your own S3-compatible bucket; there is no hosted service.</li>
-          <li>Agent-ready: <code>--json</code>, exit codes, no prompts, <a href="/llms.txt">llms.txt</a>.</li>
-        </ul>
+        <dl class="mt-5 space-y-4">
+          {
+            vhs.map(([head, body]) => (
+              <div>
+                <dt class="font-medium">{head}</dt>
+                <dd class="text-ink-2">{body}</dd>
+              </div>
+            ))
+          }
+        </dl>
       </section>
 
-      <section>
-        <h2 class="text-xl">How it works</h2>
-        <p class="mt-3 text-ink-2">
-          <code>Bun.Terminal</code> runs your shell in a PTY. Output is timestamped into the cast and fed to a headless <a href="https://ghostty.org">Ghostty</a> terminal (via <a href="https://github.com/vercel-labs/wterm">wterm</a>); that is how <code>run()</code> knows the prompt is back and <code>expect()</code> sees what you see.
-          Rendering replays the cast into the same terminal inside <code>Bun.WebView</code>, one frame per tick, and hands frames to ffmpeg. SVG and HTML are built straight from the terminal grid.
-          Inspired by <a href="https://github.com/charmbracelet/vhs">VHS</a>.
-        </p>
-        <p class="mt-3 text-ink-2">
-          Built for agents as much as people: no prompts, exit codes, <code>--json</code>, an <a href="/llms.txt">llms.txt</a> — and installable skills:
-          <code>npx skills add AmanVarshney01/tcut</code> teaches any coding agent tcut, plus a <code>tcut-remotion</code> skill for composing the footage into full launch videos with <a href="https://remotion.dev">Remotion</a>.
+      <section class="section">
+        <h2>How it works</h2>
+        <ol class="steps mt-5 space-y-4 text-ink-2">
+          <li><b class="text-ink">Record.</b> <code>Bun.Terminal</code> runs your shell in a PTY. Every byte is timestamped into a <code>.cast</code>.</li>
+          <li><b class="text-ink">Watch.</b> The same bytes feed a headless <a href="https://ghostty.org">Ghostty</a> (via <a href="https://github.com/vercel-labs/wterm">wterm</a>). That is how <code>run()</code> knows the prompt is back and <code>expect()</code> sees what you see.</li>
+          <li><b class="text-ink">Render.</b> The cast replays into the same terminal inside <code>Bun.WebView</code>, one frame per tick, straight to ffmpeg. SVG and HTML are built from the terminal grid, no browser involved.</li>
+        </ol>
+        <p class="prose-measure mt-6 text-ink-2">
+          Built for agents as much as people: no prompts, exit codes, <code>--json</code>, an <a href="/llms.txt">llms.txt</a>. <code>npx skills add AmanVarshney01/tcut</code> teaches any coding agent tcut, plus a <code>tcut-remotion</code> skill for cutting the footage into a launch video.
         </p>
       </section>
     </main>

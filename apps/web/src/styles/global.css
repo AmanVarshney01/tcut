@@ -76,6 +76,75 @@ h2 {
   font-weight: 500;
   letter-spacing: -0.01em;
 }
+h2 {
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+/* Sections read as one column of chapters: a rule above, then the heading. */
+.section {
+  margin-top: 4rem;
+  padding-top: 2.25rem;
+  border-top: 1px solid var(--color-line);
+}
+@media (min-width: 640px) {
+  .section {
+    margin-top: 4.5rem;
+  }
+}
+
+/* A comfortable measure for running text; code blocks and grids stay full width. */
+.prose-measure {
+  max-width: 38rem;
+}
+
+/* API list: the term is the real name, the description is one line. */
+.api dt code {
+  font-size: 0.9rem;
+  background: var(--color-desk-2);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+}
+.api dd {
+  margin-top: 0.3rem;
+  line-height: 1.5;
+}
+
+.bullets {
+  list-style: none;
+  padding: 0;
+}
+.bullets li {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-top: 0.55rem;
+}
+.bullets li::before {
+  content: "–";
+  position: absolute;
+  left: 0;
+  color: var(--color-amber-deep);
+}
+
+.steps {
+  list-style: none;
+  padding: 0;
+  counter-reset: step;
+}
+.steps li {
+  position: relative;
+  padding-left: 2rem;
+}
+.steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-amber-deep);
+}
 
 code,
 kbd,
