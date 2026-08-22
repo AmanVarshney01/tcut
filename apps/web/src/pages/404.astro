@@ -1,0 +1,17 @@
+---
+import Layout from "../layouts/Layout.astro";
+const GITHUB = "https://github.com/AmanVarshney01/tcut";
+---
+
+<Layout title="Not found — tcut" description="This page does not exist. Links to the home page, the agent guide and the reference.">
+  <div class="mx-auto max-w-[46rem] px-5 py-16">
+    <h1 class="font-mono text-[1.6rem]">404 — nothing here</h1>
+    <p class="mt-4 text-ink-2">tcut is a single-page site. Where to look instead:</p>
+    <ul class="bullets mt-4 text-ink-2">
+      <li><a href="/">Home</a> — what tcut is and how to use it</li>
+      <li><a href="/llms.txt">llms.txt</a> — the guide written for coding agents</li>
+      <li><a href={`${GITHUB}/blob/main/packages/tcut/docs/REFERENCE.md`}>Reference</a> — every option and method</li>
+      <li><a href="/sitemap.xml">Sitemap</a></li>
+    </ul>
+  </div>
+</Layout>

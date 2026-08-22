@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "cp ../../packages/tcut/docs/llms.txt public/llms.txt && cp ../../README.md public/index.md && astro build",
     "typecheck": "astro check",
     "preview": "astro preview",
     "media": "bun scripts/media.ts",
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
     "@fontsource-variable/ibm-plex-sans": "^5.2.6",
     "@fontsource/ibm-plex-mono": "^5.2.6",
     "astro": "^7.1.5"

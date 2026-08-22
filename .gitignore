@@ -76,3 +76,6 @@ packages/tcut/dist/
 packages/tcut/src/renderer/generated/
 out/
 dist/
+
+# built at site build time from README.md
+apps/web/public/index.md

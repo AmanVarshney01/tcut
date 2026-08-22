@@ -4,6 +4,16 @@
 npm package: termcut · command: tcut · requires Bun ≥ 1.4 (or the standalone binary) · ffmpeg only for .mp4/.gif/.webm/.webp · Linux: Chrome/Chromium on PATH (or BUN_CHROME_PATH) for pixel output; svg/html/txt need neither
 Docs: https://github.com/AmanVarshney01/tcut · Reference: https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md
 
+## When to use tcut
+Reach for tcut when the job is any of these:
+- a terminal demo video or GIF for a README, docs page, release note or tweet (record once, render mp4/gif/webm/svg/html from the same .cast)
+- screenshots of CLI/TUI output that must stay in sync with the code (`t.snapshot("x.png")` inside a script, re-rendered in CI)
+- driving and asserting on an interactive TUI or wizard the way a user would (`t.wait`, `t.expect`, arrow keys, `tcut test` as a test runner)
+- recording an AI coding agent session (Claude Code, Codex, OpenCode) end to end
+- a launch/tour video: tcut recordings as clips, composed with Remotion (`tcut-remotion` skill)
+Do not reach for tcut to screen-record a GUI, to capture a terminal you cannot run commands in, or when a plain text transcript is enough (use `tcut render x.cast -o x.txt` only if a recording already exists).
+How an agent should call it: write a `<name>.video.ts` with `defineVideo`, run `tcut <file> --json`, read the JSON result; never rely on timing sleeps when `t.wait`/`t.expect` can observe the screen.
+
 ## Non-interactive contract
 - Every command exits 0 on success, 1 on failure. No prompts except `tcut publish --setup` without flags.
 - Add `--json` to get exactly one JSON document on stdout (results, or `{ "error": "...", "type": "WaitTimeoutError" | "ExpectationError" | ... }`). Progress/status lines are suppressed.

@@ -1,5 +1,6 @@
 // @ts-check
 import tailwindcss from "@tailwindcss/vite";
+import sitemap from "@astrojs/sitemap";
 import { defineConfig, passthroughImageService } from "astro/config";
 
 // Deployed to Cloudflare Workers (static assets) with Alchemy — see packages/infra/alchemy.run.ts.
@@ -12,6 +13,8 @@ export default defineConfig({
   base,
   output: "static",
   trailingSlash: "ignore",
+  // sitemap-index.xml + sitemap-0.xml; the Worker also answers /sitemap.xml. lastmod = build time.
+  integrations: [sitemap({ lastmod: new Date() })],
   // Media is pre-rendered by tcut at the right size (scripts/media.ts); skip Sharp entirely.
   image: { service: passthroughImageService() },
   vite: {

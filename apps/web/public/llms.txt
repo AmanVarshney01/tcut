@@ -1,8 +1,18 @@
 # tcut — terminal sessions to video (for agents)
 # Skills: npx skills add AmanVarshney01/tcut  (tcut + tcut-remotion)
 
-npm package: termcut · command: tcut · requires Bun ≥ 1.4 (or the standalone binary) · ffmpeg only for .mp4/.gif/.webm/.webp
+npm package: termcut · command: tcut · requires Bun ≥ 1.4 (or the standalone binary) · ffmpeg only for .mp4/.gif/.webm/.webp · Linux: Chrome/Chromium on PATH (or BUN_CHROME_PATH) for pixel output; svg/html/txt need neither
 Docs: https://github.com/AmanVarshney01/tcut · Reference: https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md
+
+## When to use tcut
+Reach for tcut when the job is any of these:
+- a terminal demo video or GIF for a README, docs page, release note or tweet (record once, render mp4/gif/webm/svg/html from the same .cast)
+- screenshots of CLI/TUI output that must stay in sync with the code (`t.snapshot("x.png")` inside a script, re-rendered in CI)
+- driving and asserting on an interactive TUI or wizard the way a user would (`t.wait`, `t.expect`, arrow keys, `tcut test` as a test runner)
+- recording an AI coding agent session (Claude Code, Codex, OpenCode) end to end
+- a launch/tour video: tcut recordings as clips, composed with Remotion (`tcut-remotion` skill)
+Do not reach for tcut to screen-record a GUI, to capture a terminal you cannot run commands in, or when a plain text transcript is enough (use `tcut render x.cast -o x.txt` only if a recording already exists).
+How an agent should call it: write a `<name>.video.ts` with `defineVideo`, run `tcut <file> --json`, read the JSON result; never rely on timing sleeps when `t.wait`/`t.expect` can observe the screen.
 
 ## Non-interactive contract
 - Every command exits 0 on success, 1 on failure. No prompts except `tcut publish --setup` without flags.
@@ -18,9 +28,13 @@ tcut render <file.cast> [-o out…] [--theme t] [--speed x] [--json]       re-re
 tcut rec [-- command…] [-o out…] [--browser url]                         live session (TTY); writes .cast + editable .video.ts
 tcut test <files|dirs…> [--json]                                         run scripts fast (no sleeps/typing delay), exit 1 if any expect() fails
 tcut diff a.cast b.cast [--at s] [--images dir] [--json]                 screen-text regression check, exit 1 on difference
+tcut doctor f.cast [--json]                                               features the program used + what tcut cannot show (inline images, unknown escape sequences)
+tcut cut f.cast --from 2s --to 10s | --chapters a,b [--cast out] [-o …]  keep part of a recording (visible timeline); --split-chapters on render writes one file per chapter
+tcut concat a.cast b.cast… [--gap 500ms] [--cast out] [-o …]             join same-size recordings; screen resets at each seam
 tcut publish <files…> [--json] · tcut publish --setup --endpoint U --bucket B --access-key K --secret-key S   S3-compatible upload
 tcut init [name] [--template basic|tour|test] · tcut themes [query]
-Outputs by extension: .mp4 .webm .gif .webp (ffmpeg) · .svg .html (no deps) · .png .jpg (final frame) · dir/ (PNG frames)
+Outputs by extension: .mp4 .webm .gif .webp (ffmpeg) · .svg .html (no deps) · .png .jpg (final frame) · .txt (final screen as text) · .log (full transcript incl. scrollback) · dir/ (PNG frames)
+Render flags: --from/--to (seconds or "1.5s"), --chapters a,b, --split-chapters, --shadow, --watermark "text", --watermark-image logo.png, --margin-fill transparent (alpha in png/webp/gif/webm/svg/html; mp4 falls back)
 
 ## Script shape
 import { defineVideo } from "tcut";
@@ -35,9 +49,10 @@ export default defineVideo(
     await t.sleep("1s");
   },
 );
-t methods: run type paste enter tab backspace delete escape space up down left right home end pageUp pageDown ctrl("c") alt("b") shift("tab") scrollUp scrollDown key("f5") raw sleep wait expect hide screenshot(path) marker resize clear print(markdown) title(text) zoom({rows,cols}) zoom(null) chapter(name) focus(target) screen() line() cursor()
+t methods: run type paste(bracketed when the program asked) enter tab backspace delete escape space up down left right home end pageUp pageDown (SS3 form in application cursor mode) ctrl("c") alt("b") shift("tab") scrollUp scrollDown key("f5") raw sleep wait expect(re, {scope: "line"|"screen"|"scrollback"}) hide timelapse(fn,{speed}) snapshot(path: .png pixel still, .svg vector still of this exact moment, written on every render; screenshot=alias) marker resize clear print(markdown; [text](url) becomes a real hyperlink) title(text) zoom({rows,cols}) zoom(null) chapter(name) focus(target) screen() scrollback() line() cursor()
+Timelapse: `await t.timelapse(() => t.run("bun install"), { speed: 8 })` plays the install 8× faster (maxPause only removes silence; timelapse compresses output). Chapters are cut points for --chapters/--split-chapters.
 Captions: print("## Step 1\nSome **bold**") shows rendered Markdown in the terminal (written to the recording only, never typed into the shell); title("Text") = big heading + rule + pause. Call them at a shell prompt.
-Config: output shell prompt cols rows width height preset(readme|x|youtube|square) maxPause(idle compression) keys(key overlay; boolean or {limit, font, color, background, radius}, one chip by default) fps typingSpeed typingJitter seed playbackSpeed waitTimeout endPause quantize core cache font{family,size,lineHeight,letterSpacing} theme cursor{blink,period} padding margin marginFill borderRadius windowBar title loopOffset cast browser{url,width,height,fps,title,position:right|left|top|bottom|overlay,offset{x,y}}
+Config: output shell prompt cols rows width height requires(["bun","eza"] — fail fast before recording if a tool is missing) preset(readme|x|youtube|square) maxPause(idle compression) keys(key overlay; boolean or {limit, font, color, background, radius}, one chip by default) fps typingSpeed typingJitter seed playbackSpeed waitTimeout endPause quantize core cache font{family,size,lineHeight,letterSpacing} theme cursor{blink,period} title("auto" follows OSC titles) padding margin marginFill("transparent" allowed) shadow(true | {x,y,blur,color,opacity}; margin defaults to 40) watermark("text" | {text|image,position,opacity,size,color,margin}) borderRadius windowBar title loopOffset cast browser{url,width,height,fps,title,position:right|left|top|bottom|overlay,offset{x,y}}
 Browser pane (scripted mode): t.browser.goto(url) / waitFor(/text/) / click(sel) / reload() / evaluate(js); t.focus("browser"|"terminal") for overlay z-order. Composited into mp4/gif/png only. Start dev servers as `cmd </dev/null >/tmp/dev.log 2>&1 &` (logs would repaint over TUIs; stdin must be detached or the job stops).
 
 ## Writing robust scripts for TUIs
