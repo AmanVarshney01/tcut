@@ -108,20 +108,28 @@ function frameMarkup(frame: GridFrame, config: ResolvedConfig, g: Geometry): str
     // Text runs with identical style (and link); OSC 8 links become real <a> elements
     const spans: string[] = [];
     x = 0;
-    let run: { x: number; text: string; style: string; link: string | null } | null = null;
+    let run: { x: number; text: string; style: string; link: string | null; cols: number[]; single: boolean } | null = null;
     const flushRun = () => {
       if (!run || !run.text.trim()) return;
-      const span = `<tspan x="${num(run.x * g.cellW)}"${run.style}>${esc(run.text.replace(/\s+$/, ""))}</tspan>`;
+      const text = run.text.replace(/\s+$/, "");
+      // Fallback-font glyphs are not one cell wide; give every glyph its own x when the run has any non-ASCII
+      // and each cell is a single code point (an x list addresses code points, so clusters would misalign).
+      const pinned = run.single && /[^\x20-\x7e]/.test(text);
+      const xAttr = pinned ? run.cols.slice(0, [...text].length).map((c) => num(c * g.cellW)).join(" ") : num(run.x * g.cellW);
+      const span = `<tspan x="${xAttr}"${run.style}>${esc(text)}</tspan>`;
       spans.push(run.link ? `<a href="${esc(run.link)}">${span}</a>` : span);
     };
     for (const cell of cells) {
       const blank = cell.text === " " && !(cell.flags & (FLAG.underline | FLAG.strike));
       const style = blank ? "" : styleAttrs(cell, theme.foreground);
+      const single = [...cell.text].length === 1;
       if (run && ((run.style === style && run.link === cell.link) || (blank && run.text.length > 0 && run.link === null))) {
         run.text += cell.text;
+        run.cols.push(x);
+        run.single &&= single;
       } else {
         flushRun();
-        run = blank ? null : { x, text: cell.text, style, link: cell.link };
+        run = blank ? null : { x, text: cell.text, style, link: cell.link, cols: [x], single };
       }
       x += cell.width;
     }

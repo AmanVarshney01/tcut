@@ -65,6 +65,7 @@ tcut themes
 - Type: `run(cmd)` · `type(text)` · `paste(text)` · `enter()` `tab()` `backspace()` `escape()` `space()` `up()` `down()` `left()` `right()` `home()` `end()` `pageUp()` `pageDown()` (all take a count) · `ctrl("c")` · `alt("b")` · `shift("tab")` · `scrollUp(n)` `scrollDown(n)` (mouse wheel; needs a program with mouse tracking) · `key("f5")` · `raw(bytes)`
 - Wait: `sleep("500ms")` · `wait(/re/, { scope: "line" | "screen" | "scrollback" })` — default waits for the prompt; `scrollback` also searches lines that scrolled off
 - Assert: `expect(/re/)` — throws with a screen dump; `expect(/re/, { scope: "scrollback" })` for output that is no longer visible
+- Glyphs stay on the grid: symbols the font lacks (progress-bar blocks, Nerd Font icons) are pinned to their cell in MP4/GIF/HTML and positioned per glyph in SVG, so a status bar never shifts when an animation swaps them.
 - Fidelity: arrows/home/end switch to the SS3 form when the program turned on application cursor mode (vim, less, fzf); `paste()` uses bracketed paste when the program enabled it (readline, zsh, editors), so autoindent doesn't stair-step; Markdown links in `print()` captions become real OSC 8 hyperlinks
 - Shape the video: `hide(async () => …)` cuts a section · `snapshot("x.png")` · `marker("name")` · `resize(cols, rows)` · `clear()`
 - Zoom: `zoom({ rows: [a, b], cols: [a, b], duration: "400ms", padding: 1 })` magnifies a region (animated on the render clock); `zoom(null)` resets.

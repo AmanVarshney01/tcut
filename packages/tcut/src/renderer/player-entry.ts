@@ -1,5 +1,6 @@
 // Browser-side player for `.html` exports. Uses wterm's lite core (inline WASM) so the file is self-contained.
 import { WasmBridge } from "@wterm/core";
+import { pinGlyphs } from "./pin";
 import { WTerm } from "@wterm/dom";
 import { extractTitle } from "../osc";
 
@@ -74,6 +75,7 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
     elapsed += ((now - last) / 1000) * data.speed;
     last = now;
     applyUntil(elapsed);
+    pinGlyphs(el);
     if (elapsed >= data.duration) {
       if (loopBox.checked) {
         reset();

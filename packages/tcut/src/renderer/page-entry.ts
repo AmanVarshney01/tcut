@@ -4,6 +4,7 @@ import { WasmBridge, type TerminalCore } from "@wterm/core";
 import { WTerm } from "@wterm/dom";
 import { GhosttyCore } from "@wterm/ghostty";
 import type { CellSize } from "../config";
+import { pinGlyphs } from "./pin";
 
 declare global {
   interface Window {
@@ -54,6 +55,8 @@ const api = {
     await term.init();
     el.classList.add("focused");
     if (document.fonts?.ready) await document.fonts.ready;
+    await paint();
+    pinGlyphs(el);
     await paint();
     return true;
   },
@@ -165,6 +168,8 @@ const api = {
         if (c! > 0 && r! > 0) term!.resize(c!, r!);
       }
     }
+    await paint(); // wterm has rendered the rows
+    pinGlyphs(document.getElementById("term")!);
     await paint();
     return true;
   },
@@ -172,6 +177,8 @@ const api = {
   /** Fetch raw text from `url` and write it to the terminal (used for theme OSC sequences). */
   async writeUrl(url: string): Promise<boolean> {
     term!.write(await (await fetch(url)).text());
+    await paint();
+    pinGlyphs(document.getElementById("term")!);
     await paint();
     return true;
   },

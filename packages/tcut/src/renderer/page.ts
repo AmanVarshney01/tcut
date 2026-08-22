@@ -1,4 +1,5 @@
 import type { ResolvedConfig, Theme } from "../types";
+import { PIN_CSS } from "./pin";
 
 const BAR_HEIGHT = 36;
 /** Gap between the terminal window and the browser window. */
@@ -233,10 +234,12 @@ export function renderHtml(config: ResolvedConfig): string {
     --term-line-height: ${font.lineHeight};
     --term-row-height: ${Math.ceil(font.size * font.lineHeight)}px;
     letter-spacing: ${font.letterSpacing}px;
+    --vt-letter-spacing: ${font.letterSpacing}px;
     padding: 0; border-radius: 0; box-shadow: none; background: transparent;
     overflow: hidden;
   }
   #term .term-row { overflow: hidden; }
+  ${PIN_CSS}
   /* Key overlay: chips for recent key presses, driven by the renderer on the render clock. */
   #keys {
     position: absolute; left: 0; right: 0; ${config.keys?.position === "top" ? "top" : "bottom"}: ${Math.max(10, config.padding - 6)}px;
