@@ -56,7 +56,7 @@ const examples = [
 const vhs = [
   ["Scripts are TypeScript", "loops, imports, shared scenes, autocomplete — instead of a .tape DSL."],
   ["Waits on the screen", "run() returns when your prompt is back; VHS sleeps for a guessed duration."],
-  ["Record once, render forever", "a new theme, size or format never re-runs the shell. VHS screenshots Chrome live, so output depends on machine speed."],
+  ["Rendering never re-runs the shell", "a new theme, size or format is computed from the recording. VHS screenshots Chrome live, so output depends on machine speed."],
   ["Demos are tests", "expect() asserts on the screen; tcut test runs them in CI."],
   ["Same emulator as your terminal", "Ghostty's core in WASM, 607 of its themes, plus SVG and HTML outputs that need no ffmpeg or browser."],
 ];
@@ -126,7 +126,7 @@ const vhs = [
           </div>
           <div>
             <h3 class="font-mono text-[0.95rem] font-medium">Scripted</h3>
-            <p class="mt-2 text-ink-2">Plain TypeScript. Loops, helpers and imports all work. Save it, run it, commit it.</p>
+            <p class="mt-2 text-ink-2">Plain TypeScript: loops, helpers and imports work, and the script lives in the repo next to the code it shows.</p>
             <div class="mt-4"><Code code={`tcut demo.video.ts`} lang="sh" theme="catppuccin-mocha" /></div>
           </div>
         </div>

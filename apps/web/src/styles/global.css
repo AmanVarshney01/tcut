@@ -123,27 +123,12 @@ h2 {
   content: "–";
   position: absolute;
   left: 0;
-  color: var(--color-amber-deep);
+  color: var(--color-ink-3);
 }
 
 .steps {
   list-style: none;
   padding: 0;
-  counter-reset: step;
-}
-.steps li {
-  position: relative;
-  padding-left: 2rem;
-}
-.steps li::before {
-  counter-increment: step;
-  content: counter(step);
-  position: absolute;
-  left: 0;
-  top: 0.05em;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  color: var(--color-amber-deep);
 }
 
 code,

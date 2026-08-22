@@ -14,8 +14,8 @@ const rec = await readCast(cast);
 const base = rec.header.bunVideo;
 if (!base) throw new Error("demo.cast has no embedded tcut config; re-record with examples/readme.ts");
 
-// 1. Animated SVG + final-frame PNG, same chrome as the README demo.
-await renderOutputs(rec, { ...base, output: [path.join(assets, "demo.svg"), path.join(assets, "demo.png")] });
+// 1. Animated SVG + final-frame PNG. No window bar on the site: the terminal, nothing pretending to be a Mac.
+await renderOutputs(rec, { ...base, windowBar: "none", title: "", output: [path.join(assets, "demo.svg"), path.join(assets, "demo.png")] });
 
 // 2. Film strip: one frame per second, plain (no margin/bar) so the strip reads as frames.
 const framesDir = path.join(web, ".media-frames") + "/";
