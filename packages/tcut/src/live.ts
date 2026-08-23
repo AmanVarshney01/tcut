@@ -108,7 +108,9 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
 
   try {
     await Promise.race([exitedPromise, proc.exited]);
-    push("m", MARKER.end);
+    // Hold the final screen for `endPause`, like a scripted recording does — otherwise a command that exits in
+    // 20 ms (`tcut rec -- ls`) becomes a three-frame video. The timeline is virtual: stamp it, don't sleep.
+    events.push([Number((stamp() + config.endPause / 1000).toFixed(6)), "m", MARKER.end]);
   } finally {
     await browser?.stop();
     const emitter: NodeJS.EventEmitter = process; // @types/bun's process.off() lacks the signal overload; the generic emitter has it

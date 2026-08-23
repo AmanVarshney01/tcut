@@ -31,6 +31,20 @@ describe("live recording", () => {
     expect(rec.header.duration ?? 0).toBeGreaterThan(0.15);
   });
 
+  test("a command that exits at once still holds its final screen for endPause", async () => {
+    const rec = await recordLive(resolveConfig({ output: `${dir}/fast.mp4`, endPause: "1.5s" }), {
+      command: ["bash", "-c", "echo quick"],
+      cols: 40,
+      rows: 10,
+      stdin: null,
+      stdout: { write: () => {} },
+    });
+    const end = rec.events.at(-1)!;
+    expect(end[2]).toBe("end");
+    expect(end[0]).toBeGreaterThanOrEqual(1.5);
+    expect(rec.header.duration).toBe(end[0]);
+  });
+
   test("tcut rec -- <command> writes a cast and renders", async () => {
     await rm(dir, { recursive: true, force: true });
     await mkdir(dir, { recursive: true });
