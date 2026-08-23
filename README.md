@@ -1,38 +1,43 @@
 # tcut
 
-Turn a terminal session into a video. Record it live or script it in TypeScript; render to MP4, GIF, SVG, HTML — identical every time.
+Terminal videos, written in TypeScript. Record a session live or script it, then render it to MP4, GIF, WebM, SVG or HTML — the same recording gives the same pixels every time.
 
 ![tcut demo](https://raw.githubusercontent.com/AmanVarshney01/tcut/main/packages/tcut/docs/demo.gif)
+
+[tcut.amanv.dev](https://tcut.amanv.dev) · [Reference](https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md) · [Examples](https://github.com/AmanVarshney01/tcut/tree/main/packages/tcut/examples) · [llms.txt](https://tcut.amanv.dev/llms.txt)
 
 ## Install
 
 ```sh
-bun add -g termcut     # Bun ≥ 1.4 · installs the `tcut` command
+bun add -g termcut        # Bun ≥ 1.4 · installs the `tcut` command
 ```
 
-Standalone binaries for macOS, Linux and Windows (all tested in CI): [Releases](https://github.com/AmanVarshney01/tcut/releases). MP4/GIF need `ffmpeg`; SVG/HTML don't. Linux and Windows render pixels through Chrome/Chromium.
+Or a standalone binary for macOS, Linux or Windows from [Releases](https://github.com/AmanVarshney01/tcut/releases) — all three are tested in CI.
 
-## Use
+- MP4, GIF, WebM, WebP need `ffmpeg` on the PATH. SVG, HTML and text outputs need nothing.
+- Linux and Windows render pixels through Chrome or Chromium (`BUN_CHROME_PATH` to point at one).
 
-Record what you do:
+## Record
+
+**Live.** A clean shell opens; type; `exit`. You get the video, the exact recording (`demo.cast`) and an editable script of what you typed (`demo.video.ts`).
 
 ```sh
-tcut rec -o demo.gif                    # opens a shell, records until you `exit`
-tcut rec -o demo.mp4 -- npm create vite # or just one command
+tcut rec -o demo.gif
+tcut rec -o demo.mp4 -- npm create vite     # one command, ends when it exits
 ```
 
-You get `demo.gif`, the exact recording (`demo.cast`) and an editable script (`demo.video.ts`) of what you typed.
-
-Or script it:
+**Scripted.** Plain TypeScript, so loops, helpers and imports work, and the script lives in the repo next to the code it shows.
 
 ```ts
 // demo.video.ts
 import { defineVideo } from "tcut";
 
-export default defineVideo({ output: "demo.gif" }, async (t) => {
-  await t.run("bun --version");     // type, Enter, wait for the prompt
-  await t.expect(/1\.\d+/);         // assert on the screen
-  await t.sleep("1s");
+export default defineVideo({ output: ["demo.mp4", "demo.gif"] }, async (t) => {
+  await t.run("bun --version");       // types it, presses Enter, waits for the prompt
+  await t.run("ls -la");
+  await t.expect(/package\.json/);    // asserts on the screen — the demo is a test
+  await t.snapshot("files.png");      // a still of this exact moment
+  await t.sleep("1.5s");
 });
 ```
 
@@ -40,7 +45,60 @@ export default defineVideo({ output: "demo.gif" }, async (t) => {
 tcut demo.video.ts
 ```
 
-Record a real browser next to (or over) the terminal, for dev-server demos:
+What a script can do, one line each:
+
+| | |
+|---|---|
+| `run(cmd)` | waits for your prompt to come back, not for a timer |
+| `wait(/re/)` · `expect(/re/)` | observe or assert the screen — including lines that already scrolled away (`{ scope: "scrollback" }`) |
+| `type` · `enter` · arrows · `ctrl("c")` · `key("f5")` | keys, sent the way the running program asked for them |
+| `hide(fn)` | runs setup off-camera; the state stays |
+| `snapshot("x.png" \| "x.svg")` | a pixel or vector still of that exact moment, written on every render |
+| `chapter(name)` | mp4 chapters, and cut points for `--chapters` / `--split-chapters` |
+| `print(markdown)` · `title(text)` | captions rendered into the terminal, nothing typed |
+| `zoom({ rows, cols })` | magnifies a region; `keys: true` shows what was pressed |
+| `timelapse(fn, { speed })` | fast-forwards an install or a build, not just the silence |
+| `browser` | a real browser window beside or over the terminal (below) |
+
+The full surface is in the [reference](https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md).
+
+## Render again
+
+Recording and rendering are separate. A recording is an asciicast; frames are computed on a virtual clock. So a new theme, size or format never re-runs a shell — and cuts, joins and chapter splits happen on the recording, which is why they work for SVG as well as MP4.
+
+```sh
+tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg -o demo.html
+tcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4
+tcut render demo.cast --from 2s --to 10s --shadow --watermark "@you" -o clip.gif
+tcut render demo.cast --split-chapters --margin-fill transparent -o demo.webm
+tcut concat intro.cast demo.cast --gap 500ms -o launch.mp4
+tcut themes                                   # ~600 themes, Ghostty's collection
+```
+
+Outputs by extension: `.mp4` `.gif` `.webm` `.webp` · `.svg` (animated, real text) · `.html` (single-file player) · `.png` `.jpg` (final frame) · `.txt` (final screen) · `.log` (full transcript) · `dir/` (PNG frames).
+
+## Faithful to the terminal
+
+The emulator is Ghostty's core, so what tcut sees is what your terminal would show — and what it records is what the program actually received.
+
+- Arrow keys and pastes arrive exactly as the running program asked: application cursor mode, bracketed paste.
+- Links printed with OSC 8 — including Markdown links in `print()` captions — stay clickable in SVG and HTML.
+- Frames are never torn: synchronized-output blocks are captured whole.
+- Symbols the font lacks (progress blocks, Nerd Font icons) stay on their cell, so status bars never drift.
+- `tcut doctor demo.cast` explains what a recording used, and what cannot be rendered (inline images).
+
+## Test it
+
+```sh
+tcut test demo.video.ts        # runs the script with no delays — just the assertions
+tcut diff a.cast b.cast        # catches output changes between two recordings
+```
+
+`expect()` makes a demo a test. `tcut test` runs it fast, and exits non-zero when the screen does not match — so the same script that renders your README video can guard it in CI.
+
+## A browser next to the terminal
+
+For dev-server demos: the page is recorded on the same clock and composited beside or over the terminal.
 
 ```ts
 defineVideo({ output: "demo.mp4", browser: { position: "overlay" } }, async (t) => {
@@ -51,46 +109,43 @@ defineVideo({ output: "demo.mp4", browser: { position: "overlay" } }, async (t) 
 });
 ```
 
-Polish: `shadow: true`, `watermark: "© you"`, `marginFill: "transparent"` (real alpha in PNG/WebP/GIF/WebM/SVG), `title: "auto"` follows the title the program sets, `keys: true` shows key presses, `maxPause: "800ms"` cuts dead air, `t.timelapse(fn, { speed: 8 })` fast-forwards an install, `t.zoom({ rows: [0, 5] })` magnifies output, `t.chapter("Install")` adds mp4 chapters, `t.snapshot("hero.png")` (or `.svg`) saves a still of that exact moment on every render, `preset: "x"` sizes it for X.
-
-Faithful to the terminal: arrows switch to the form vim/less asked for, `t.paste()` uses bracketed paste (no autoindent stair-steps), synchronized-output repaints never show torn frames, and OSC 8 hyperlinks — including Markdown links in `t.print()` captions — stay clickable in SVG and HTML output.
-
-Test and inspect: `tcut diff a.cast b.cast` catches output changes in CI, `t.expect(/…/, { scope: "scrollback" })` checks output that scrolled away (`-o demo.log` writes the whole transcript), and `tcut doctor demo.cast` tells you what a recording used — and what can't be rendered (inline images).
-
-Cut and join without re-recording — on the cast, so every format works:
+## Share it
 
 ```sh
-tcut render demo.cast --from 2s --to 10s -o clip.gif     # a window of the video
-tcut render demo.cast --split-chapters -o demo.mp4       # one file per t.chapter()
-tcut concat intro.cast demo.cast --gap 500ms -o launch.mp4
-```
-
-Re-render any recording without re-running it — ~600 themes ([Ghostty's collection](https://github.com/mbadolato/iTerm2-Color-Schemes)), `tcut themes` lists them:
-
-```sh
-tcut render demo.cast --theme "Gruvbox Dark" -o demo.svg
-```
-
-Share it:
-
-```sh
-tcut publish --setup        # once: your S3-compatible bucket (RustFS, MinIO, R2, S3)
+tcut publish --setup        # once: your own S3-compatible bucket (RustFS, MinIO, R2, S3)
 tcut publish demo.gif       # → https://…/3f9a1c2b7d4e/demo.gif
 ```
 
-## Agents
+There is no hosted service; you bring the bucket.
+
+## For agents
 
 ```sh
-npx skills add AmanVarshney01/tcut   # tcut + tcut-remotion skills for Claude Code, Cursor, etc.
+npx skills add AmanVarshney01/tcut   # skills for Claude Code, Cursor, Codex, …
 ```
 
-Two skills: `tcut` (record terminal videos) and `tcut-remotion` (compose tcut footage into launch videos with [Remotion](https://remotion.dev)). Plus [llms.txt](https://tcut.amanv.dev/llms.txt) and `--json` everywhere.
+Two skills: `tcut` (record terminal videos) and `tcut-remotion` (compose tcut footage into a launch video with [Remotion](https://remotion.dev)). Every command has `--json`, exit codes and no prompts; [llms.txt](https://tcut.amanv.dev/llms.txt) is the condensed guide.
+
+## Compared with VHS
+
+[VHS](https://github.com/charmbracelet/vhs) is the reference point and the inspiration. Where tcut differs:
+
+- **Scripts are TypeScript** — loops, imports, shared scenes, autocomplete — instead of a `.tape` DSL.
+- **Waits on the screen** — `run()` returns when your prompt is back; VHS sleeps for a guessed duration.
+- **Rendering never re-runs the shell** — a new theme, size or format is computed from the recording. VHS screenshots Chrome live, so output depends on machine speed.
+- **Demos are tests** — `expect()` asserts on the screen; `tcut test` runs them in CI.
+- **Same emulator as your terminal** — Ghostty's core in WASM, its themes, plus SVG and HTML outputs that need no ffmpeg or browser.
+
+## How it works
+
+1. **Record.** `Bun.Terminal` runs your shell in a PTY. Every byte is timestamped into a `.cast`.
+2. **Watch.** The same bytes feed a headless [Ghostty](https://ghostty.org) (via [wterm](https://github.com/vercel-labs/wterm)). That is how `run()` knows the prompt is back and `expect()` sees what you see.
+3. **Render.** The cast replays into the same terminal inside `Bun.WebView`, one frame per tick, straight to ffmpeg. SVG and HTML are built from the terminal grid, no browser involved.
 
 ## More
 
-- [Examples](https://github.com/AmanVarshney01/tcut/tree/main/packages/tcut/examples) — driving an interactive TUI, recording Claude Code / Codex
+- [Examples](https://github.com/AmanVarshney01/tcut/tree/main/packages/tcut/examples) — driving an interactive TUI, recording Claude Code and Codex
 - [Reference](https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md) — every CLI flag and script option
-- [llms.txt](https://tcut.amanv.dev/llms.txt) — the same, condensed for coding agents (`--json` gives machine-readable results)
 - [tcut.amanv.dev](https://tcut.amanv.dev)
 
 MIT
