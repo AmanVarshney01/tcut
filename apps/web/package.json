@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
-    "build": "cp ../../packages/tcut/docs/llms.txt public/llms.txt && cp ../../README.md public/index.md && astro build",
+    "sync:docs": "cp ../../packages/tcut/docs/llms.txt public/llms.txt && cp ../../README.md public/index.md",
+    "dev": "bun run sync:docs && astro dev",
+    "build": "bun run sync:docs && astro build",
     "typecheck": "astro check",
     "preview": "astro preview",
     "media": "bun scripts/media.ts",

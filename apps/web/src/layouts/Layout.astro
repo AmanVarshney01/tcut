@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import pkg from "../../../../packages/tcut/package.json";
 
 interface Props {
   title?: string;
@@ -25,7 +26,7 @@ const jsonLd = {
   url: canonical,
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS, Linux, Windows",
-  softwareVersion: "1.0.1",
+  softwareVersion: pkg.version,
   license: "https://opensource.org/licenses/MIT",
   isAccessibleForFree: true,
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

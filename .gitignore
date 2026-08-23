@@ -77,5 +77,6 @@ packages/tcut/src/renderer/generated/
 out/
 dist/
 
-# built at site build time from README.md
+# copied at site build time (sync:docs) from README.md and packages/tcut/docs/llms.txt
 apps/web/public/index.md
+apps/web/public/llms.txt

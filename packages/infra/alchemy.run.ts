@@ -26,7 +26,12 @@ export default Alchemy.Stack(
         // A small Worker in front of the assets: first-party Umami proxy, markdown content negotiation,
         // /sitemap.xml alias, markdown 404s. It runs on every request and delegates to ASSETS.
         main: path.resolve(import.meta.dir, "../../apps/web/src/worker.ts"),
-        assets: { notFoundHandling: "404-page", runWorkerFirst: true },
+        // The Worker runs only where it has a job; hashed assets and media are served by the asset layer directly.
+        // Paths with no asset still reach the Worker (for the markdown 404).
+        assets: { notFoundHandling: "404-page", runWorkerFirst: ["/", "/index.html", "/s.js", "/api/*", "/sitemap.xml"] },
+        // The build copies README.md and llms.txt from sibling packages: hash them too, or the build is skipped
+        // when only they change and the deploy ships stale markdown.
+        memo: { include: ["**/*", "../../README.md", "../../packages/tcut/docs/llms.txt", "../../packages/tcut/package.json"], lockfile: true },
         domain: stack.stage === "production" ? PRODUCTION_DOMAIN : undefined,
         dev: {
           command: "bun run dev",

@@ -9,7 +9,6 @@ interface Env {
 }
 
 const UMAMI = "https://umami.amanv.cloud";
-const ORIGIN = "https://tcut.amanv.dev";
 
 const wantsMarkdown = (request: Request): boolean => {
   const accept = request.headers.get("accept") ?? "";
@@ -31,13 +30,13 @@ const withVary = (response: Response): Response => {
 const markdown = (body: string, status = 200, extra: HeadersInit = {}): Response =>
   new Response(body, { status, headers: { "content-type": "text/markdown; charset=utf-8", vary: "Accept", ...extra } });
 
-const NOT_FOUND_MD = `# Not found
+const notFoundMarkdown = (origin: string): string => `# Not found
 
 Nothing lives at this path. Where to look instead:
 
-- Home: ${ORIGIN}/ (send \`Accept: text/markdown\` for the markdown version)
-- Agent guide: ${ORIGIN}/llms.txt
-- Sitemap: ${ORIGIN}/sitemap.xml
+- Home: ${origin}/ (send \`Accept: text/markdown\` for the markdown version)
+- Agent guide: ${origin}/llms.txt
+- Sitemap: ${origin}/sitemap.xml
 - Reference: https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md
 `;
 
@@ -79,7 +78,7 @@ export default {
     }
 
     const response = await env.ASSETS.fetch(request);
-    if (response.status === 404 && md) return markdown(NOT_FOUND_MD, 404);
+    if (response.status === 404 && md) return markdown(notFoundMarkdown(url.origin), 404);
     const type = response.headers.get("content-type") ?? "";
     return type.includes("text/html") ? withVary(response) : response;
   },
