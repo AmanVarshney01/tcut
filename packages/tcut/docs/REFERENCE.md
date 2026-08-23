@@ -6,7 +6,7 @@ Full options for the CLI and the script API. For getting started see the [README
 
 ```
 tcut <script.ts>                  record + render
-tcut rec [-- command…]            record a live session, then render
+tcut rec [-- command…]            record a live session, then render; `-- command` runs through the shell you typed it in (aliases, functions, colours), `--raw` runs the binary bare
 tcut record <script.ts>           record only (.cast)
 tcut render <file.cast>           render a cast (tcut's or asciinema's)
 tcut test <paths…>                run scripts as tests

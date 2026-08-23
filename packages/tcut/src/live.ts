@@ -24,6 +24,8 @@ export interface LiveOptions {
   /** Keystroke source (default: this process's stdin, switched to raw mode when it is a TTY). */
   stdin?: LiveStdin | null;
   log?: (message: string) => void;
+  /** How to name the command in status lines (defaults to the argv). */
+  describe?: string;
 }
 
 /**
@@ -104,7 +106,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
     stdin.on("data", onData);
   }
   process.on("SIGWINCH", onResize);
-  log(`recording ${setup.cmd.join(" ")} at ${cols}×${rows} — ${opts.command ? "ends when the command exits" : "type exit to stop"}`);
+  log(`recording ${opts.describe ?? setup.cmd.join(" ")} at ${cols}×${rows} — ${opts.command ? "ends when the command exits" : "type exit to stop"}`);
 
   try {
     await Promise.race([exitedPromise, proc.exited]);

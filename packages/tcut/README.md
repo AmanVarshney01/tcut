@@ -26,6 +26,8 @@ tcut rec -o demo.gif
 tcut rec -o demo.mp4 -- npm create vite     # one command, ends when it exits
 ```
 
+`-- command` runs through the shell you typed it in, interactively — your aliases, functions and colours apply, so `tcut rec -- ls` records what *your* `ls` shows. `--raw` runs the binary directly.
+
 **Scripted.** Plain TypeScript, so loops, helpers and imports work, and the script lives in the repo next to the code it shows.
 
 ```ts

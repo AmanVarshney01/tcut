@@ -19,7 +19,7 @@ How an agent should call it: write a `<name>.video.ts` with `defineVideo`, run `
 - Add `--json` to get exactly one JSON document on stdout (results, or `{ "error": "...", "type": "WaitTimeoutError" | "ExpectationError" | ... }`). Progress/status lines are suppressed.
 - `-q` silences status lines without JSON. Status goes to stdout, errors to stderr (unless --json).
 - Recording is cached: re-running an unchanged script reuses its .cast; `--force` re-records.
-- `tcut rec` needs a TTY to pass keystrokes through; agents should prefer scripts or `tcut rec -- <command>` for non-interactive commands.
+- `tcut rec` needs a TTY to pass keystrokes through; agents should prefer scripts or `tcut rec -- <command>` for non-interactive commands. `-- <command>` runs through the user's interactive shell (aliases, functions, fish abbreviations, colours); `--raw` runs the binary directly.
 
 ## Commands
 tcut <script.ts> [-o out…] [--theme t] [--width px --height px] [--json]   record + render

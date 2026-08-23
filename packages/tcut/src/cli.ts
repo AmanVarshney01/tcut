@@ -6,6 +6,7 @@ import { readCast, writeCast } from "./cast";
 import { applyOverrides, resolveConfig } from "./config";
 import * as api from "./index";
 import { recordLive } from "./live";
+import { throughShell, userShell } from "./usershell";
 import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig, type Published } from "./publish";
 import { diffCasts, type DiffResult } from "./diff";
 import { diagnoseCast, formatDoctorReport, type DoctorReport } from "./doctor";
@@ -70,6 +71,7 @@ Options (override the script's config):
       --gap <dur>          concat: still time between parts
       --preset <name>      readme | x | youtube | square
       --browser <url>      rec: record a browser window too (--browser-position right|left|top|bottom|overlay)
+      --raw                rec: run the command directly instead of through your shell (no aliases/functions)
       --at <seconds>       diff: compare the screen at this time instead of the end
       --images <dir>       diff: also write a.png / b.png
       --cast <path>        where to read/write the .cast
@@ -130,6 +132,7 @@ const { values, positionals } = parseArgs({
     cast: { type: "string" },
     "record-only": { type: "boolean" },
     "no-script": { type: "boolean" },
+    raw: { type: "boolean" },
     force: { type: "boolean" },
     setup: { type: "boolean" },
     open: { type: "boolean" },
@@ -471,11 +474,15 @@ async function main(): Promise<void> {
       const rawOutputs = overrides.output ?? ["rec.mp4"];
       const outputs = Array.isArray(rawOutputs) ? rawOutputs : [rawOutputs];
       const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast });
-      const command = rest.length > 0 ? rest : undefined;
+      // `-- cmd` runs through the shell tcut was typed into (aliases, functions, colours), unless --raw.
+      const shell = rest.length > 0 && !values.raw ? userShell() : null;
+      const command = rest.length > 0 ? (shell ? throughShell(rest, shell) : rest) : undefined;
+      if (shell) log(dim(`  via ${shell.name} — your aliases and functions apply (--raw to run the binary directly)`));
       // Size: --cols/--rows if given, else derived from --width/--height, else the terminal tcut runs in.
       const sized = overrides.width !== undefined || overrides.height !== undefined;
       const recording = await recordLive(config, {
         command,
+        describe: rest.length > 0 ? rest.join(" ") : undefined,
         log,
         cols: overrides.cols ?? (sized ? config.cols : undefined),
         rows: overrides.rows ?? (sized ? config.rows : undefined),
