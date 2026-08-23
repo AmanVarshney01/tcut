@@ -70,6 +70,22 @@ describe("recorder", () => {
     expect(markers(rec.events)).toEqual(["screenshot:/tmp/tcut-test/still.svg", "screenshot:/tmp/tcut-test/shot.png", "chapter-1", "end"]);
   });
 
+  test('shell: "user" records in the user\'s own shell and run() waits for its prompt', async () => {
+    if (process.platform === "win32") return;
+    const saved = process.env.SHELL;
+    process.env.SHELL = "/bin/bash"; // under bun test the parent is bun, so $SHELL decides
+    try {
+      const rec = await record(resolveConfig({ ...base, shell: "user", promptPattern: /\$\s*$/ }), async (t) => {
+        await t.run("echo user-shell-$((40+2))");
+        await t.expect(/user-shell-42/);
+      });
+      expect(rec.header.bunVideo?.shell).toBe("user");
+    } finally {
+      if (saved === undefined) delete process.env.SHELL;
+      else process.env.SHELL = saved;
+    }
+  });
+
   test("programs that query the terminal get an answer", async () => {
     // Ask for Device Attributes and read the reply the shell receives on stdin.
     const rec = await record(resolveConfig({ ...base, waitTimeout: 5000 }), async (t) => {

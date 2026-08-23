@@ -6,7 +6,7 @@ Full options for the CLI and the script API. For getting started see the [README
 
 ```
 tcut <script.ts>                  record + render
-tcut rec [-- command…]            record a live session in the shell you typed it in (your prompt, config, aliases), then render; `--clean` opens a plain shell with a `>` prompt; `-- command` runs through that shell, `--raw` runs the binary bare
+tcut rec [-- command…]            record a live session in the shell you typed it in (your prompt, config, aliases), then render; `--clean` opens a plain `>` shell instead; `-- command` runs through your shell (aliases, functions, fish abbreviations), `--raw` runs the binary bare
 tcut record <script.ts>           record only (.cast)
 tcut render <file.cast>           render a cast (tcut's or asciinema's)
 tcut test <paths…>                run scripts as tests
@@ -40,8 +40,9 @@ tcut themes
 | | default | |
 |---|---|---|
 | `output` | — | string or array; extension picks the format |
-| `shell` | `"bash"` | `bash` · `zsh` · `fish` · `sh` · or a `string[]` command |
+| `shell` | `"bash"` | `bash` · `zsh` · `fish` · `sh` (clean shells with the configured prompt) · `"user"` (the shell tcut was launched from, interactive + login, with its config) · or a `string[]` command |
 | `prompt` | `"> "` | prompt of the clean shell; `run()` waits for it |
+| `promptPattern` | from `prompt` | regex `run()`/`wait()` match against the cursor line; for `shell: "user"` it defaults to `[❯>$%#»➜λ]\s*$` and `tcut rec` writes the one it detected (e.g. `/❯\s*$/`) into the generated script |
 | `cols` · `rows` · `fps` | 80 · 24 · 60 | |
 | `width` · `height` | — | video size in px; grid is derived and centred inside |
 | `loopOffset` | — | where GIF/WebP loops start: frames or `"50%"` |

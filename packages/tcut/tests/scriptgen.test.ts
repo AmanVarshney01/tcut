@@ -3,7 +3,8 @@ import { PassThrough } from "node:stream";
 import { resolveConfig } from "../src/config";
 import { recordLive } from "../src/live";
 import { record } from "../src/recorder";
-import { eventsToOps, generateScript, stripTerminalReplies, tokenize } from "../src/scriptgen";
+import { eventsToOps, generateScript, tokenize } from "../src/scriptgen";
+import { stripTerminalReplies } from "../src/replies";
 import type { Recording, Script } from "../src/types";
 
 const rec = (inputs: Array<[number, string]>): Recording => ({
@@ -13,7 +14,7 @@ const rec = (inputs: Array<[number, string]>): Recording => ({
 
 describe("terminal replies", () => {
   test("answers to the program's queries are not keystrokes", () => {
-    const replies = "\x1b[?1;2c\x1b[?0u\x1b]11;rgb:1e1e/1e1e/2e2e\x1b\\\x1bP1+r696e646e\x1b\\\x1b[24;1R";
+    const replies = "\x1b[?1;2c\x1b[?0u\x1b]11;rgb:1e1e/1e1e/2e2e\x1b\\\x1bP1+r696e646e\x1b\\\x1b[24;80R";
     expect(stripTerminalReplies(`${replies}ls\r`)).toBe("ls\r");
     const ops = eventsToOps(rec([[0.1, replies], [0.5, "ls\r"]]), { output: ["x.mp4"], cleanShell: true });
     expect(ops.filter((o) => o.kind === "raw")).toHaveLength(0);
@@ -100,6 +101,17 @@ describe("generateScript", () => {
     const src = generateScript(rec([[0, "\r"]]), { output: ["x.mp4"], cleanShell: false, command: ["bash", "-c", "echo x"] });
     expect(src).toContain('shell: ["bash","-c","echo x"]');
     expect(src).toContain("await t.enter();");
+  });
+
+  test("a session in the user's own shell keeps run(), names the shell portably and waits for the detected prompt", () => {
+    const recording = rec([[0.5, "ls\r"], [1.0, "exit\r"]]);
+    recording.header.bunVideo = resolveConfig({ output: "x.mp4", shell: "user" });
+    const src = generateScript(recording, { output: ["x.mp4"], cleanShell: true, promptPattern: "❯\\s*$" });
+    expect(src).toContain('shell: "user"');
+    expect(src).toContain("promptPattern: /❯\\s*$/");
+    expect(src).toContain('await t.run("ls");');
+    expect(src).not.toContain("exit"); // the recorder ends the shell itself
+    expect(src).not.toMatch(/\/opt\/|\/bin\//); // nothing machine-specific
   });
 
   test("round trip: live session → script → re-recorded with the scripted recorder", async () => {

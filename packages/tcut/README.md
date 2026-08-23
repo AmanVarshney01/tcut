@@ -19,14 +19,14 @@ Or a standalone binary for macOS, Linux or Windows from [Releases](https://githu
 
 ## Record
 
-**Live.** Your shell opens — your prompt, config and aliases; type; `exit`. You get the video, the exact recording (`demo.cast`) and an editable script of what you typed (`demo.video.ts`). `--clean` opens a plain shell with a `>` prompt instead.
+**Live.** Your own shell opens — prompt, config, aliases; type; `exit`. You get the video, the exact recording (`demo.cast`) and an editable script of what you typed (`demo.video.ts`): it reopens your shell (`shell: "user"`), waits for your prompt (`promptPattern`, detected from the recording) and replays the commands as `run()` calls. `--clean` opens a plain shell with a `>` prompt instead.
 
 ```sh
 tcut rec -o demo.gif
 tcut rec -o demo.mp4 -- npm create vite     # one command, ends when it exits
 ```
 
-`-- command` runs through that same shell, so `tcut rec -- ls` records what *your* `ls` shows — aliases, functions and colours included. `--raw` runs the binary directly.
+`-- command` runs through that same shell, so `tcut rec -- ls` records what *your* `ls` shows — aliases, functions, fish abbreviations and colours included. `--raw` runs the binary directly.
 
 **Scripted.** Plain TypeScript, so loops, helpers and imports work, and the script lives in the repo next to the code it shows.
 

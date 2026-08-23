@@ -1,4 +1,5 @@
 import path from "node:path";
+import { stripTerminalReplies } from "./replies";
 import { keySequence } from "./keys";
 import type { Recording } from "./types";
 
@@ -9,6 +10,8 @@ export interface ScriptGenOptions {
   cleanShell: boolean;
   /** The command that was recorded in `-- command` mode (becomes `shell: [...]`). */
   command?: string[];
+  /** Regex source `run()` should wait for — detected from the user's prompt when their own shell was recorded. */
+  promptPattern?: string;
   /** Gaps between keystrokes longer than this become `sleep()` calls. Default 400 ms. */
   pauseThresholdMs?: number;
   /** Where the cast lives, for the header comment. */
@@ -128,24 +131,6 @@ function formatMs(ms: number): string {
 
 const q = (s: string) => JSON.stringify(s);
 
-/**
- * Answers the terminal sent to the program's queries (device attributes, kitty keyboard, colours via OSC,
- * XTGETTCAP via DCS, cursor position). They arrive on stdin and get recorded as input, but they are not
- * keystrokes: when a script replays, tcut answers the queries itself.
- */
-const ESC = String.fromCharCode(0x1b);
-const BEL = String.fromCharCode(0x07);
-const TERMINAL_REPLIES = new RegExp(
-  [
-    `${ESC}\\[\\?[\\d;]*[cu]`, // primary DA, kitty keyboard flags
-    `${ESC}\\[>[\\d;]*c`, // secondary DA
-    `${ESC}\\][\\d;]*[^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\)`, // OSC (colour queries)
-    `${ESC}P[^${ESC}]*${ESC}\\\\`, // DCS (XTGETTCAP)
-    `${ESC}\\[\\d+;\\d+R`, // cursor position report
-  ].join("|"),
-  "g",
-);
-export const stripTerminalReplies = (input: string): string => input.replace(TERMINAL_REPLIES, "");
 
 /** Turn the `i` (input) events of a recording into a list of script operations. */
 export function eventsToOps(rec: Recording, opts: ScriptGenOptions): Op[] {
@@ -259,6 +244,7 @@ export function generateScript(rec: Recording, opts: ScriptGenOptions): string {
   const config: string[] = [`output: ${JSON.stringify(opts.output)}`];
   if (opts.command) config.push(`shell: ${JSON.stringify(opts.command)}`);
   else if (cfg && cfg.shell !== "bash") config.push(`shell: ${JSON.stringify(cfg.shell)}`);
+  if (opts.promptPattern) config.push(`promptPattern: /${opts.promptPattern.replace(/\//g, "\\/")}/`);
   config.push(`cols: ${rec.header.width}`, `rows: ${rec.header.height}`);
   if (cfg) {
     if (cfg.theme?.name) config.push(`theme: ${q(cfg.theme.name)}`);
@@ -271,7 +257,9 @@ export function generateScript(rec: Recording, opts: ScriptGenOptions): string {
   const castNote = opts.castPath ? ` The exact recording is in ${path.basename(opts.castPath)}.` : "";
   const modeNote = opts.command
     ? "It opens the same program and replays your keys; waits are the pauses you took, so adjust them if it is slower elsewhere."
-    : "Typed commands became run(), which waits for the prompt instead of guessing.";
+    : cfg?.shell === "user"
+      ? "It opens your own shell; typed commands became run(), which waits for your prompt (promptPattern) instead of guessing."
+      : "Typed commands became run(), which waits for the prompt instead of guessing.";
 
   return `import { defineVideo } from "tcut";
 

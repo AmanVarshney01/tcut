@@ -1,4 +1,5 @@
 import { MarkdownRenderer } from "@wterm/markdown";
+import { userShell } from "./usershell";
 import { startBrowserCapture, type BrowserCapture } from "./browser";
 import { MARKER } from "./cast";
 import { toMs } from "./duration";
@@ -45,6 +46,13 @@ export function shellSetup(config: ResolvedConfig): ShellSetup {
   const { shell, prompt } = config;
   if (Array.isArray(shell)) return { cmd: shell, env: {} };
   switch (shell) {
+    case "user": {
+      // The user's own shell, interactive + login, so its config, prompt and aliases apply. No known shell
+      // (Windows, or tcut launched from something that is not bash/zsh/fish) → the clean bash below.
+      const own = userShell();
+      if (own) return { cmd: [own.path, "-il"], env: {} };
+      return shellSetup({ ...config, shell: "bash" });
+    }
     case "bash":
       return {
         cmd: ["bash", "--norc", "--noprofile"],

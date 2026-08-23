@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { parseCast } from "../src/cast";
 import { resolveConfig } from "../src/config";
 import { recordLive } from "../src/live";
@@ -43,6 +44,24 @@ describe("live recording", () => {
     expect(end[2]).toBe("end");
     expect(end[0]).toBeGreaterThanOrEqual(1.5);
     expect(rec.header.duration).toBe(end[0]);
+  });
+
+  test("the terminal's answers to queries are not recorded as keystrokes", async () => {
+    const stdin = new PassThrough();
+    const live = recordLive(resolveConfig({ output: `${dir}/replies.mp4`, endPause: 0 }), {
+      command: ["bash", "-c", "printf '\\033[6n'; sleep 0.5; echo done"],
+      cols: 40,
+      rows: 10,
+      stdin,
+      stdout: { write: () => undefined },
+    });
+    await Bun.sleep(250);
+    stdin.write("\x1b[?1;2c\x1b]11;rgb:0000/0000/0000\x1b\\"); // DA + colour replies: never keys
+    stdin.write("\x1b[1;2R"); // the CPR the program asked for
+    stdin.write("k"); // a real key
+    const rec = await live;
+    const inputs = rec.events.filter((e) => e[1] === "i").map((e) => e[2]).join("");
+    expect(inputs).toBe("k");
   });
 
   test("tcut rec -- <command> writes a cast and renders", async () => {

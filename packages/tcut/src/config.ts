@@ -1,4 +1,5 @@
 import path from "node:path";
+import { USER_PROMPT_PATTERN } from "./promptguess";
 import { toMs } from "./duration";
 import { applyPreset } from "./presets";
 import { resolveTheme } from "./themes";
@@ -83,7 +84,7 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
     cast: config.cast ?? castDefault,
     shell: config.shell ?? "bash",
     prompt,
-    promptPattern: (config.promptPattern ?? defaultPromptPattern(prompt)).source,
+    promptPattern: (config.promptPattern ?? (config.shell === "user" ? new RegExp(USER_PROMPT_PATTERN) : defaultPromptPattern(prompt))).source,
     cwd: config.cwd ?? process.cwd(),
     env: config.env ?? {},
     cols: cols ?? 80,

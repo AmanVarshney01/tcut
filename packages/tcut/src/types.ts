@@ -29,7 +29,8 @@ export interface Theme {
  */
 export type ThemeName = "catppuccin-mocha" | "dracula" | "github-dark" | "tokyo-night" | "one-dark" | (string & {});
 
-export type ShellName = "bash" | "zsh" | "fish" | "sh";
+/** `user` is the shell tcut was launched from (interactive login, with its config); the others are clean shells with the configured prompt. */
+export type ShellName = "bash" | "zsh" | "fish" | "sh" | "user";
 /** Terminal emulator core: libghostty (full VT, answers queries) or wterm's lite Zig core (faster, fewer features). */
 export type CoreName = "ghostty" | "lite";
 export type WindowBar = "none" | "colorful" | "colorfulRight" | "rings" | "ringsRight";

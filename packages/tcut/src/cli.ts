@@ -6,6 +6,7 @@ import { readCast, writeCast } from "./cast";
 import { applyOverrides, resolveConfig } from "./config";
 import * as api from "./index";
 import { recordLive } from "./live";
+import { detectPromptPattern } from "./promptguess";
 import { throughShell, userShell } from "./usershell";
 import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig, type Published } from "./publish";
 import { diffCasts, type DiffResult } from "./diff";
@@ -71,8 +72,8 @@ Options (override the script's config):
       --gap <dur>          concat: still time between parts
       --preset <name>      readme | x | youtube | square
       --browser <url>      rec: record a browser window too (--browser-position right|left|top|bottom|overlay)
-      --raw                rec: run the command directly instead of through your shell (no aliases/functions)
-      --clean              rec: open tcut's clean shell (plain > prompt, no personal config) instead of yours
+      --clean              rec: a clean shell with a plain > prompt instead of your own (also: run -- command bare)
+      --raw                rec: run -- command as a bare binary, not through your shell (no aliases/functions)
       --at <seconds>       diff: compare the screen at this time instead of the end
       --images <dir>       diff: also write a.png / b.png
       --cast <path>        where to read/write the .cast
@@ -475,26 +476,28 @@ async function main(): Promise<void> {
       const overrides = overridesFromFlags();
       const rawOutputs = overrides.output ?? ["rec.mp4"];
       const outputs = Array.isArray(rawOutputs) ? rawOutputs : [rawOutputs];
-      const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast });
-      // The shell tcut was typed into: `-- cmd` runs through it (aliases, functions, colours) unless --raw;
-      // with no command it IS the session — your prompt and config — unless --clean or an explicit --shell.
-      const clean = Boolean(values.clean) || overrides.shell !== undefined;
-      const shell = (rest.length > 0 ? !values.raw : !clean) ? userShell() : null;
+      // The shell tcut was typed into is the session (your prompt, config, aliases) and what `-- cmd` runs
+      // through. --clean / --raw opt out: a plain shell with a `>` prompt, or the bare binary.
+      const shell = values.clean || values.raw ? null : userShell();
+      const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast, ...(rest.length === 0 && shell && { shell: "user" }) });
       let command: string[] | undefined;
-      let interactive = false;
+      let portable: string[] | undefined;
       if (rest.length > 0) {
-        command = shell ? throughShell(rest, shell) : rest;
-        if (shell) log(dim(`  via ${shell.name} — your aliases and functions apply (--raw to run the binary directly)`));
+        if (shell) {
+          const through = throughShell(rest, shell);
+          command = through.argv;
+          portable = through.portable;
+          log(dim(`  via ${shell.name} — your aliases and functions apply (--raw runs the binary directly)`));
+        } else {
+          command = rest;
+        }
       } else if (shell) {
-        command = [shell.path, "-il"];
-        interactive = true;
         log(dim(`  your ${shell.name}, with its config (--clean for a plain shell with a > prompt)`));
       }
       // Size: --cols/--rows if given, else derived from --width/--height, else the terminal tcut runs in.
       const sized = overrides.width !== undefined || overrides.height !== undefined;
       const recording = await recordLive(config, {
         command,
-        interactive,
         describe: rest.length > 0 ? rest.join(" ") : shell ? `your ${shell.name}` : undefined,
         log,
         cols: overrides.cols ?? (sized ? config.cols : undefined),
@@ -508,7 +511,9 @@ async function main(): Promise<void> {
       ok(`wrote ${config.cast}`, `${recording.events.length} events, ${(recording.header.duration ?? 0).toFixed(1)}s`);
       if (!values["no-script"]) {
         const scriptPath = config.cast.replace(/\.cast$/, "") + ".video.ts";
-        await Bun.write(scriptPath, generateScript(recording, { output: outputs, cleanShell: !command, command, castPath: config.cast }));
+        // A session in the user's own shell replays with run(): wait for whatever their prompt ends with.
+        const promptPattern = !command && config.shell === "user" ? ((await detectPromptPattern(recording, config.core)) ?? undefined) : undefined;
+        await Bun.write(scriptPath, generateScript(recording, { output: outputs, cleanShell: !command, command: portable ?? command, castPath: config.cast, promptPattern }));
         ok(`wrote ${scriptPath}`, "editable script — tweak it, then `tcut " + scriptPath + "`");
       }
       if (values["record-only"]) {
