@@ -3,12 +3,22 @@ import { PassThrough } from "node:stream";
 import { resolveConfig } from "../src/config";
 import { recordLive } from "../src/live";
 import { record } from "../src/recorder";
-import { eventsToOps, generateScript, tokenize } from "../src/scriptgen";
+import { eventsToOps, generateScript, stripTerminalReplies, tokenize } from "../src/scriptgen";
 import type { Recording, Script } from "../src/types";
 
 const rec = (inputs: Array<[number, string]>): Recording => ({
   header: { version: 2, width: 80, height: 24, bunVideo: resolveConfig({ output: "x.mp4" }) },
   events: inputs.map(([t, d]) => [t, "i", d] as const).map((e) => [e[0], e[1], e[2]]),
+});
+
+describe("terminal replies", () => {
+  test("answers to the program's queries are not keystrokes", () => {
+    const replies = "\x1b[?1;2c\x1b[?0u\x1b]11;rgb:1e1e/1e1e/2e2e\x1b\\\x1bP1+r696e646e\x1b\\\x1b[24;1R";
+    expect(stripTerminalReplies(`${replies}ls\r`)).toBe("ls\r");
+    const ops = eventsToOps(rec([[0.1, replies], [0.5, "ls\r"]]), { output: ["x.mp4"], cleanShell: true });
+    expect(ops.filter((o) => o.kind === "raw")).toHaveLength(0);
+    expect(ops.some((o) => o.kind === "run" && o.command === "ls")).toBe(true);
+  });
 });
 
 describe("tokenize", () => {

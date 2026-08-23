@@ -72,6 +72,7 @@ Options (override the script's config):
       --preset <name>      readme | x | youtube | square
       --browser <url>      rec: record a browser window too (--browser-position right|left|top|bottom|overlay)
       --raw                rec: run the command directly instead of through your shell (no aliases/functions)
+      --clean              rec: open tcut's clean shell (plain > prompt, no personal config) instead of yours
       --at <seconds>       diff: compare the screen at this time instead of the end
       --images <dir>       diff: also write a.png / b.png
       --cast <path>        where to read/write the .cast
@@ -133,6 +134,7 @@ const { values, positionals } = parseArgs({
     "record-only": { type: "boolean" },
     "no-script": { type: "boolean" },
     raw: { type: "boolean" },
+    clean: { type: "boolean" },
     force: { type: "boolean" },
     setup: { type: "boolean" },
     open: { type: "boolean" },
@@ -474,15 +476,26 @@ async function main(): Promise<void> {
       const rawOutputs = overrides.output ?? ["rec.mp4"];
       const outputs = Array.isArray(rawOutputs) ? rawOutputs : [rawOutputs];
       const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast });
-      // `-- cmd` runs through the shell tcut was typed into (aliases, functions, colours), unless --raw.
-      const shell = rest.length > 0 && !values.raw ? userShell() : null;
-      const command = rest.length > 0 ? (shell ? throughShell(rest, shell) : rest) : undefined;
-      if (shell) log(dim(`  via ${shell.name} — your aliases and functions apply (--raw to run the binary directly)`));
+      // The shell tcut was typed into: `-- cmd` runs through it (aliases, functions, colours) unless --raw;
+      // with no command it IS the session — your prompt and config — unless --clean or an explicit --shell.
+      const clean = Boolean(values.clean) || overrides.shell !== undefined;
+      const shell = (rest.length > 0 ? !values.raw : !clean) ? userShell() : null;
+      let command: string[] | undefined;
+      let interactive = false;
+      if (rest.length > 0) {
+        command = shell ? throughShell(rest, shell) : rest;
+        if (shell) log(dim(`  via ${shell.name} — your aliases and functions apply (--raw to run the binary directly)`));
+      } else if (shell) {
+        command = [shell.path, "-il"];
+        interactive = true;
+        log(dim(`  your ${shell.name}, with its config (--clean for a plain shell with a > prompt)`));
+      }
       // Size: --cols/--rows if given, else derived from --width/--height, else the terminal tcut runs in.
       const sized = overrides.width !== undefined || overrides.height !== undefined;
       const recording = await recordLive(config, {
         command,
-        describe: rest.length > 0 ? rest.join(" ") : undefined,
+        interactive,
+        describe: rest.length > 0 ? rest.join(" ") : shell ? `your ${shell.name}` : undefined,
         log,
         cols: overrides.cols ?? (sized ? config.cols : undefined),
         rows: overrides.rows ?? (sized ? config.rows : undefined),

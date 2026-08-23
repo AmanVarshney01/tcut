@@ -26,6 +26,8 @@ export interface LiveOptions {
   log?: (message: string) => void;
   /** How to name the command in status lines (defaults to the argv). */
   describe?: string;
+  /** The command is a shell the user types into (ends on `exit`), not a program that runs and exits. */
+  interactive?: boolean;
 }
 
 /**
@@ -106,7 +108,7 @@ export async function recordLive(config: ResolvedConfig, opts: LiveOptions = {})
     stdin.on("data", onData);
   }
   process.on("SIGWINCH", onResize);
-  log(`recording ${opts.describe ?? setup.cmd.join(" ")} at ${cols}×${rows} — ${opts.command ? "ends when the command exits" : "type exit to stop"}`);
+  log(`recording ${opts.describe ?? setup.cmd.join(" ")} at ${cols}×${rows} — ${opts.command && !opts.interactive ? "ends when the command exits" : "type exit to stop"}`);
 
   try {
     await Promise.race([exitedPromise, proc.exited]);

@@ -128,6 +128,25 @@ function formatMs(ms: number): string {
 
 const q = (s: string) => JSON.stringify(s);
 
+/**
+ * Answers the terminal sent to the program's queries (device attributes, kitty keyboard, colours via OSC,
+ * XTGETTCAP via DCS, cursor position). They arrive on stdin and get recorded as input, but they are not
+ * keystrokes: when a script replays, tcut answers the queries itself.
+ */
+const ESC = String.fromCharCode(0x1b);
+const BEL = String.fromCharCode(0x07);
+const TERMINAL_REPLIES = new RegExp(
+  [
+    `${ESC}\\[\\?[\\d;]*[cu]`, // primary DA, kitty keyboard flags
+    `${ESC}\\[>[\\d;]*c`, // secondary DA
+    `${ESC}\\][\\d;]*[^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\)`, // OSC (colour queries)
+    `${ESC}P[^${ESC}]*${ESC}\\\\`, // DCS (XTGETTCAP)
+    `${ESC}\\[\\d+;\\d+R`, // cursor position report
+  ].join("|"),
+  "g",
+);
+export const stripTerminalReplies = (input: string): string => input.replace(TERMINAL_REPLIES, "");
+
 /** Turn the `i` (input) events of a recording into a list of script operations. */
 export function eventsToOps(rec: Recording, opts: ScriptGenOptions): Op[] {
   const threshold = opts.pauseThresholdMs ?? 400;
@@ -163,7 +182,7 @@ export function eventsToOps(rec: Recording, opts: ScriptGenOptions): Op[] {
     }
     lastTime = time;
 
-    for (const token of tokenize(data)) {
+    for (const token of tokenize(stripTerminalReplies(data))) {
       if (token.length > 1 && token[0]! >= " ") {
         pendingText += token;
         continue;
@@ -251,7 +270,7 @@ export function generateScript(rec: Recording, opts: ScriptGenOptions): string {
   const body = ops.length ? ops.map((op) => `    ${opToLine(op)}`).join("\n") : "    // (no input was recorded)";
   const castNote = opts.castPath ? ` The exact recording is in ${path.basename(opts.castPath)}.` : "";
   const modeNote = opts.command
-    ? "It runs the same command and replays your keys; waits are the pauses you took, so adjust them if the program is slower elsewhere."
+    ? "It opens the same program and replays your keys; waits are the pauses you took, so adjust them if it is slower elsewhere."
     : "Typed commands became run(), which waits for the prompt instead of guessing.";
 
   return `import { defineVideo } from "tcut";
