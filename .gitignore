@@ -86,3 +86,5 @@ apps/web/src/assets/walkthrough/walkthrough.svg
 apps/web/public/sitemap.xml
 apps/web/dist-ssr
 apps/web/dist-dev
+apps/promo/out/
+.playwright-mcp/
