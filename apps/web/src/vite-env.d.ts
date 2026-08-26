@@ -5,3 +5,10 @@ declare module "*.md" {
   const Content: MDXContent;
   export default Content;
 }
+
+declare module "*.cast?raw" {
+  const text: string;
+  export default text;
+}
+
+declare module "@wterm/react/css";

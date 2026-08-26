@@ -4,9 +4,10 @@ import btsGif from "@/assets/examples/better-t-stack.gif";
 import claudeGif from "@/assets/examples/claude-code.gif";
 import lazygitGif from "@/assets/examples/lazygit.gif";
 import nvimGif from "@/assets/examples/nvim-hmr.gif";
-import demoSvg from "@/assets/demo.svg?raw";
+import demoCast from "@/assets/demo.cast?raw";
 import facts from "@/assets/facts.json";
 import promoPoster from "@/assets/promo-poster.jpg";
+import { CastPlayer } from "@/components/cast-player";
 import { Code } from "@/components/code";
 import { CopyCommand } from "@/components/copy-command";
 import { RenderSpotlight } from "@/components/spotlight";
@@ -20,6 +21,19 @@ const GITHUB = "https://github.com/AmanVarshney01/tcut";
 const NPM = "https://www.npmjs.com/package/termcut";
 const REFERENCE = `${GITHUB}/blob/main/packages/tcut/docs/REFERENCE.md`;
 const EXAMPLES = `${GITHUB}/tree/main/packages/tcut/examples`;
+
+/**
+ * `muted` is a property, not an attribute, in React's client renderer but an attribute in its server one — passing
+ * it as a prop makes hydration fail. Set it on the element, and autoplay the tour only where that is welcome.
+ */
+function tourVideo(el: HTMLVideoElement | null): void {
+  if (!el) return;
+  el.muted = true;
+  if (matchMedia("(min-width: 640px) and (prefers-reduced-motion: no-preference)").matches) {
+    el.autoplay = true;
+    el.play().catch(() => undefined);
+  }
+}
 
 const SnippetSchema = Block.extend({ rec: HighlightedCodeBlock, test: HighlightedCodeBlock, browser: HighlightedCodeBlock, vhs: HighlightedCodeBlock });
 
@@ -41,6 +55,7 @@ const faithful = [
   "Links printed with OSC 8 stay clickable in SVG and HTML.",
   "Frames are never torn: synchronized-output blocks are captured whole.",
   "Symbols the font lacks — progress blocks, Nerd Font icons — stay on their cell, so status bars never drift.",
+  "theme: \"auto\" and font: \"auto\" render with the colours and font of the terminal you record in — asked from the terminal itself — so the video looks like your terminal, not like a default. tcut rec does this by itself.",
   "tcut doctor demo.cast explains what a recording used, and what would not survive a GIF.",
 ];
 
@@ -80,7 +95,7 @@ function Page() {
         </section>
 
         <figure className="mt-10">
-          <video className="block w-full rounded-lg bg-desk-2" src="/promo.mp4" poster={promoPoster} width={1920} height={1080} controls muted loop playsInline preload="metadata" aria-label="tcut feature tour: scripted recording, themes, browser overlay, Claude Code, captions, zoom, CI" />
+          <video ref={tourVideo} className="block w-full rounded-lg bg-desk-2" src="/promo.mp4" poster={promoPoster} width={1920} height={1080} controls loop playsInline preload="metadata" aria-label="tcut feature tour: scripted recording, themes, browser overlay, Claude Code, captions, zoom, CI" />
           <figcaption className="mt-2.5 font-mono text-xs text-ink-3">75 s tour. Every clip is a tcut recording, composed in <a href="https://remotion.dev">Remotion</a> — a build artifact, not a screen grab.</figcaption>
         </figure>
 
@@ -104,7 +119,7 @@ function Page() {
           <h2>Or just record</h2>
           <div className="mt-6 grid gap-8 md:grid-cols-2">
             <div>
-              <p className="text-ink-2">Your own shell opens — prompt, config, aliases. Type, exit. You get the recording and a script of what you typed, with <code>run()</code> calls that wait for your prompt. <code>-- command</code> runs through your shell too, so <code>tcut rec -- ls</code> is <em>your</em> ls.</p>
+              <p className="text-ink-2">Your own shell opens — prompt, config, aliases, in your terminal's colours and font. Type, exit. You get the recording and a script of what you typed, with <code>run()</code> calls that wait for your prompt. <code>-- command</code> runs through your shell too, so <code>tcut rec -- ls</code> is <em>your</em> ls.</p>
             </div>
             <Code codeblock={snippets.rec} />
           </div>
@@ -118,8 +133,10 @@ function Page() {
         </section>
 
         <figure className="mt-14">
-          <div className="demo-svg overflow-hidden rounded-lg" dangerouslySetInnerHTML={{ __html: demoSvg }} />
-          <figcaption className="mt-2.5 font-mono text-xs text-ink-3">demo.svg, {Math.round(facts.svgBytes / 1024)} KB. Real text, not pixels: select it, copy it. tcut recording tcut, {facts.totalFrames} frames, {facts.uniqueFrames} unique.</figcaption>
+          <CastPlayer cast={demoCast} />
+          <figcaption className="mt-2.5 font-mono text-xs text-ink-3">
+            demo.cast, {Math.round(demoCast.length / 1024)} KB, played by a real terminal emulator (Ghostty's core in WASM) in this page — tcut recording tcut. Pause it and select the text. The same recording as <code>demo.svg</code> ({Math.round(facts.svgBytes / 1024)} KB, {facts.uniqueFrames} unique frames).
+          </figcaption>
         </figure>
 
         <section className="section">

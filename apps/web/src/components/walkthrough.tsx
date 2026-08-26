@@ -1,5 +1,6 @@
 import { Block, HighlightedCodeBlock, parseRoot } from "codehike/blocks";
-import { Selectable, Selection, SelectionProvider } from "codehike/utils/selection";
+import type { HighlightedCode } from "codehike/code";
+import { Selectable, SelectionProvider, useSelectedIndex } from "codehike/utils/selection";
 import { z } from "zod";
 import Content from "@/content/walkthrough.md";
 import step1 from "@/assets/walkthrough/step-1.svg?raw";
@@ -35,24 +36,31 @@ export function Walkthrough() {
       </div>
       <div className="hidden lg:block">
         <div className="sticky top-6 space-y-3">
-          <Selection
-            from={steps.map((step, i) => (
-              <div key={step.title} className="space-y-3">
-                <Code codeblock={step.code} handlers={["focus", "mark"]} className="max-h-[22rem]" />
-                <Frame svg={FRAMES[i] ?? ""} />
-              </div>
-            ))}
-          />
+          <StickyPane steps={steps} />
         </div>
       </div>
     </SelectionProvider>
   );
 }
 
+/** The code block is one element across steps, so tokens animate to their new place instead of being replaced. */
+function StickyPane({ steps }: { steps: Array<{ title?: string; code: HighlightedCode }> }) {
+  const [index] = useSelectedIndex();
+  const step = steps[index] ?? steps[0];
+  if (!step) return null;
+  return (
+    <div className="space-y-3">
+      <Code codeblock={step.code} handlers={["token-transitions", "focus", "mark"]} className="max-h-[22rem]" />
+      <Frame svg={FRAMES[index] ?? FRAMES[0] ?? ""} />
+    </div>
+  );
+}
+
 function Frame({ svg }: { svg: string }) {
   return (
     <figure className="frame overflow-hidden rounded-lg bg-mocha">
-      <div dangerouslySetInnerHTML={{ __html: svg }} />
+      {/* the browser normalises the SVG markup, so its innerHTML never equals the raw string byte for byte */}
+      <div dangerouslySetInnerHTML={{ __html: svg }} suppressHydrationWarning />
       <figcaption className="px-3 py-1.5 font-mono text-[0.7rem] text-[#6c7086]">the frame this step produced — real text, select it</figcaption>
     </figure>
   );

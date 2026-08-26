@@ -84,3 +84,5 @@ apps/web/public/llms.txt
 apps/web/src/assets/walkthrough/walkthrough.cast
 apps/web/src/assets/walkthrough/walkthrough.svg
 apps/web/public/sitemap.xml
+apps/web/dist-ssr
+apps/web/dist-dev

@@ -1,5 +1,6 @@
 import { type AnnotationHandler, getPreRef, type HighlightedCode, type InlineAnnotation, InnerLine, InnerPre, Pre } from "codehike/code";
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import { tokenTransitions } from "./token-transitions";
 
 /** `// !mark` — a line or token the text is talking about. */
 export const mark: AnnotationHandler = {
@@ -16,7 +17,7 @@ export const mark: AnnotationHandler = {
 const PreWithFocus: AnnotationHandler["PreWithRef"] = (props) => {
   const ref = getPreRef(props);
   const first = useRef(true);
-  useLayoutEffect(() => {
+  useEffect(() => {
     const pre = ref.current;
     if (!pre) return;
     const focused = pre.querySelectorAll<HTMLElement>("[data-focus=true]");
@@ -65,7 +66,7 @@ export const callout: AnnotationHandler = {
   },
 };
 
-const HANDLERS = { mark, focus, callout } as const;
+const HANDLERS = { mark, focus, callout, "token-transitions": tokenTransitions } as const;
 type HandlerName = keyof typeof HANDLERS;
 
 export interface CodeProps {

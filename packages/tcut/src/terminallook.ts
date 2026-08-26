@@ -74,16 +74,45 @@ const ANSI_NAMES = [
   "brightBlack", "brightRed", "brightGreen", "brightYellow", "brightBlue", "brightMagenta", "brightCyan", "brightWhite",
 ] as const;
 
+type AnsiName = (typeof ANSI_NAMES)[number];
+
+interface BaseColors {
+  background?: string;
+  foreground?: string;
+  cursor?: string;
+}
+
+/** A Theme from a colour lookup, or null when foreground, background or any of the 16 ANSI colours is missing. */
+function assembleTheme(base: BaseColors, ansi: (name: AnsiName) => string | undefined): Theme | null {
+  if (!base.background || !base.foreground) return null;
+  for (const name of ANSI_NAMES) if (!ansi(name)) return null;
+  const c = (name: AnsiName): string => ansi(name) ?? "";
+  return {
+    background: base.background,
+    foreground: base.foreground,
+    cursor: base.cursor,
+    black: c("black"),
+    red: c("red"),
+    green: c("green"),
+    yellow: c("yellow"),
+    blue: c("blue"),
+    magenta: c("magenta"),
+    cyan: c("cyan"),
+    white: c("white"),
+    brightBlack: c("brightBlack"),
+    brightRed: c("brightRed"),
+    brightGreen: c("brightGreen"),
+    brightYellow: c("brightYellow"),
+    brightBlue: c("brightBlue"),
+    brightMagenta: c("brightMagenta"),
+    brightCyan: c("brightCyan"),
+    brightWhite: c("brightWhite"),
+  };
+}
+
 /** A complete Theme from replies, or null when any of foreground, background or the 16 palette entries is missing. */
 export function themeFromReplies(r: OscReplies): Theme | null {
-  if (!r.foreground || !r.background) return null;
-  const colors: Partial<Record<(typeof ANSI_NAMES)[number], string>> = {};
-  for (const [i, name] of ANSI_NAMES.entries()) {
-    const c = r.palette.get(i);
-    if (!c) return null;
-    colors[name] = c;
-  }
-  return { background: r.background, foreground: r.foreground, cursor: r.cursor, ...(colors as Record<(typeof ANSI_NAMES)[number], string>) };
+  return assembleTheme(r, (name) => r.palette.get(ANSI_NAMES.indexOf(name)));
 }
 
 export const COLOR_QUERIES = [`${OSC}10;?${BEL}`, `${OSC}11;?${BEL}`, `${OSC}12;?${BEL}`, ...ANSI_NAMES.map((_, i) => `${OSC}4;${i};?${BEL}`), `${ESC}[c`].join("");
@@ -149,28 +178,23 @@ export function terminalProgram(env: Record<string, string | undefined> = proces
   return "unknown";
 }
 
+/** Font as a terminal config states it: family and point size, either may be absent. */
+interface FontHint {
+  family?: string;
+  size?: number;
+}
+
 interface ConfigLook {
-  font?: { family?: string; size?: number };
+  font?: FontHint;
   theme?: Theme;
 }
 
 const hexOrNull = (v: string | undefined): string | null => (v && /^#?[0-9a-f]{6}$/i.test(v.trim()) ? `#${v.trim().replace("#", "").toLowerCase()}` : null);
 
-type AnsiName = (typeof ANSI_NAMES)[number];
 /** Colours collected from a config file before we know whether they add up to a full theme. */
 type ThemeParts = Partial<Record<"background" | "foreground" | "cursor" | AnsiName, string | undefined>>;
 
-function themeFromParts(parts: ThemeParts): Theme | null {
-  const { background, foreground } = parts;
-  if (!background || !foreground) return null;
-  const colors: Partial<Record<(typeof ANSI_NAMES)[number], string>> = {};
-  for (const name of ANSI_NAMES) {
-    const c = parts[name];
-    if (!c) return null;
-    colors[name] = c;
-  }
-  return { background, foreground, cursor: parts.cursor, ...(colors as Record<(typeof ANSI_NAMES)[number], string>) };
-}
+const themeFromParts = (parts: ThemeParts): Theme | null => assembleTheme(parts, (name) => parts[name]);
 
 // Ghostty ----------------------------------------------------------------------------------------------------
 
@@ -187,7 +211,7 @@ export function ghosttyBinary(env: Record<string, string | undefined> = process.
 
 /** `ghostty +show-config` output: `key = value` lines; `font-family` may repeat (fallbacks), the first wins. */
 export function parseGhosttyConfig(text: string): ConfigLook {
-  const font: { family?: string; size?: number } = {};
+  const font: FontHint = {};
   const parts: ThemeParts = {};
   for (const raw of text.split("\n")) {
     const m = /^([a-z-]+)\s*=\s*(.*)$/.exec(raw.trim());
@@ -220,7 +244,7 @@ async function ghosttyLook(): Promise<ConfigLook | null> {
 
 /** kitty.conf: `key value` lines, `include other.conf` relative to the file. */
 export async function parseKittyConfig(file: string, depth = 0): Promise<ConfigLook> {
-  const font: { family?: string; size?: number } = {};
+  const font: FontHint = {};
   const parts: ThemeParts = {};
   const f = Bun.file(file);
   if (!(await f.exists())) return {};
@@ -315,7 +339,7 @@ export function parseITermPlist(plist: ITermPlist): ConfigLook {
   const profiles = plist["New Bookmarks"] ?? [];
   const profile = profiles.find((p) => p.Guid === plist["Default Bookmark Guid"]) ?? profiles[0];
   if (!profile) return {};
-  const font: { family?: string; size?: number } = {};
+  const font: FontHint = {};
   const fontSpec = /^(.*)\s+(\d+(?:\.\d+)?)$/.exec(profile["Normal Font"] ?? "");
   if (fontSpec) {
     font.family = familyFromPostScriptName(fontSpec[1]!);
