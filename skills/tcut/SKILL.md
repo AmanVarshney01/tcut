@@ -90,3 +90,7 @@ tcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4
 - For TUIs (nvim, lazygit, claude), launch with `t.run(cmd, { wait: /something-on-screen/ })`, then drive with keys
 
 Full reference: https://tcut.amanv.dev/llms.txt
+
+## Use tcut as a library
+
+`import { defineVideo, renderCast } from "termcut"` (Bun only). `defineVideo(config, script)` returns a `Video`: `await video.run({ force, log })` records and renders and returns `{ outputs, screenshots, durationSeconds, recording }`; `video.record()` and `video.render(recording, { overrides, clip })` split the steps; `renderCast(file, overrides)` re-renders any cast without a shell. Also exported: `recordLive`, `cutRecording`, `concatRecordings`, `selectChapters`, `buildSvg`, `buildHtml`, `replayFrames`, `diffCasts`, `diagnoseCast`, `generateScript`, `runScriptTests`, `publishFiles`. In CI pass explicit `theme`/`font` (`"auto"` reads the running terminal) and render one video at a time.
