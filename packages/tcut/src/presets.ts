@@ -20,5 +20,5 @@ export function applyPreset(config: VideoConfig): VideoConfig {
   if (!config.preset) return config;
   const base = presets[config.preset];
   if (!base) throw new Error(`Unknown preset "${config.preset}". Available: ${presetNames.join(", ")}`);
-  return { ...base, ...config, font: { ...base.font, ...config.font } };
+  return { ...base, ...config, font: config.font === "auto" ? "auto" : { ...base.font, ...config.font } };
 }

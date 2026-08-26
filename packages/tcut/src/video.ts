@@ -1,4 +1,5 @@
 import { mkdir, rm } from "node:fs/promises";
+import { applyTerminalLook } from "./terminallook";
 import path from "node:path";
 import { readCast, writeCast } from "./cast";
 import { applyOverrides, resolveConfig } from "./config";
@@ -51,7 +52,7 @@ export async function attachBrowserFrames(recording: Recording, castPath: string
 }
 
 export class Video {
-  readonly config: ResolvedConfig;
+  config: ResolvedConfig;
   readonly script: Script;
   readonly __bunVideo = true as const;
   /** Absolute path of the script file, when loaded by the CLI; enables cast caching. */
@@ -98,6 +99,7 @@ export class Video {
         return { ...cached, cached: true };
       }
     }
+    this.config = await applyTerminalLook(this.config, opts.log);
     const recording = await record(this.config, this.script, opts);
     recording.header.scriptHash = await this.scriptHash();
     const castPath = path.resolve(this.config.cast);
@@ -144,7 +146,7 @@ export async function renderCast(
   clip?: ClipSelection,
 ): Promise<RenderResult> {
   const rec = await readCast(castFile);
-  const config = applyOverrides(castConfig(rec, castFile, overrides.output), overrides);
+  const config = await applyTerminalLook(applyOverrides(castConfig(rec, castFile, overrides.output), overrides));
   return renderSelection(rec, config, clip, onProgress);
 }
 

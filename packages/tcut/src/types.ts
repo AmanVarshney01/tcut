@@ -209,8 +209,10 @@ export interface VideoConfig {
   /** Programs the script needs on the PATH (`["bun", "eza"]`). Checked before the shell starts; missing ones fail fast with a clear message. */
   requires?: string[];
 
-  font?: FontConfig;
-  theme?: ThemeName | Theme;
+  /** Font for the rendered terminal, or `"auto"`: the font of the terminal tcut runs in (read from its config). */
+  font?: FontConfig | "auto";
+  /** A bundled theme name, an inline Theme, or `"auto"`: the colours of the terminal tcut runs in. */
+  theme?: ThemeName | Theme | "auto";
   cursor?: CursorConfig;
   /** Record a browser window beside the terminal. */
   browser?: BrowserConfig;
@@ -263,6 +265,10 @@ export interface ResolvedConfig {
   requires: string[];
   font: Required<FontConfig>;
   theme: Theme;
+  /** `"auto"` requests still to be resolved against the terminal (see applyTerminalLook). */
+  auto: { theme: boolean; font: boolean };
+  /** Which of theme/font were taken from the terminal; a generated script writes `"auto"` back for those. */
+  detected?: { theme: boolean; font: boolean };
   cursor: Required<CursorConfig>;
   browser?: Required<Omit<BrowserConfig, "url" | "title" | "offset">> & Pick<BrowserConfig, "url" | "title" | "offset">;
   padding: number;

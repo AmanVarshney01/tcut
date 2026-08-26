@@ -19,7 +19,7 @@ Or a standalone binary for macOS, Linux or Windows from [Releases](https://githu
 
 ## Record
 
-**Live.** Your own shell opens — prompt, config, aliases; type; `exit`. You get the video, the exact recording (`demo.cast`) and an editable script of what you typed (`demo.video.ts`): it reopens your shell (`shell: "user"`), waits for your prompt (`promptPattern`, detected from the recording) and replays the commands as `run()` calls. `--clean` opens a plain shell with a `>` prompt instead.
+**Live.** Your own shell opens — prompt, config, aliases — in your terminal's colours and font (`theme: "auto"`, `font: "auto"`: asked from the terminal itself); type; `exit`. You get the video, the exact recording (`demo.cast`) and an editable script of what you typed (`demo.video.ts`): it reopens your shell (`shell: "user"`), waits for your prompt (`promptPattern`, detected from the recording) and replays the commands as `run()` calls. `--clean` opens a plain shell with a `>` prompt instead.
 
 ```sh
 tcut rec -o demo.gif
@@ -87,6 +87,7 @@ The emulator is Ghostty's core, so what tcut sees is what your terminal would sh
 - Links printed with OSC 8 — including Markdown links in `print()` captions — stay clickable in SVG and HTML.
 - Frames are never torn: synchronized-output blocks are captured whole.
 - Symbols the font lacks (progress blocks, Nerd Font icons) stay on their cell, so status bars never drift.
+- `theme: "auto"` and `font: "auto"` render with the colours and font of the terminal you record in — the video looks like *your* terminal, not like a default.
 - `tcut doctor demo.cast` explains what a recording used, and what cannot be rendered (inline images).
 
 ## Test it

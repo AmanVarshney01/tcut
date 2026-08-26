@@ -144,11 +144,18 @@ function frameMarkup(frame: GridFrame, config: ResolvedConfig, g: Geometry): str
 }
 
 /** Drop shadow as an SVG filter on the window rect (blur radius ≈ 2 × stdDeviation). */
-function shadowDefs(config: ResolvedConfig): string {
+function shadowDefs(config: ResolvedConfig, id: string): string {
   const s = config.shadow;
   if (!s) return "";
-  return `<defs><filter id="shadow" x="-40%" y="-40%" width="180%" height="200%"><feDropShadow dx="${num(s.x)}" dy="${num(s.y)}" stdDeviation="${num(s.blur / 2)}" flood-color="${s.color}" flood-opacity="${num(s.opacity)}"/></filter></defs>`;
+  return `<defs><filter id="${id}" x="-40%" y="-40%" width="180%" height="200%"><feDropShadow dx="${num(s.x)}" dy="${num(s.y)}" stdDeviation="${num(s.blur / 2)}" flood-color="${s.color}" flood-opacity="${num(s.opacity)}"/></filter></defs>`;
 }
+
+/**
+ * Element ids must be unique per HTML document, and a page may inline several tcut SVGs (a README with a demo
+ * and a few stills): a shared `#term` clip would resolve to whichever came first. The tag is derived from the
+ * content, so the same recording still renders byte-identically.
+ */
+const idTag = (content: string): string => Bun.hash(content).toString(36).slice(0, 7);
 
 async function watermarkMarkup(config: ResolvedConfig, g: Geometry): Promise<string> {
   const w = config.watermark;
@@ -178,17 +185,19 @@ export interface SvgResult {
 /** The shared document: chrome (background, window, bar, watermark) around exporter-supplied style + body. */
 async function svgDocument(config: ResolvedConfig, g: Geometry, title: string, style: string, body: string): Promise<string> {
   const { theme, font } = config;
+  const tag = idTag(body);
+  const ids = { term: `term-${tag}`, shadow: `shadow-${tag}` };
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${g.width}" height="${g.height}" viewBox="0 0 ${g.width} ${g.height}" font-family="${esc(font.family)}" font-size="${font.size}">
 <style>
-${style}text{white-space:pre;dominant-baseline:auto}
+${style.replaceAll("@@tag@@", tag)}text{white-space:pre;dominant-baseline:auto}
 </style>
 ${config.marginFill === "transparent" ? "" : `<rect width="100%" height="100%" fill="${config.marginFill}"/>`}
-${shadowDefs(config)}
-<rect x="${num(g.frameX)}" y="${num(g.frameY)}" width="${num(g.frameW)}" height="${num(g.frameH)}" rx="${config.borderRadius}" fill="${theme.background}"${config.shadow ? ' filter="url(#shadow)"' : ""}/>
+${shadowDefs(config, ids.shadow)}
+<rect x="${num(g.frameX)}" y="${num(g.frameY)}" width="${num(g.frameW)}" height="${num(g.frameH)}" rx="${config.borderRadius}" fill="${theme.background}"${config.shadow ? ` filter="url(#${ids.shadow})"` : ""}/>
 ${windowBar(config, g, title)}
-<clipPath id="term"><rect x="${num(g.termX)}" y="${num(g.termY)}" width="${num(g.termW)}" height="${num(g.termH)}"/></clipPath>
-<g clip-path="url(#term)"><g transform="translate(${num(g.termX)} ${num(g.termY)})">${body}</g></g>
+<clipPath id="${ids.term}"><rect x="${num(g.termX)}" y="${num(g.termY)}" width="${num(g.termW)}" height="${num(g.termH)}"/></clipPath>
+<g clip-path="url(#${ids.term})"><g transform="translate(${num(g.termX)} ${num(g.termY)})">${body}</g></g>
 ${await watermarkMarkup(config, g)}
 </svg>
 `;
@@ -212,7 +221,7 @@ export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<
     .map((f, i) => `<g transform="translate(${num(i * g.termW)} 0)">${frameMarkup(f, config, g)}</g>`)
     .join("\n");
 
-  const style = `.strip{animation:tcut ${num(total)}s steps(1,end) infinite}\n@keyframes tcut{${keyframes.join("")}}\n`;
+  const style = `.strip{animation:tcut-@@tag@@ ${num(total)}s steps(1,end) infinite}\n@keyframes tcut-@@tag@@{${keyframes.join("")}}\n`;
   const body = `<g class="strip" xml:space="preserve">\n${frames}\n</g>`;
   const title = config.title === "auto" ? (replay.title ?? "") : config.title;
   return { svg: await svgDocument(config, g, title, style, body), frames: n, duration: total };

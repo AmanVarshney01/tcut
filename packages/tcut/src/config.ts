@@ -3,7 +3,7 @@ import { USER_PROMPT_PATTERN } from "./promptguess";
 import { toMs } from "./duration";
 import { applyPreset } from "./presets";
 import { resolveTheme } from "./themes";
-import type { ResolvedConfig, VideoConfig } from "./types";
+import type { ResolvedConfig, VideoConfig, ThemeName, Theme } from "./types";
 
 export const DEFAULT_FONT_FAMILY =
   '"JetBrains Mono", "JetBrainsMono Nerd Font Mono", "Fira Code", Menlo, Consolas, "DejaVu Sans Mono", monospace';
@@ -35,13 +35,16 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
   if (outputs.length === 0) throw new Error("config.output must name at least one output");
 
   const prompt = config.prompt ?? "> ";
-  const theme = resolveTheme(config.theme);
+  // "auto" is resolved later, against the terminal tcut runs in (applyTerminalLook); until then the defaults stand.
+  const auto = { theme: config.theme === "auto", font: config.font === "auto" };
+  const theme = resolveTheme(auto.theme ? undefined : (config.theme as ThemeName | Theme | undefined));
+  const fontConfig = config.font === "auto" ? undefined : config.font;
 
   const font = {
-    family: config.font?.family ?? DEFAULT_FONT_FAMILY,
-    size: config.font?.size ?? 20,
-    lineHeight: config.font?.lineHeight ?? 1.2,
-    letterSpacing: config.font?.letterSpacing ?? 0,
+    family: fontConfig?.family ?? DEFAULT_FONT_FAMILY,
+    size: fontConfig?.size ?? 20,
+    lineHeight: fontConfig?.lineHeight ?? 1.2,
+    letterSpacing: fontConfig?.letterSpacing ?? 0,
   };
   const padding = config.padding ?? 24;
   const shadow = config.shadow
@@ -118,6 +121,7 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
     requires: config.requires ?? [],
     font,
     theme,
+    auto,
     cursor: {
       blink: config.cursor?.blink ?? true,
       period: config.cursor?.period ?? 1000,
@@ -153,7 +157,7 @@ export function applyOverrides(base: ResolvedConfig, overrides: Partial<VideoCon
     // ResolvedConfig keeps maxPause in seconds; VideoConfig reads bare numbers as milliseconds.
     maxPause: base.maxPause === undefined ? undefined : base.maxPause * 1000,
     ...overrides,
-    font: { ...base.font, ...overrides.font },
+    font: overrides.font === "auto" ? "auto" : { ...base.font, ...overrides.font },
     cursor: { ...base.cursor, ...overrides.cursor },
     output: overrides.output ?? base.output,
   };

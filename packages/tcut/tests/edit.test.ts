@@ -214,8 +214,8 @@ describe("svg / txt output", () => {
   ]);
   test("svg carries shadow, watermark and transparency", async () => {
     const { svg } = await buildSvg(cast, resolveConfig({ output: "x.svg", cols: 40, rows: 10, shadow: true, watermark: "© me", marginFill: "transparent" }));
-    expect(svg).toContain('<filter id="shadow"');
-    expect(svg).toContain('filter="url(#shadow)"');
+    expect(svg).toMatch(/<filter id="shadow-[a-z0-9]+"/);
+    expect(svg).toMatch(/filter="url\(#shadow-[a-z0-9]+\)"/);
     expect(svg).toContain(">© me</text>");
     expect(svg).not.toContain('<rect width="100%"');
     const plain = await buildSvg(cast, resolveConfig({ output: "x.svg", cols: 40, rows: 10 }));

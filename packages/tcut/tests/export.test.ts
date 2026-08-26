@@ -54,7 +54,11 @@ describe("svg export", () => {
     expect(duration).toBeCloseTo(5.6, 1);
     expect(svg.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns=')).toBe(true);
     expect(svg).toContain("steps(1,end) infinite");
-    expect(svg).toContain("@keyframes tcut{0%{transform:translateX(0px)}");
+    expect(svg).toMatch(/@keyframes tcut-[a-z0-9]+\{0%\{transform:translateX\(0px\)\}/);
+    // ids are unique per document so several tcut SVGs can be inlined on one page
+    const clipId = /<clipPath id="(term-[a-z0-9]+)"/.exec(svg)?.[1];
+    expect(clipId).toBeDefined();
+    expect(svg).toContain(`clip-path="url(#${clipId})"`);
     expect(svg.match(/<g transform="translate\(\d+(\.\d+)? 0\)">/g)).toHaveLength(2);
     expect(svg).toContain(`fill="${themes["catppuccin-mocha"].red}"`);
     expect(svg).toContain('font-weight="bold"');

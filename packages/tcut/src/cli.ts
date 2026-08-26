@@ -7,6 +7,7 @@ import { applyOverrides, resolveConfig } from "./config";
 import * as api from "./index";
 import { recordLive } from "./live";
 import { detectPromptPattern } from "./promptguess";
+import { applyTerminalLook } from "./terminallook";
 import { throughShell, userShell } from "./usershell";
 import { ensurePublicBucket, loadPublishConfig, publicUrlFor, publishFiles, savePublishConfig, type PublishConfig, type Published } from "./publish";
 import { diffCasts, type DiffResult } from "./diff";
@@ -53,7 +54,7 @@ Usage:
 Options (override the script's config):
   -o, --output <path>      .mp4 .webm .gif .webp .svg .html .png .jpg or dir/ for PNG frames — repeatable
       --theme <name>       ${themeNames.join(" | ")}
-      --font <family>      --font-size <px>  --line-height <x>  --letter-spacing <px>
+      --font <family>      --font-size <px>  --line-height <x>  --letter-spacing <px>  (--theme auto / --font auto: this terminal's)
       --fps <n>            --speed <x>       playback speed multiplier
       --padding <px>       --margin <px>     --margin-fill <css-color>   --radius <px>
       --window-bar <type>  none | colorful | colorfulRight | rings | ringsRight
@@ -207,11 +208,12 @@ function overridesFromFlags(): Partial<VideoConfig> {
   if (values.output?.length) o.output = values.output;
   if (values.theme) o.theme = values.theme as ThemeName;
   const font: NonNullable<VideoConfig["font"]> = {};
-  if (values.font) font.family = values.font;
+  if (values.font === "auto") o.font = "auto";
+  else if (values.font) font.family = values.font;
   if (values["font-size"] !== undefined) font.size = num("font-size");
   if (values["line-height"] !== undefined) font.lineHeight = num("line-height");
   if (values["letter-spacing"] !== undefined) font.letterSpacing = num("letter-spacing");
-  if (Object.keys(font).length) o.font = font;
+  if (Object.keys(font).length && o.font !== "auto") o.font = font;
   if (values.fps !== undefined) o.fps = num("fps");
   if (values.speed !== undefined) o.playbackSpeed = num("speed");
   if (values.padding !== undefined) o.padding = num("padding");
@@ -287,7 +289,7 @@ async function loadVideo(file: string): Promise<Video> {
       ...video.config,
       promptPattern: new RegExp(video.config.promptPattern),
       ...overrides,
-      font: { ...video.config.font, ...overrides.font },
+      font: overrides.font === "auto" ? "auto" : { ...video.config.font, ...overrides.font },
       cursor: { ...video.config.cursor, ...overrides.cursor },
     },
     video.script,
@@ -479,7 +481,19 @@ async function main(): Promise<void> {
       // The shell tcut was typed into is the session (your prompt, config, aliases) and what `-- cmd` runs
       // through. --clean / --raw opt out: a plain shell with a `>` prompt, or the bare binary.
       const shell = values.clean || values.raw ? null : userShell();
-      const config = resolveConfig({ ...overrides, output: outputs, cast: overrides.cast, ...(rest.length === 0 && shell && { shell: "user" }) });
+      // In a terminal, a live recording looks like that terminal: its colours and font, unless told otherwise.
+      const tty = Boolean(process.stdin.isTTY && process.stdout.isTTY);
+      const config = await applyTerminalLook(
+        resolveConfig({
+          theme: tty ? "auto" : undefined,
+          font: tty ? "auto" : undefined,
+          ...overrides,
+          output: outputs,
+          cast: overrides.cast,
+          ...(rest.length === 0 && shell && { shell: "user" }),
+        }),
+        (m) => log(dim(`  ${m}`)),
+      );
       let command: string[] | undefined;
       let portable: string[] | undefined;
       if (rest.length > 0) {

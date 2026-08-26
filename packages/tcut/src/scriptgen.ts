@@ -247,7 +247,9 @@ export function generateScript(rec: Recording, opts: ScriptGenOptions): string {
   if (opts.promptPattern) config.push(`promptPattern: /${opts.promptPattern.replace(/\//g, "\\/")}/`);
   config.push(`cols: ${rec.header.width}`, `rows: ${rec.header.height}`);
   if (cfg) {
-    if (cfg.theme?.name) config.push(`theme: ${q(cfg.theme.name)}`);
+    if (cfg.detected?.theme) config.push(`theme: "auto"`);
+    else if (cfg.theme?.name) config.push(`theme: ${q(cfg.theme.name)}`);
+    if (cfg.detected?.font) config.push(`font: "auto"`);
     if (cfg.fps !== 60) config.push(`fps: ${cfg.fps}`);
     if (cfg.windowBar !== "none") config.push(`windowBar: ${q(cfg.windowBar)}`);
     if (cfg.title) config.push(`title: ${q(cfg.title)}`);
