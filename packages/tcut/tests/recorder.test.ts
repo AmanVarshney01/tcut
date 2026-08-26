@@ -75,9 +75,11 @@ describe("recorder", () => {
     const saved = process.env.SHELL;
     process.env.SHELL = "/bin/bash"; // under bun test the parent is bun, so $SHELL decides
     try {
+      // no `$` in the command: on a runner with a long hostname the typed line wraps, and a wrap right after a
+      // `$` would let the prompt pattern match the command's own tail
       const rec = await record(resolveConfig({ ...base, shell: "user", promptPattern: /\$\s*$/ }), async (t) => {
-        await t.run("echo user-shell-$((40+2))");
-        await t.expect(/user-shell-42/);
+        await t.run("echo user-shell-fortytwo");
+        await t.expect(/user-shell-fortytwo/);
       });
       expect(rec.header.bunVideo?.shell).toBe("user");
     } finally {
