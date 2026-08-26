@@ -10,8 +10,8 @@ export default defineVideo(
   {
     output: [path.join(out, "walkthrough.svg")],
     cast: path.join(out, "walkthrough.cast"),
-    cols: 66,
-    rows: 15,
+    cols: 52,
+    rows: 11,
     theme: "catppuccin-mocha",
     windowBar: "none",
     margin: 0,
@@ -36,7 +36,7 @@ export default defineVideo(
     await t.sleep("400ms");
     await t.snapshot(frame(2));
     await t.sleep("120ms");
-    await t.run("ls -la");
+    await t.run("ls");
     await t.expect(/package\.json/);
     await t.sleep("400ms");
     await t.snapshot(frame(3));

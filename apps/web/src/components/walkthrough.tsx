@@ -49,19 +49,22 @@ function StickyPane({ steps }: { steps: Array<{ title?: string; code: Highlighte
   const step = steps[index] ?? steps[0];
   if (!step) return null;
   return (
-    <div className="space-y-3">
+    <div>
       <Code codeblock={step.code} handlers={["token-transitions", "focus", "mark"]} className="max-h-[22rem]" />
       <Frame svg={FRAMES[index] ?? FRAMES[0] ?? ""} />
     </div>
   );
 }
 
+/** The terminal after this step: visibly a different thing from the code above it — labelled, darker, bordered. */
 function Frame({ svg }: { svg: string }) {
   return (
-    <figure className="frame overflow-hidden rounded-lg bg-mocha">
-      {/* the browser normalises the SVG markup, so its innerHTML never equals the raw string byte for byte */}
-      <div dangerouslySetInnerHTML={{ __html: svg }} suppressHydrationWarning />
-      <figcaption className="px-3 py-1.5 font-mono text-[0.7rem] text-[#6c7086]">the frame this step produced — real text, select it</figcaption>
+    <figure className="frame mt-4">
+      <figcaption className="mb-1.5 font-mono text-[0.72rem] text-ink-3">the terminal after this step — real text, select it</figcaption>
+      <div className="overflow-hidden rounded-lg border border-line bg-mocha-2">
+        {/* the browser normalises the SVG markup, so its innerHTML never equals the raw string byte for byte */}
+        <div dangerouslySetInnerHTML={{ __html: svg }} suppressHydrationWarning />
+      </div>
     </figure>
   );
 }

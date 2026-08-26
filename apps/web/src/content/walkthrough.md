@@ -41,7 +41,7 @@ export default defineVideo(
   async (t) => {
     await t.run("bun --version");
     // !focus(1:2)
-    await t.run("ls -la");
+    await t.run("ls");
     await t.expect(/package\.json/);
   },
 );
@@ -58,7 +58,7 @@ export default defineVideo(
   { output: ["demo.mp4", "demo.gif"] },
   async (t) => {
     await t.run("bun --version");
-    await t.run("ls -la");
+    await t.run("ls");
     await t.expect(/package\.json/);
     // !focus
     await t.snapshot("files.svg");
@@ -77,7 +77,7 @@ export default defineVideo(
   { output: ["demo.mp4", "demo.gif"] },
   async (t) => {
     await t.run("bun --version");
-    await t.run("ls -la");
+    await t.run("ls");
     await t.expect(/package\.json/);
     await t.snapshot("files.svg");
     // !focus(1:2)
@@ -98,7 +98,7 @@ export default defineVideo(
   { output: ["demo.mp4", "demo.gif"] },
   async (t) => {
     await t.run("bun --version");
-    await t.run("ls -la");
+    await t.run("ls");
     await t.expect(/package\.json/);
     await t.snapshot("files.svg");
     await t.chapter("Install");

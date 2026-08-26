@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="820" height="388" viewBox="0 0 820 388" font-family="&quot;JetBrains Mono&quot;, &quot;JetBrainsMono Nerd Font Mono&quot;, &quot;Fira Code&quot;, Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace" font-size="20">
+<svg xmlns="http://www.w3.org/2000/svg" width="652" height="292" viewBox="0 0 652 292" font-family="&quot;JetBrains Mono&quot;, &quot;JetBrainsMono Nerd Font Mono&quot;, &quot;Fira Code&quot;, Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace" font-size="20">
 <style>
 text{white-space:pre;dominant-baseline:auto}
 </style>
 
 
-<rect x="0" y="0" width="820" height="388" rx="0" fill="#1e1e2e"/>
+<rect x="0" y="0" width="652" height="292" rx="0" fill="#1e1e2e"/>
 
-<clipPath id="term"><rect x="14" y="14" width="792" height="360"/></clipPath>
-<g clip-path="url(#term)"><g transform="translate(14 14)"><g xml:space="preserve"><text y="18.72"><tspan x="0" fill="#cdd6f4">&gt; bun --version</tspan></text><text y="42.72"><tspan x="0" fill="#cdd6f4">1.4.0</tspan></text><text y="66.72"><tspan x="0" fill="#cdd6f4">&gt;</tspan></text><rect x="24" y="48" width="12" height="24" fill="#f5e0dc" opacity="0.85"/></g></g></g>
+<clipPath id="term-1l6wv2i"><rect x="14" y="14" width="624" height="264"/></clipPath>
+<g clip-path="url(#term-1l6wv2i)"><g transform="translate(14 14)"><g xml:space="preserve"><text y="18.72"><tspan x="0" fill="#cdd6f4">&gt; bun --version</tspan></text><text y="42.72"><tspan x="0" fill="#cdd6f4">1.4.0</tspan></text><text y="66.72"><tspan x="0" fill="#cdd6f4">&gt;</tspan></text><rect x="24" y="48" width="12" height="24" fill="#f5e0dc" opacity="0.85"/></g></g></g>
 
 </svg>
