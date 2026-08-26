@@ -43,23 +43,19 @@ html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
-
 body {
   font-size: 16px;
   line-height: 1.6;
 }
-
 ::selection {
   background: var(--color-amber);
   color: #14181d;
 }
-
 :focus-visible {
   outline: 2px solid var(--color-amber-deep);
   outline-offset: 3px;
   border-radius: 2px;
 }
-
 a {
   text-decoration: underline;
   text-decoration-color: var(--color-line);
@@ -69,9 +65,9 @@ a {
 a:hover {
   text-decoration-color: var(--color-amber);
 }
-
 h1,
-h2 {
+h2,
+h3 {
   font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -79,6 +75,20 @@ h2 {
 h2 {
   font-size: 1.35rem;
   line-height: 1.25;
+}
+code,
+kbd,
+pre {
+  font-family: var(--font-mono);
+}
+p code,
+li code,
+td code,
+dd code {
+  font-size: 0.92em;
+  background: var(--color-desk-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
 }
 
 /* Sections read as one column of chapters: a rule above, then the heading. */
@@ -92,22 +102,37 @@ h2 {
     margin-top: 4.5rem;
   }
 }
-
-/* A comfortable measure for running text; code blocks and grids stay full width. */
 .prose-measure {
   max-width: 38rem;
 }
 
-/* API list: the term is the real name, the description is one line. */
-.api dt code {
-  font-size: 0.9rem;
-  background: var(--color-desk-2);
-  padding: 0.1em 0.4em;
-  border-radius: 4px;
+/* Code Hike blocks: always the mocha terminal colours, in both themes, like the terminal frames. */
+.ch-code {
+  font-size: 0.84rem;
+  line-height: 1.6;
+  padding: 0.85rem 0;
+  border-radius: 8px;
+  overflow-x: auto;
+  background: var(--color-mocha) !important;
+  color: #cdd6f4;
+  white-space: pre;
+  margin: 0;
 }
-.api dd {
-  margin-top: 0.3rem;
-  line-height: 1.5;
+.ch-code [data-focus] {
+  background: rgb(255 255 255 / 0.045);
+}
+
+/* The demo is tcut's own animated SVG; reduced motion freezes it on its first frame. */
+.demo-svg svg,
+.frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-svg svg .strip {
+    animation-play-state: paused !important;
+  }
 }
 
 .bullets {
@@ -125,48 +150,6 @@ h2 {
   left: 0;
   color: var(--color-ink-3);
 }
-
-.steps {
-  list-style: none;
-  padding: 0;
-}
-
-code,
-kbd,
-pre {
-  font-family: var(--font-mono);
-}
-p code,
-li code,
-td code {
-  font-size: 0.92em;
-  background: var(--color-desk-2);
-  padding: 0.1em 0.35em;
-  border-radius: 4px;
-}
-
-/* Astro's <Code> block: always the mocha terminal colours, in both themes. */
-.astro-code {
-  font-size: 0.84rem;
-  line-height: 1.6;
-  padding: 1rem 1.15rem;
-  border-radius: 8px;
-  overflow-x: auto;
-  background: var(--color-mocha) !important;
-}
-
-/* The demo is tcut's own animated SVG; reduced motion freezes it on its first frame. */
-.demo-svg svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-@media (prefers-reduced-motion: reduce) {
-  .demo-svg svg .strip {
-    animation-play-state: paused !important;
-  }
-}
-
 .theme-toggle .icon-moon { display: inline; }
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }

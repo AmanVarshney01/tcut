@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="388" viewBox="0 0 820 388" font-family="&quot;JetBrains Mono&quot;, &quot;JetBrainsMono Nerd Font Mono&quot;, &quot;Fira Code&quot;, Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace" font-size="20">
+<style>
+text{white-space:pre;dominant-baseline:auto}
+</style>
+
+
+<rect x="0" y="0" width="820" height="388" rx="0" fill="#1e1e2e"/>
+
+<clipPath id="term"><rect x="14" y="14" width="792" height="360"/></clipPath>
+<g clip-path="url(#term)"><g transform="translate(14 14)"><g xml:space="preserve"><text y="18.72"><tspan x="0" fill="#cdd6f4">&gt; bun --version</tspan></text><text y="42.72"><tspan x="0" fill="#cdd6f4">1.4.0</tspan></text><text y="66.72"><tspan x="0" fill="#cdd6f4">&gt; ls -la</tspan></text><text y="90.72"><tspan x="0" fill="#cdd6f4">total 48</tspan></text><text y="114.72"><tspan x="0" fill="#cdd6f4">drwx------@   9 aman  staff    288 26 Aug 23:56 .</tspan></text><text y="138.72"><tspan x="0" fill="#cdd6f4">drwx------@ 691 aman  staff  22112 26 Aug 23:56 ..</tspan></text><text y="162.72"><tspan x="0" fill="#cdd6f4">drwxr-xr-x@   3 aman  staff     96 26 Aug 23:56 .cursor</tspan></text><text y="186.72"><tspan x="0" fill="#cdd6f4">-rw-r--r--@   1 aman  staff    388 26 Aug 23:56 .gitignore</tspan></text><text y="210.72"><tspan x="0" fill="#cdd6f4">-rw-r--r--@   1 aman  staff   6674 26 Aug 23:56 bun.lock</tspan></text><text y="234.72"><tspan x="0" fill="#cdd6f4">-rw-r--r--@   1 aman  staff     30 26 Aug 23:56 index.ts</tspan></text><text y="258.72"><tspan x="0" fill="#cdd6f4">drwxr-xr-x@   8 aman  staff    256 26 Aug 23:56 node_modules</tspan></text><text y="282.72"><tspan x="0" fill="#cdd6f4">-rw-r--r--@   1 aman  staff    201 26 Aug 23:56 package.json</tspan></text><text y="306.72"><tspan x="0" fill="#cdd6f4">-rw-r--r--@   1 aman  staff    735 26 Aug 23:56 tsconfig.json</tspan></text><text y="330.72"><tspan x="0" fill="#cdd6f4">&gt;</tspan></text><rect x="24" y="312" width="12" height="24" fill="#f5e0dc" opacity="0.85"/></g></g></g>
+
+</svg>

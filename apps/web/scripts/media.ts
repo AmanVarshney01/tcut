@@ -65,3 +65,8 @@ const facts = {
 };
 await Bun.write(path.join(assets, "facts.json"), JSON.stringify(facts, null, 2) + "\n");
 console.log("media:", JSON.stringify(facts));
+
+// 4. Walkthrough frames: one SVG snapshot per step of the script the landing page explains.
+const walkthrough = (await import("./walkthrough.video.ts")).default;
+const result = await walkthrough.run({ force: true, log: (m: string) => console.log("walkthrough:", m) });
+console.log("walkthrough snapshots:", result.screenshots.length);

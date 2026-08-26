@@ -1,30 +1,38 @@
 {
   "name": "web",
-  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "sync:docs": "cp ../../packages/tcut/docs/llms.txt public/llms.txt && cp ../../README.md public/index.md",
-    "dev": "bun run sync:docs && astro dev",
-    "build": "bun run sync:docs && astro build",
-    "typecheck": "astro check",
-    "preview": "astro preview",
-    "media": "bun scripts/media.ts",
-    "astro": "astro"
+    "dev": "bun run sync:docs && vite",
+    "build": "bun run sync:docs && bun scripts/sitemap.ts && vite build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
+    "preview": "vite preview",
+    "media": "bun scripts/media.ts"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.3",
     "@fontsource-variable/ibm-plex-sans": "^5.2.6",
     "@fontsource/ibm-plex-mono": "^5.2.6",
-    "astro": "^7.1.5"
+    "@tanstack/react-router": "^1.170.18",
+    "codehike": "^1.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
-    "@tailwindcss/vite": "^4.3.3",
     "@cloudflare/workers-types": "catalog:",
+    "@mdx-js/rollup": "^3.1.1",
+    "@shikijs/themes": "^3.13.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.23",
     "@tcut/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.4",
     "tailwindcss": "^4.3.3",
     "termcut": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "^8.1.5"
   }
 }

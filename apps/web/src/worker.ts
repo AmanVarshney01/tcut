@@ -1,7 +1,7 @@
 // Worker in front of the static assets (Alchemy StaticSite `main`). Three jobs:
 //   1. first-party analytics: /s.js and /api/send proxy to Umami, so filter lists have nothing to match
 //   2. markdown content negotiation: `Accept: text/markdown` on a page returns its markdown twin (+ Vary: Accept)
-//   3. small agent courtesies: /sitemap.xml alias, a markdown 404 body
+//   3. a markdown 404 body for agents
 // Everything else is delegated to the asset layer untouched.
 
 interface Env {
@@ -63,11 +63,6 @@ export default {
       const lang = request.headers.get("accept-language");
       if (lang) headers.set("accept-language", lang);
       return fetch(`${UMAMI}/api/send`, { method: "POST", headers, body: request.body });
-    }
-
-    // 3. sitemap alias (the Astro integration writes sitemap-index.xml)
-    if (pathname === "/sitemap.xml") {
-      return env.ASSETS.fetch(new Request(`${url.origin}/sitemap-index.xml`, request));
     }
 
     // 2. markdown twin of a page
