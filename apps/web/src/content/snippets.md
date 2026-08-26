@@ -29,3 +29,16 @@ export default defineVideo({ output: "demo.gif" }, async (t) => {
   for (const file of ["a.ts", "b.ts"]) await t.run(`bun ${file}`);
 });
 ```
+
+```ts !library
+import { defineVideo, renderCast } from "termcut";
+
+const video = defineVideo({ output: ["demo.mp4", "demo.gif"] }, async (t) => {
+  await t.run("bun --version");
+  await t.expect(/1\.\d+/);
+});
+// !mark
+const { outputs, screenshots } = await video.run({ log: console.log });
+
+await renderCast("old.cast", { output: ["old.webm"], width: 1280, height: 720 });
+```

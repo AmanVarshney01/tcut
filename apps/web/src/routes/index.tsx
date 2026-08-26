@@ -35,7 +35,7 @@ function tourVideo(el: HTMLVideoElement | null): void {
   }
 }
 
-const SnippetSchema = Block.extend({ rec: HighlightedCodeBlock, test: HighlightedCodeBlock, browser: HighlightedCodeBlock, vhs: HighlightedCodeBlock });
+const SnippetSchema = Block.extend({ rec: HighlightedCodeBlock, test: HighlightedCodeBlock, browser: HighlightedCodeBlock, vhs: HighlightedCodeBlock, library: HighlightedCodeBlock });
 
 const api = [
   ["run()", "waits for your prompt to come back, not for a timer"],
@@ -150,6 +150,14 @@ function Page() {
           <div className="mt-6 grid gap-8 md:grid-cols-2">
             <p className="text-ink-2"><code>expect()</code> makes a demo a test. <code>tcut test</code> runs it with no delays and exits non-zero when the screen does not match, so the script that renders your README video can guard it in CI. <code>tcut diff</code> catches output changes between two recordings.</p>
             <Code codeblock={snippets.test} />
+          </div>
+        </section>
+
+        <section className="section">
+          <h2>Or from code</h2>
+          <div className="mt-6 grid gap-8 md:grid-cols-2">
+            <p className="text-ink-2">Everything the CLI does is an exported function. Define a video in your own build script, record it, render it, read the results back — this site records its walkthrough frames that way. Bun only, like the CLI.</p>
+            <Code codeblock={snippets.library} />
           </div>
         </section>
 

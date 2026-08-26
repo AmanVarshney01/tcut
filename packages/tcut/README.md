@@ -112,6 +112,30 @@ defineVideo({ output: "demo.mp4", browser: { position: "overlay" } }, async (t) 
 });
 ```
 
+## Use it as a library
+
+Everything the CLI does is an exported function — the site's own build records and renders its walkthrough frames from code.
+
+```ts
+import { defineVideo, renderCast } from "termcut";
+
+const video = defineVideo({ output: ["demo.mp4", "demo.gif"] }, async (t) => {
+  await t.run("bun --version");
+  await t.expect(/1\.\d+/);
+  await t.snapshot("version.svg");
+});
+
+const result = await video.run({ force: true, log: console.log });
+// result.outputs, result.screenshots, result.durationSeconds, result.recording
+
+const recording = await video.record();                 // just the .cast
+await video.render(recording, { overrides: { theme: "Gruvbox Dark" }, clip: { from: 2, to: 10 } });
+
+await renderCast("old.cast", { output: ["old.webm"], width: 1280, height: 720 });   // any cast, no shell
+```
+
+Also exported: `recordLive` (a live session under program control), `cutRecording` / `concatRecordings` / `selectChapters`, `buildSvg` / `buildHtml` / `replayFrames` (frames as a text grid, no pixels), `diffCasts`, `diagnoseCast`, `generateScript` (cast → script), `runScriptTests`, `publishFiles`, plus every type. Two things to know: `theme: "auto"` / `font: "auto"` read the terminal the process runs in, so in CI pass explicit values; and render one video at a time — each one drives a WebView.
+
 ## Share it
 
 ```sh

@@ -14,6 +14,9 @@ Reach for tcut when the job is any of these:
 Do not reach for tcut to screen-record a GUI, to capture a terminal you cannot run commands in, or when a plain text transcript is enough (use `tcut render x.cast -o x.txt` only if a recording already exists).
 How an agent should call it: write a `<name>.video.ts` with `defineVideo`, run `tcut <file> --json`, read the JSON result; never rely on timing sleeps when `t.wait`/`t.expect` can observe the screen.
 
+## Library (import from "termcut", Bun only)
+defineVideo(config, script) → Video: await video.run({ force, log }) → { outputs, screenshots, durationSeconds, recording }; video.record(); video.render(recording, { overrides, clip }); renderCast(file, overrides, onProgress?, clip?). Also: recordLive, cutRecording/concatRecordings/selectChapters, buildSvg/buildHtml/replayFrames, diffCasts, diagnoseCast, generateScript, runScriptTests, publishFiles, readCast/writeCast, resolveConfig, themes. In CI pass explicit theme/font (auto reads the running terminal); render one video at a time.
+
 ## Non-interactive contract
 - Every command exits 0 on success, 1 on failure. No prompts except `tcut publish --setup` without flags.
 - Add `--json` to get exactly one JSON document on stdout (results, or `{ "error": "...", "type": "WaitTimeoutError" | "ExpectationError" | ... }`). Progress/status lines are suppressed.

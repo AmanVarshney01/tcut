@@ -95,6 +95,42 @@ tcut concat intro.cast demo.cast outro.cast --gap 500ms -o launch.mp4
 
 `cut`/`concat` bake the timing in (the new cast's `playbackSpeed` is 1). Parts of a `concat` must share `cols`×`rows`; the screen is reset at each seam and chapters carry over. The same selection works programmatically: `renderCast(file, overrides, onProgress, { from, to, chapters, splitChapters })`, `cutRecording`, `concatRecordings`, `selectChapters`.
 
+## Library
+
+`import { … } from "termcut"` — the package ships its TypeScript source (`exports: "./src/index.ts"`), so it is Bun-only as a library, like the CLI.
+
+```ts
+import { defineVideo, renderCast } from "termcut";
+
+const video = defineVideo({ output: ["demo.mp4", "demo.gif"] }, async (t) => {
+  await t.run("bun --version");
+  await t.expect(/1\.\d+/);
+  await t.snapshot("version.svg");
+});
+
+const result = await video.run({ force: true, log: console.log });
+// result.outputs, result.screenshots, result.durationSeconds, result.recording
+
+const recording = await video.record();                 // just the .cast
+await video.render(recording, { overrides: { theme: "Gruvbox Dark" }, clip: { from: 2, to: 10 } });
+
+await renderCast("old.cast", { output: ["old.webm"], width: 1280, height: 720 });   // any cast, no shell
+```
+
+| group | exports |
+|---|---|
+| define and run | `defineVideo(config, script)` → `Video` with `record(opts)`, `render(recording?, { overrides, clip })`, `run(opts)`; `renderCast(file, overrides, onProgress?, clip?)`; `isVideo`, `castConfig` |
+| record | `recordLive(config, { command, stdin, stdout, cols, rows })`; errors `WaitTimeoutError`, `ExpectationError`, `MissingRequirementError` |
+| casts | `readCast` / `writeCast` / `parseCast` / `serializeCast`; `buildTimeline` (the visible timeline) |
+| edit | `cutRecording`, `concatRecordings`, `selectChapters`, `chapterRanges`, `findChapters`, `flattenRecording` |
+| render | `renderOutputs`, `renderSelection`, `buildSvg`, `buildHtml`, `writeTxt`, `writeLog`, `replayFrames` (grid frames, no pixels), `decodePng` / `encodePng` / `matte` |
+| inspect | `diffCasts`, `diagnoseCast` / `diagnoseRecording` / `formatDoctorReport`, `generateScript` / `eventsToOps` / `tokenize`, `runScriptTests` / `discoverScripts` |
+| config | `resolveConfig`, `presets` / `applyPreset`, `themes` / `themeNames` / `resolveTheme` / `findThemes` |
+| publish | `publishFiles`, `loadPublishConfig` / `savePublishConfig`, `publicUrlFor` |
+| types | `export type *` — `VideoConfig`, `ResolvedConfig`, `Recording`, `Session`, `RenderResult`, … |
+
+`theme: "auto"` / `font: "auto"` read the terminal the process runs in; in CI they fall back to the defaults with a note, so pass explicit values there. Render one video at a time — each render drives a WebView.
+
 ## Requirements
 
 | To… | You need |
