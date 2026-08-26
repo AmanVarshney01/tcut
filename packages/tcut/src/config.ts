@@ -8,6 +8,38 @@ import type { ResolvedConfig, VideoConfig, ThemeName, Theme } from "./types";
 export const DEFAULT_FONT_FAMILY =
   '"JetBrains Mono", "JetBrainsMono Nerd Font Mono", "Fira Code", Menlo, Consolas, "DejaVu Sans Mono", monospace';
 
+/** Split a CSS font-family list into names (quotes removed). */
+export function fontFamilies(list: string): string[] {
+  return (list.match(/"[^"]*"|'[^']*'|[^,]+/g) ?? []).map((f) => f.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+}
+
+const quoteFamily = (name: string): string => (/[^\w-]/.test(name) && !/^(monospace|sans-serif|serif|system-ui)$/.test(name) ? `"${name}"` : name);
+
+/**
+ * The font list the renderer uses. Terminals fall back to a symbols font for glyphs the main font lacks —
+ * Ghostty ships Nerd Font symbols and uses them without being told — so the renderer does the same: after the
+ * configured families come the Nerd Font variants of the first one, the Nerd symbols fonts, then the defaults.
+ * Fallbacks only ever fill glyphs the earlier fonts do not have; they never change how the main font renders.
+ */
+export function fontStack(family: string): string {
+  const configured = fontFamilies(family);
+  const first = configured[0] ?? "";
+  const nerd = /nerd font/i.test(first)
+    ? []
+    : [`${first} Nerd Font Mono`, `${first.replace(/\s+/g, "")} Nerd Font Mono`, `${first} Nerd Font`, `${first.replace(/\s+/g, "")} Nerd Font`];
+  const all = [...configured, ...(first ? nerd : []), "Symbols Nerd Font Mono", "Symbols Nerd Font", ...fontFamilies(DEFAULT_FONT_FAMILY)];
+  const seen = new Set<string>();
+  return all
+    .filter((f) => {
+      const key = f.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(quoteFamily)
+    .join(", ");
+}
+
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

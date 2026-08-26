@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import { fontStack } from "../config";
 import { PIN_CSS } from "../renderer/pin";
 import path from "node:path";
 import { barHeight, embedImage, shadowCss, watermarkCss } from "../renderer/page";
@@ -63,7 +64,7 @@ ${watermarkCss(config)}
 #bar { height: ${barHeight(config)}px; margin-top: -${Math.min(config.padding, 12)}px; display: flex; align-items: center; justify-content: space-between; font: 13px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: ${theme.foreground}; }
 #bar .dots { display: flex; gap: 8px; } #bar .dot { width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; display: inline-block; }
 #bar .title { flex: 1; text-align: center; opacity: .7; } #bar.right .title { text-align: left; }
-#term.wterm { ${vars}; --term-font-family: ${font.family}; --term-font-size: ${font.size}px; --term-line-height: ${font.lineHeight}; --term-row-height: ${Math.ceil(font.size * font.lineHeight)}px; letter-spacing: ${font.letterSpacing}px; --vt-letter-spacing: ${font.letterSpacing}px; padding: 0; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
+#term.wterm { ${vars}; --term-font-family: ${fontStack(font.family)}; --term-font-size: ${font.size}px; --term-line-height: ${font.lineHeight}; --term-row-height: ${Math.ceil(font.size * font.lineHeight)}px; letter-spacing: ${font.letterSpacing}px; --vt-letter-spacing: ${font.letterSpacing}px; padding: 0; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
 ${PIN_CSS}
 #controls { display: flex; gap: 12px; align-items: center; margin-top: 12px; font: 12px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: ${theme.foreground}; opacity: .85; }
 #controls button { background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 6px; width: 34px; height: 26px; cursor: pointer; }

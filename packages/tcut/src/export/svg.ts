@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import { fontStack } from "../config";
 import path from "node:path";
 import { fitFrame } from "../loop";
 import { barHeight, embedImage } from "../renderer/page";
@@ -188,7 +189,7 @@ async function svgDocument(config: ResolvedConfig, g: Geometry, title: string, s
   const tag = idTag(body);
   const ids = { term: `term-${tag}`, shadow: `shadow-${tag}` };
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${g.width}" height="${g.height}" viewBox="0 0 ${g.width} ${g.height}" font-family="${esc(font.family)}" font-size="${font.size}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${g.width}" height="${g.height}" viewBox="0 0 ${g.width} ${g.height}" font-family="${esc(fontStack(font.family))}" font-size="${font.size}">
 <style>
 ${style.replaceAll("@@tag@@", tag)}text{white-space:pre;dominant-baseline:auto}
 </style>

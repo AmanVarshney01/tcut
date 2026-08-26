@@ -1,4 +1,5 @@
 import type { ResolvedConfig, Theme } from "../types";
+import { fontStack } from "../config";
 import { PIN_CSS } from "./pin";
 
 const BAR_HEIGHT = 36;
@@ -229,7 +230,7 @@ export function renderHtml(config: ResolvedConfig): string {
   #bar.right .title { text-align: left; }
   #term.wterm {
     ${themeCssVars(theme)};
-    --term-font-family: ${font.family};
+    --term-font-family: ${fontStack(font.family)};
     --term-font-size: ${font.size}px;
     --term-line-height: ${font.lineHeight};
     --term-row-height: ${Math.ceil(font.size * font.lineHeight)}px;
@@ -246,7 +247,7 @@ export function renderHtml(config: ResolvedConfig): string {
     display: ${config.keys ? "flex" : "none"}; justify-content: center; gap: 6px; pointer-events: none; z-index: 5;
   }
   #keys span {
-    font: 600 ${config.keys?.font ?? 15}px ${font.family};
+    font: 600 ${config.keys?.font ?? 15}px ${fontStack(font.family)};
     color: ${config.keys?.color ?? "#fff"}; background: ${config.keys?.background ?? "rgba(15, 15, 20, 0.85)"};
     border: 1px solid rgba(255,255,255,0.12); border-radius: ${config.keys?.radius ?? 8}px;
     padding: 0.4em 0.9em; letter-spacing: 0.02em; white-space: pre;

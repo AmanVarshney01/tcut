@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import { resolveConfig } from "../src/config";
+import { fontFamilies, fontStack, resolveConfig } from "../src/config";
 import {
   COLOR_QUERIES,
   familyFromPostScriptName,
@@ -127,6 +127,17 @@ describe("terminal look", () => {
   test("VS Code: terminal font, falling back to the editor font", () => {
     expect(parseVsCodeSettings({ "terminal.integrated.fontFamily": "'MonoLisa', monospace", "terminal.integrated.fontSize": 13 }).font).toEqual({ family: "MonoLisa", size: 13 });
     expect(parseVsCodeSettings({ "editor.fontFamily": "Menlo", "editor.fontSize": 12 }).font).toEqual({ family: "Menlo", size: 12 });
+  });
+
+  test("the render font stack falls back to Nerd Font symbols like a terminal does", () => {
+    const stack = fontStack("JetBrains Mono");
+    expect(stack.startsWith('"JetBrains Mono", "JetBrains Mono Nerd Font Mono", "JetBrainsMono Nerd Font Mono"')).toBe(true);
+    expect(stack).toContain('"Symbols Nerd Font Mono"');
+    expect(stack.endsWith("monospace")).toBe(true);
+    // a configured list keeps its order; a Nerd Font first needs no variants; nothing is listed twice
+    expect(fontStack('"Fira Code", Menlo')).toMatch(/^"Fira Code", Menlo, "Fira Code Nerd Font Mono"/);
+    expect(fontStack("JetBrainsMono Nerd Font Mono")).not.toContain("Nerd Font Mono Nerd Font");
+    expect(fontFamilies(fontStack("Menlo")).filter((f) => f === "Menlo")).toHaveLength(1);
   });
 
   test("points become pixels per platform", () => {
