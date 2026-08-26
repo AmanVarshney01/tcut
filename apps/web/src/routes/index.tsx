@@ -95,7 +95,7 @@ function Page() {
         </section>
 
         <figure className="mt-10">
-          <video ref={tourVideo} className="block w-full rounded-lg bg-desk-2" src="/promo.mp4" poster={promoPoster} width={1920} height={1080} controls loop playsInline preload="metadata" aria-label="tcut feature tour: scripted recording, themes, browser overlay, Claude Code, captions, zoom, CI" />
+          <video ref={tourVideo} className="block w-full rounded-lg bg-desk-2" src="/promo.mp4" poster={promoPoster} width={1920} height={1080} controls loop playsInline preload="metadata" aria-label="tcut feature tour: scripted recording, themes, your terminal's look, browser overlay, Claude Code, captions, zoom, CI, library" />
           <figcaption className="mt-2.5 font-mono text-xs text-ink-3">75 s tour. Every clip is a tcut recording, composed in <a href="https://remotion.dev">Remotion</a> — a build artifact, not a screen grab.</figcaption>
         </figure>
 
