@@ -15,3 +15,7 @@ declare module "*/generated/ghostty-vt.wasm" {
   const file: string;
   export default file;
 }
+declare module "*/fonts/SymbolsNerdFontMono-Regular.ttf" {
+  const file: string;
+  export default file;
+}

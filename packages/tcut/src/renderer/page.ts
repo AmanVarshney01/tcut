@@ -228,6 +228,9 @@ export function renderHtml(config: ResolvedConfig): string {
   #bar .dot { width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; display: inline-block; }
   #bar .title { flex: 1; text-align: center; opacity: 0.7; }
   #bar.right .title { text-align: left; }
+  /* The glyph fallback every terminal has: Nerd Font symbols, bundled (same font Ghostty embeds). Listed last in
+     the font stack, so it only ever supplies glyphs the configured fonts lack. */
+  @font-face { font-family: "Symbols Nerd Font Mono"; src: url("/fonts/symbols.ttf") format("truetype"); font-display: block; }
   #term.wterm {
     ${themeCssVars(theme)};
     --term-font-family: ${fontStack(font.family)};

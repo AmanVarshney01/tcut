@@ -7,6 +7,8 @@ export interface PageAssets {
   playerJs: string;
   css: string;
   wasmPath: string;
+  /** Symbols Nerd Font Mono: the glyph fallback a terminal has and a browser does not (see fonts/README.md). */
+  symbolsFontPath: string;
 }
 
 let cached: Promise<PageAssets> | null = null;
@@ -59,6 +61,7 @@ async function loadAssets(): Promise<PageAssets> {
     playerJs,
     css: await Bun.file(path.join(packageRoot("@wterm/dom"), "src", "terminal.css")).text(),
     wasmPath: path.join(packageRoot("@wterm/ghostty"), "wasm", "ghostty-vt.wasm"),
+    symbolsFontPath: path.join(import.meta.dir, "fonts", "SymbolsNerdFontMono-Regular.ttf"),
   };
 }
 

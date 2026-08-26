@@ -71,6 +71,30 @@ describe("renderer", () => {
   }, 60_000);
 });
 
+describe("bundled symbols font", () => {
+  test("ships with the renderer assets and loads in the render page", async () => {
+    const { pageAssets } = await import("../src/renderer/bundle");
+    const assets = await pageAssets();
+    expect(Bun.file(assets.symbolsFontPath).size).toBeGreaterThan(2_000_000);
+    const { renderHtml } = await import("../src/renderer/page");
+    expect(renderHtml(resolveConfig({ output: "x.mp4" }))).toContain('font-family: "Symbols Nerd Font Mono"; src: url("/fonts/symbols.ttf")');
+    // a prompt with a powerline separator and a Nerd icon: the render must not report the font missing
+    const d = path.join(dir, "symbols");
+    await rm(d, { recursive: true, force: true });
+    await mkdir(d, { recursive: true });
+    const rec: Recording = {
+      header: { version: 2, width: 30, height: 4 },
+      events: [
+        [0.0, "o", "\uf0035 aman \ue0b0 ~ \ue0b0\r\n> "],
+        [0.3, "m", "end"],
+      ],
+    };
+    const result = await render(rec, resolveConfig({ output: [path.join(d, "out.png")], fps: 10 }));
+    expect(result.notes ?? []).not.toContainEqual(expect.stringContaining("Nerd Font symbols"));
+    expect(Bun.file(path.join(d, "out.png")).size).toBeGreaterThan(0);
+  }, 30_000);
+});
+
 describe("raster snapshots", () => {
   test("a png snapshot renders even when no raster output is configured", async () => {
     const d = path.join(dir, "snap-only");

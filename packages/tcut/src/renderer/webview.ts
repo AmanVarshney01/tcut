@@ -79,6 +79,7 @@ export async function render(
       if (pathname === "/wterm.css") return new Response(assets.css, { headers: { "content-type": "text/css" } });
       if (pathname === "/ghostty-vt.wasm") return new Response(Bun.file(assets.wasmPath), { headers: { "content-type": "application/wasm" } });
       if (pathname === "/theme") return new Response(osc, { headers: { "content-type": "text/plain; charset=utf-8" } });
+      if (pathname === "/fonts/symbols.ttf") return new Response(Bun.file(assets.symbolsFontPath), { headers: { "content-type": "font/ttf", "cache-control": "max-age=3600" } });
       if (pathname === "/watermark" && config.watermark?.image) return new Response(Bun.file(path.resolve(config.watermark.image)));
       if (pathname.startsWith("/bframe/")) {
         const rel = decodeURIComponent(pathname.slice("/bframe/".length));
@@ -135,6 +136,7 @@ export async function render(
       core: config.core,
     };
     await view.evaluate(`window.__vt.boot(${JSON.stringify(boot)})`);
+    if ((await view.evaluate("window.__vt.symbolsFontLoaded()")) !== true) notes.push("the bundled Nerd Font symbols did not load; icons may render as boxes");
     if (!lite) await view.evaluate("window.__vt.writeUrl('/theme')");
 
     const cell = (await view.evaluate("window.__vt.measure()")) as CellSize;

@@ -27,6 +27,7 @@ interface BatchEvent {
   data: string;
 }
 
+const SYMBOLS_PROBE_PX = 16;
 let term: WTerm | null = null;
 let core: TerminalCore | null = null;
 
@@ -54,11 +55,18 @@ const api = {
     });
     await term.init();
     el.classList.add("focused");
+    // @font-face loads lazily; ask for the symbols font now so the first frame already has it
+    await document.fonts.load(`${SYMBOLS_PROBE_PX}px "Symbols Nerd Font Mono"`).catch(() => undefined);
     if (document.fonts?.ready) await document.fonts.ready;
     await paint();
     pinGlyphs(el);
     await paint();
     return true;
+  },
+
+  /** Did the bundled Nerd Font symbols load? Checked with a glyph only that font provides (a powerline separator). */
+  symbolsFontLoaded(): boolean {
+    return document.fonts.check(`${SYMBOLS_PROBE_PX}px "Symbols Nerd Font Mono"`, "\ue0b0");
   },
 
   measure(): CellSize {
