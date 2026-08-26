@@ -20,6 +20,8 @@
         "@fontsource-variable/ibm-plex-sans": "^5.2.6",
         "@fontsource/ibm-plex-mono": "^5.2.6",
         "@tanstack/react-router": "^1.170.18",
+        "@wterm/core": "^0.3.4",
+        "@wterm/react": "^0.3.4",
         "codehike": "^1.1.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
@@ -677,6 +679,8 @@
     "@wterm/ghostty": ["@wterm/ghostty@0.3.4", "", { "dependencies": { "@wterm/core": "0.3.4" } }, "sha512-oa53vgUFuNfIt+p8vvEeKlr8M4NRciEmHqY8pIXBxV3NRH6OGjMb1TiSxKBi+hySP61uXKqVbbu9YdW+7fWNMg=="],
 
     "@wterm/markdown": ["@wterm/markdown@0.3.4", "", {}, "sha512-bv6WwbO3d/yrtO1P9ztq2n09bhTBDhDbZPGIiZtpCrwBBD7s2PIJnszsHuw64TZVxlbnVRVvpFVqevrx1zK8Sw=="],
+
+    "@wterm/react": ["@wterm/react@0.3.4", "", { "peerDependencies": { "@wterm/dom": "0.3.4", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-/DwzDyvLp2x6wOc5Ng49GRTy46gfhdVfqlYTnZNh4y3DJBb82/f2JKpxKJtQkI3m6HL7VQqwgAnysIX+DavugQ=="],
 
     "acorn": ["acorn@8.18.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ=="],
 
