@@ -85,7 +85,8 @@ describe("terminal look", () => {
 
   test("alacritty.toml with an import", async () => {
     await Bun.write(path.join(dir, "colors.toml"), `[colors.primary]\nbackground = "#282a36"\nforeground = "#f8f8f2"\n[colors.normal]\nblack = "#000000"\nred = "#ff5555"\ngreen = "#50fa7b"\nyellow = "#f1fa8c"\nblue = "#bd93f9"\nmagenta = "#ff79c6"\ncyan = "#8be9fd"\nwhite = "#bfbfbf"\n[colors.bright]\nblack = "#4d4d4d"\nred = "#ff6e6e"\ngreen = "#69ff94"\nyellow = "#ffffa5"\nblue = "#d6acff"\nmagenta = "#ff92df"\ncyan = "#a4ffff"\nwhite = "#ffffff"\n`);
-    await Bun.write(path.join(dir, "alacritty.toml"), `[general]\nimport = ["${path.join(dir, "colors.toml")}"]\n[font]\nsize = 12\n[font.normal]\nfamily = "Iosevka"\n`);
+    // a TOML literal string: a Windows path's backslashes must not be read as escapes
+    await Bun.write(path.join(dir, "alacritty.toml"), `[general]\nimport = ['${path.join(dir, "colors.toml")}']\n[font]\nsize = 12\n[font.normal]\nfamily = "Iosevka"\n`);
     const look = await parseAlacrittyConfig(path.join(dir, "alacritty.toml"));
     expect(look.font).toEqual({ family: "Iosevka", size: 12 });
     expect(look.theme?.background).toBe("#282a36");
