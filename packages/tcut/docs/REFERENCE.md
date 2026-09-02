@@ -11,7 +11,7 @@ tcut record <script.ts>           record only (.cast)
 tcut render <file.cast>           render a cast (tcut's or asciinema's)
 tcut test <paths…>                run scripts as tests
 tcut diff <a.cast> <b.cast> [--at s] [--images dir]   compare screen text of two recordings; exit 1 if different
-tcut doctor <file.cast>           what the program used (alt screen, mouse, bracketed paste, app cursor keys, sync output, links, titles) and what tcut cannot show (inline images, unknown sequences)
+tcut doctor <file.cast>           what the program used (alt screen, mouse, bracketed paste, app cursor keys, sync output, links, titles, Kitty graphics) and what tcut cannot show (Sixel, iTerm2 images, unknown sequences)
 tcut cut <file.cast> --from 2s --to 10s [--chapters a,b] [--cast out.cast] [-o …]   keep part of a recording (a new .cast, plus outputs if -o)
 tcut concat <a.cast> <b.cast…> [--gap 500ms] [--cast out.cast] [-o …]   join recordings of the same size end to end
 tcut publish <files…> [--open]    upload to your S3-compatible bucket, print links

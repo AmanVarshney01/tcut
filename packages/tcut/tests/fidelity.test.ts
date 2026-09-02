@@ -22,7 +22,10 @@ describe("osc helpers", () => {
     expect(extractTitle("no title here")).toBeNull();
     expect(hyperlink("docs", "https://a.b")).toBe(`${ESC}]8;;https://a.b${ESC}\\docs${ESC}]8;;${ESC}\\`);
     expect(linkifyMarkdown("see [the docs](https://tcut.amanv.dev) now")).toContain(`${ESC}]8;;https://tcut.amanv.dev${ESC}\\`);
-    expect(unsupportedProtocols(`${ESC}_Gf=100;AAAA${ESC}\\ ${ESC}Pq#0;2;0;0;0${ESC}\\`).map((u) => u.name)).toEqual(["kitty-graphics", "sixel"]);
+    // Kitty graphics is supported with Ghostty core (default), so only Sixel is unsupported
+    expect(unsupportedProtocols(`${ESC}_Gf=100;AAAA${ESC}\\ ${ESC}Pq#0;2;0;0;0${ESC}\\`, "ghostty").map((u) => u.name)).toEqual(["sixel"]);
+    // With lite core, Kitty graphics is also unsupported
+    expect(unsupportedProtocols(`${ESC}_Gf=100;AAAA${ESC}\\ ${ESC}Pq#0;2;0;0;0${ESC}\\`, "lite").map((u) => u.name)).toEqual(["kitty-graphics", "sixel"]);
   });
 });
 
@@ -135,9 +138,35 @@ describe("doctor", () => {
     expect(r.features).toMatchObject({ altScreen: true, mouseTracking: true, bracketedPaste: true, hyperlinks: 1, titles: ["htop"] });
     const multi = await diagnoseRecording(rec([[0, "o", "\x1b]0;one\x07mid\x1b]2;two\x1b\\"], [0.4, "m", "end"]]), "titles.cast");
     expect(multi.features.titles).toEqual(["one", "two"]); // several titles inside one chunk all count
-    expect(r.unsupported.map((u) => u.name)).toEqual(["kitty-graphics"]);
+    // Kitty graphics are now a feature, not unsupported (when using Ghostty core, the default)
+    expect(r.features.kittyGraphics).toBe(1);
+    expect(r.core).toBe("ghostty"); // default core
+    expect(r.unsupported.map((u) => u.name)).toEqual([]); // no unsupported protocols with Ghostty core
     expect(r.markers.chapters).toBe(1);
     expect(r.warnings.some((w) => /full-screen program exited/.test(w))).toBe(true); // ?1049h…?1049l flashed by
-    expect(r.warnings.some((w) => /Kitty/.test(w))).toBe(false); // unsupported protocols are reported once, not echoed as warnings
+    expect(r.warnings.some((w) => /Kitty/.test(w))).toBe(false); // kitty graphics is now a feature, not a warning
+  });
+
+  test("Kitty graphics is unsupported with lite core", async () => {
+    const cast = rec([
+      [0, "o", `${ESC}_Gf=100;AAAA${ESC}\\`],
+      [0.4, "m", "end"],
+    ]);
+    // Set the core to lite in the recording header
+    cast.header.bunVideo = { core: "lite" } as import("../src/types").ResolvedConfig;
+    const r = await diagnoseRecording(cast, "lite.cast");
+    expect(r.features.kittyGraphics).toBe(1); // still detected as a feature
+    expect(r.core).toBe("lite");
+    expect(r.unsupported.map((u) => u.name)).toEqual(["kitty-graphics"]); // unsupported with lite core
+  });
+
+  test("Sixel and iTerm2 images are always unsupported", async () => {
+    const cast = rec([
+      [0, "o", `${ESC}Pq#0;2;0;0;0${ESC}\\`], // Sixel
+      [0.1, "o", `${ESC}]1337;File=name=test.png:inline=1:;base64${ESC}\\`], // iTerm2
+      [0.4, "m", "end"],
+    ]);
+    const r = await diagnoseRecording(cast, "images.cast");
+    expect(r.unsupported.map((u) => u.name)).toEqual(["sixel", "iterm2-image"]);
   });
 });

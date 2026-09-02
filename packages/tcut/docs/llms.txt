@@ -31,7 +31,7 @@ tcut render <file.cast> [-o out…] [--theme t] [--speed x] [--json]       re-re
 tcut rec [-- command…] [-o out…] [--browser url]                         live session (TTY); writes .cast + editable .video.ts
 tcut test <files|dirs…> [--json]                                         run scripts fast (no sleeps/typing delay), exit 1 if any expect() fails
 tcut diff a.cast b.cast [--at s] [--images dir] [--json]                 screen-text regression check, exit 1 on difference
-tcut doctor f.cast [--json]                                               features the program used + what tcut cannot show (inline images, unknown escape sequences)
+tcut doctor f.cast [--json]                                               features the program used (Kitty graphics rendered with Ghostty core) + what tcut cannot show (Sixel, iTerm2 images, unknown sequences)
 tcut cut f.cast --from 2s --to 10s | --chapters a,b [--cast out] [-o …]  keep part of a recording (visible timeline); --split-chapters on render writes one file per chapter
 tcut concat a.cast b.cast… [--gap 500ms] [--cast out] [-o …]             join same-size recordings; screen resets at each seam
 tcut publish <files…> [--json] · tcut publish --setup --endpoint U --bucket B --access-key K --secret-key S   S3-compatible upload

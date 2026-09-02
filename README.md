@@ -88,7 +88,8 @@ The emulator is Ghostty's core, so what tcut sees is what your terminal would sh
 - Frames are never torn: synchronized-output blocks are captured whole.
 - Symbols the font lacks (progress blocks, Nerd Font icons) stay on their cell, so status bars never drift — and tcut bundles the Nerd Font symbols (the same file Ghostty embeds) as the last fallback, so icons render on any machine.
 - `theme: "auto"` and `font: "auto"` render with the colours and font of the terminal you record in — the video looks like *your* terminal, not like a default.
-- `tcut doctor demo.cast` explains what a recording used, and what cannot be rendered (inline images).
+- Kitty graphics (inline images) are rendered when using the Ghostty core (the default). Sixel and iTerm2 images are not supported.
+- `tcut doctor demo.cast` explains what a recording used, including Kitty graphics and any protocols tcut cannot render.
 
 ## Test it
 

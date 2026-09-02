@@ -54,10 +54,10 @@
     "build:all": "bun run build:assets && bun scripts/build-binaries.ts"
   },
   "dependencies": {
-    "@wterm/core": "^0.3.4",
-    "@wterm/dom": "^0.3.4",
-    "@wterm/ghostty": "^0.3.4",
-    "@wterm/markdown": "^0.3.4"
+    "@wterm/core": "^0.4.1",
+    "@wterm/dom": "^0.4.1",
+    "@wterm/ghostty": "^0.4.1",
+    "@wterm/markdown": "^0.4.1"
   },
   "devDependencies": {
     "@types/bun": "latest"
