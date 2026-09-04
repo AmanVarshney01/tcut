@@ -43,7 +43,7 @@ Usage:
   tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
   tcut test <path...>                 run scripts in fast mode as tests (no video)
   tcut diff <a.cast> <b.cast>         compare what two recordings show on screen (exit 1 if different)
-  tcut doctor <file.cast>             what the program used, and what tcut cannot show (images, unknown sequences)
+  tcut doctor <file.cast>             what the program used (Kitty graphics with Ghostty core), and what tcut cannot show (Sixel, iTerm2 images, unknown sequences)
   tcut cut <file.cast> --from 2s --to 10s [--cast out.cast] [-o …]   keep part of a recording (by time or --chapters)
   tcut concat <a.cast> <b.cast…> [--gap 500ms] [--cast out.cast] [-o …]   join recordings end to end
   tcut publish <files...> [--open]    upload to your S3-compatible bucket and print share links

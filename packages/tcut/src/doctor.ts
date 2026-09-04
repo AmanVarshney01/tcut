@@ -1,8 +1,8 @@
 // `tcut doctor`: replay a cast through the emulator and report what the program used — and what tcut cannot show.
 import { MARKER, readCast } from "./cast";
-import { unsupportedProtocols, extractTitles, type UnsupportedProtocol } from "./osc";
+import { unsupportedProtocols, extractTitles, countKittyGraphics, type UnsupportedProtocol } from "./osc";
 import { loadCore } from "./screen";
-import type { Recording } from "./types";
+import type { CoreName, Recording } from "./types";
 
 export interface UnhandledSequenceSummary {
   /** Final byte of the CSI/ESC sequence, e.g. "h". */
@@ -27,7 +27,11 @@ export interface DoctorReport {
     hyperlinks: number;
     scrollbackLines: number;
     titles: string[];
+    /** Kitty graphics APCs detected (rendered with Ghostty core, unsupported with lite core). */
+    kittyGraphics: number;
   };
+  /** The emulator core: "ghostty" (default, supports Kitty graphics) or "lite". */
+  core: CoreName;
   markers: { chapters: number; zoom: number; hidden: number; screenshots: number; browserFrames: number };
   /** Things tcut cannot render faithfully. */
   unsupported: UnsupportedProtocol[];
@@ -92,7 +96,12 @@ export async function diagnoseRecording(rec: Recording, castPath = rec.source ??
     screenshots: rec.events.filter((e) => e[1] === "m" && e[2].startsWith(MARKER.screenshot)).length,
     browserFrames: rec.events.filter((e) => e[1] === "b").length,
   };
-  const unsupported = unsupportedProtocols(outputText); // shown on their own report lines; not repeated as warnings
+  // Detect Kitty graphics usage
+  const kittyGraphicsCount = countKittyGraphics(outputText);
+  // Determine the core from the recording's config (default: ghostty)
+  const configuredCore: CoreName = rec.header.bunVideo?.core ?? "ghostty";
+  // Unsupported protocols depend on the core (Kitty graphics is supported with Ghostty)
+  const unsupported = unsupportedProtocols(outputText, configuredCore);
   const warnings: string[] = [];
   if (altScreen && rec.events.some((e) => e[1] === "o" && e[2].includes("\x1b[?1049l"))) {
     warnings.push("A full-screen program exited; text it left on the primary screen is normal — use t.hide(() => t.clear()) to tidy the video");
@@ -117,7 +126,9 @@ export async function diagnoseRecording(rec: Recording, castPath = rec.source ??
       hyperlinks: links.size,
       scrollbackLines: core.getScrollbackCount(),
       titles,
+      kittyGraphics: kittyGraphicsCount,
     },
+    core: configuredCore,
     markers,
     unsupported,
     unhandled,
@@ -137,6 +148,10 @@ export function formatDoctorReport(r: DoctorReport): string[] {
     `${r.cast}: ${r.cols}×${r.rows}, ${r.durationSeconds.toFixed(1)}s, ${r.events} events, ${(r.outputBytes / 1024).toFixed(1)} KB of output`,
     `features: alt screen ${yes(r.features.altScreen)} · mouse ${yes(r.features.mouseTracking)} · bracketed paste ${yes(r.features.bracketedPaste)} · app cursor keys ${yes(r.features.appCursorKeys)} · synchronized output ${yes(r.features.synchronizedOutput)} · ${r.features.hyperlinks} hyperlink(s) · ${r.features.scrollbackLines} scrollback line(s)`,
   ];
+  if (r.features.kittyGraphics > 0) {
+    const supported = r.core === "ghostty";
+    lines.push(`kitty graphics: ${r.features.kittyGraphics} image(s)${supported ? " (rendered with Ghostty core)" : " — requires core: \"ghostty\" to render"}`);
+  }
   if (r.features.titles.length) lines.push(`titles: ${r.features.titles.map((t) => JSON.stringify(t)).join(" → ")}`);
   const m = r.markers;
   if (m.chapters || m.zoom || m.hidden || m.screenshots || m.browserFrames) {

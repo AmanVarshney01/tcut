@@ -116,3 +116,42 @@ describe("raster snapshots", () => {
     expect(Bun.file(shot).size).toBeGreaterThan(0);
   }, 30_000);
 });
+
+describe("kitty graphics", () => {
+  test("recording with Kitty graphics APC renders without errors (Ghostty core)", async () => {
+    const d = path.join(dir, "kitty-graphics");
+    await rm(d, { recursive: true, force: true });
+    await mkdir(d, { recursive: true });
+
+    // A minimal Kitty graphics APC: ESC _G a=T,f=100 ; <base64 PNG> ESC \
+    // This is a tiny 1x1 red pixel PNG
+    const ESC = "\x1b";
+    const tinyPngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+    const kittyApc = `${ESC}_Ga=T,f=100;${tinyPngBase64}${ESC}\\`;
+
+    const rec: Recording = {
+      header: { version: 2, width: 40, height: 8 },
+      events: [
+        [0.0, "o", "Kitty graphics test\r\n"],
+        [0.1, "o", kittyApc],
+        [0.2, "o", "\r\nImage sent!\r\n> "],
+        [0.5, "m", "end"],
+      ],
+    };
+
+    // Use Ghostty core (default) - Kitty graphics should be supported
+    const config = resolveConfig({ output: [path.join(d, "kitty.png")], fps: 10 });
+    const result = await render(rec, config);
+
+    // Rendering should complete without errors
+    expect(result.frames).toBeGreaterThan(0);
+    expect(Bun.file(path.join(d, "kitty.png")).size).toBeGreaterThan(0);
+
+    // Verify doctor reports Kitty graphics as a feature, not unsupported
+    const { diagnoseRecording } = await import("../src/doctor");
+    const report = await diagnoseRecording(rec, "kitty.cast");
+    expect(report.features.kittyGraphics).toBe(1);
+    expect(report.core).toBe("ghostty");
+    expect(report.unsupported.map((u) => u.name)).not.toContain("kitty-graphics");
+  }, 60_000);
+});

@@ -2,14 +2,14 @@
 // Patterns never contain control characters: ESC and BEL are mapped to private-use code points first.
 const ESC = "\x1b";
 const BEL = "\x07";
-const ESC_MARK = "";
-const BEL_MARK = "";
+const ESC_MARK = "\uE000";
+const BEL_MARK = "\uE001";
 
 const marked = (chunk: string): string => chunk.replaceAll(ESC, ESC_MARK).replaceAll(BEL, BEL_MARK);
 
 /** Every window title set in `chunk` via OSC 0/2 (`ESC ] 0 ; title BEL`), in order. */
 export function extractTitles(chunk: string): string[] {
-  return [...marked(chunk).matchAll(/\](?:0|2);([^]*)(?:|\\)/g)].map((m) => m[1] ?? "");
+  return [...marked(chunk).matchAll(/\uE000\](?:0|2);([^\uE000\uE001]*)(?:\uE001|\uE000\\)/g)].map((m) => m[1] ?? "");
 }
 
 /** The last window title set in `chunk`, or null — what a live window bar should show after the chunk. */
@@ -34,15 +34,61 @@ export interface UnsupportedProtocol {
   note: string;
 }
 
-const PROTOCOLS: Array<{ name: string; pattern: RegExp; note: string }> = [
-  { name: "kitty-graphics", pattern: /_G/g, note: "Kitty graphics protocol (inline images) is not rendered" },
-  { name: "sixel", pattern: /P[0-9;]*q/g, note: "Sixel images are not rendered" },
-  { name: "iterm2-image", pattern: /\]1337;File=/g, note: "iTerm2 inline images are not rendered" },
-  { name: "tmux-passthrough", pattern: /Ptmux;/g, note: "tmux passthrough sequences are ignored" },
+export interface GraphicsProtocol {
+  name: string;
+  count: number;
+  supported: boolean;
+  note: string;
+}
+
+const KITTY_GRAPHICS_PATTERN = /\uE000_G/g;
+
+const ALWAYS_UNSUPPORTED: Array<{ name: string; pattern: RegExp; note: string }> = [
+  { name: "sixel", pattern: /\uE000P[0-9;]*q/g, note: "Sixel images are not rendered" },
+  { name: "iterm2-image", pattern: /\uE000\]1337;File=/g, note: "iTerm2 inline images are not rendered" },
+  { name: "tmux-passthrough", pattern: /\uE000Ptmux;/g, note: "tmux passthrough sequences are ignored" },
 ];
 
-/** Image/graphics protocols tcut cannot draw, counted across a chunk of output. */
-export function unsupportedProtocols(output: string): UnsupportedProtocol[] {
+/** Count Kitty graphics APCs in output. */
+export function countKittyGraphics(output: string): number {
   const safe = marked(output);
-  return PROTOCOLS.map((p) => ({ name: p.name, count: (safe.match(p.pattern) ?? []).length, note: p.note })).filter((p) => p.count > 0);
+  return (safe.match(KITTY_GRAPHICS_PATTERN) ?? []).length;
+}
+
+/**
+ * Detect graphics protocols in output.
+ * @param core - The emulator core: "ghostty" supports Kitty graphics, "lite" does not.
+ */
+export function detectGraphicsProtocols(output: string, core: "ghostty" | "lite" = "ghostty"): GraphicsProtocol[] {
+  const safe = marked(output);
+  const result: GraphicsProtocol[] = [];
+
+  const kittyCount = (safe.match(KITTY_GRAPHICS_PATTERN) ?? []).length;
+  if (kittyCount > 0) {
+    const supported = core === "ghostty";
+    result.push({
+      name: "kitty-graphics",
+      count: kittyCount,
+      supported,
+      note: supported
+        ? "Kitty graphics protocol: inline images are rendered with the Ghostty core"
+        : "Kitty graphics protocol: inline images require the Ghostty core (use core: \"ghostty\")",
+    });
+  }
+
+  for (const proto of ALWAYS_UNSUPPORTED) {
+    const count = (safe.match(proto.pattern) ?? []).length;
+    if (count > 0) {
+      result.push({ name: proto.name, count, supported: false, note: proto.note });
+    }
+  }
+
+  return result;
+}
+
+/** Image/graphics protocols tcut cannot draw, counted across a chunk of output. */
+export function unsupportedProtocols(output: string, core: "ghostty" | "lite" = "ghostty"): UnsupportedProtocol[] {
+  return detectGraphicsProtocols(output, core)
+    .filter((p) => !p.supported)
+    .map(({ name, count, note }) => ({ name, count, note }));
 }
