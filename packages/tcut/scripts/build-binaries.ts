@@ -23,7 +23,7 @@ for (const target of targets) {
   const ext = target.includes("windows") ? ".exe" : "";
   const outfile = path.join(dist, `tcut-${version}-${platform}${ext}`);
   const proc = Bun.spawn(
-    ["bun", "build", "--compile", "--minify", `--target=${target}`, path.join(root, "src", "cli.ts"), "--outfile", outfile],
+    ["bun", "build", "--compile", "--bytecode", "--minify", `--target=${target}`, path.join(root, "src", "cli.ts"), "--outfile", outfile],
     { cwd: root, stdout: "ignore", stderr: "pipe" },
   );
   const code = await proc.exited;

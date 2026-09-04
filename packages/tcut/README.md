@@ -9,7 +9,7 @@ Terminal videos, written in TypeScript. Record a session live or script it, then
 ## Install
 
 ```sh
-bun add -g termcut        # Bun ≥ 1.4 · installs the `tcut` command
+bun add -g termcut        # Bun ≥ 1.4.1 · installs the `tcut` command
 ```
 
 Or a standalone binary for macOS, Linux or Windows from [Releases](https://github.com/AmanVarshney01/tcut/releases) — all three are tested in CI.
