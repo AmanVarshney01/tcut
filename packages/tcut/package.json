@@ -43,14 +43,14 @@
     "LICENSE"
   ],
   "engines": {
-    "bun": ">=1.4.0"
+    "bun": ">=1.4.1"
   },
   "scripts": {
     "demo": "bun src/cli.ts examples/demo.ts",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
     "build:assets": "bun scripts/build-assets.ts",
-    "build": "bun run build:assets && bun build --compile --minify src/cli.ts --outfile dist/tcut",
+    "build": "bun run build:assets && bun build --compile --bytecode --minify src/cli.ts --outfile dist/tcut",
     "build:all": "bun run build:assets && bun scripts/build-binaries.ts"
   },
   "dependencies": {
