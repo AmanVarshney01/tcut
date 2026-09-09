@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { fontStack } from "../config";
 import path from "node:path";
 import { fitFrame } from "../loop";
+import { captionAt, captionsOnTimeline, type CaptionPresentation } from "../captions";
 import { slidesOnTimeline, type SlideCard } from "../slides";
 import { buildTimeline } from "../timeline";
 import { barHeight, embedImage } from "../renderer/page";
@@ -256,6 +257,45 @@ function slideMarkup(card: SlideCard, config: ResolvedConfig, g: Geometry): stri
   return parts.join("");
 }
 
+/** Subtitle text stays vector text, including the active word and pop scale. */
+function captionMarkup(c: CaptionPresentation | null, g: Geometry): string {
+  if (!c) return "";
+  const size = c.fontSize;
+  const max = Math.max(1, Math.floor((g.termW * 0.9 - size) / (size * 0.62)));
+  const lines: Array<Array<{ text: string; word: number }>> = [];
+  let wordIndex = 0;
+  for (const paragraph of c.text.split("\n")) {
+    let line: Array<{ text: string; word: number }> = [];
+    let length = 0;
+    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+      const chars = Array.from(word);
+      for (let i = 0; i < chars.length; i += max) {
+        const chunk = chars.slice(i, i + max).join("");
+        const n = Math.min(max, chars.length - i);
+        if (length && length + 1 + n > max) {
+          lines.push(line);
+          line = [];
+          length = 0;
+        }
+        line.push({ text: (length ? " " : "") + chunk, word: wordIndex });
+        length += n + (length ? 1 : 0);
+      }
+      wordIndex++;
+    }
+    lines.push(line);
+  }
+  const height = lines.length * size * 1.25 + size * 0.4;
+  const width = Math.min(g.termW * 0.9, Math.max(0, ...lines.map((line) => Array.from(line.map((part) => part.text).join("")).length)) * size * 0.62 + size);
+  const x = g.termW / 2;
+  const y = c.position === "top" ? 16 : Math.max(0, g.termH - 16 - height);
+  const cy = y + height / 2;
+  const text = lines.map((line, i) => {
+    const parts = line.map((part) => `<tspan fill="${esc(part.word === c.activeWord ? c.highlightColor : c.color)}">${esc(part.text)}</tspan>`).join("");
+    return `<text x="${num(x)}" y="${num(y + size * (1.15 + i * 1.25))}" text-anchor="middle">${parts}</text>`;
+  }).join("");
+  return `<g class="caption" transform="translate(${num(x)} ${num(cy)}) scale(${num(c.scale)}) translate(${num(-x)} ${num(-cy)})" style="filter:drop-shadow(0px 2px 3px #000a)" font-family="Arial,Helvetica,sans-serif" font-size="${num(size)}" font-weight="${c.weight}" stroke="#111" stroke-width="${c.outline * 2}" paint-order="stroke fill" stroke-linejoin="round"><rect x="${num(x - width / 2)}" y="${num(y)}" width="${num(width)}" height="${num(height)}" rx="9" fill="${esc(c.background)}" stroke="none"/>${text}</g>`;
+}
+
 /** Animated SVG: a horizontal strip of unique frames moved by a stepped CSS animation. No JS, no fonts embedded. */
 export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<SvgResult> {
   const replay = await replayFrames(rec, config);
@@ -264,17 +304,29 @@ export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<
 
   // Transition cards need their own steps: the grid does not change while a card is up.
   const slides = slidesOf(rec, config);
-  const cuts = [...new Set([...replay.frames.map((f) => f.time), ...slides.flatMap((s) => [s.start, s.end])])]
+  const captions = captionsOnTimeline(buildTimeline(rec.events, config.playbackSpeed, { maxPause: config.maxPause }).events);
+  const captionTicks: number[] = [];
+  for (const cue of captions) {
+    captionTicks.push(cue.start);
+    if (cue.end !== undefined) captionTicks.push(cue.end);
+    const animationEnd = Math.min(cue.end ?? total, cue.caption.style === "pop" ? cue.start + 0.3 : total);
+    if (cue.caption.style === "pop") captionTicks.push(animationEnd);
+    if (cue.caption.style === "pop" || cue.caption.style === "tiktok") {
+      for (let tick = Math.ceil(cue.start * config.fps); tick / config.fps < animationEnd; tick++) captionTicks.push(tick / config.fps);
+    }
+  }
+  const cuts = [...new Set([...replay.frames.map((f) => f.time), ...slides.flatMap((s) => [s.start, s.end]), ...captionTicks])]
     .filter((time) => time < total + 1e-9)
     .sort((a, b) => a - b);
-  const steps: Array<{ frame: GridFrame; time: number; card?: SlideCard }> = [];
+  const steps: Array<{ frame: GridFrame; time: number; card?: SlideCard; caption: CaptionPresentation | null }> = [];
   for (const time of cuts) {
     const frame = frameAt(replay.frames, time);
     if (!frame) continue;
     const card = slides.find((s) => time >= s.start - 1e-9 && time < s.end - 1e-9);
+    const caption = captionAt(captions, time);
     const previous = steps[steps.length - 1];
-    if (previous && previous.frame === frame && previous.card === card) continue;
-    steps.push({ frame, time, card });
+    if (previous && previous.frame === frame && previous.card === card && JSON.stringify(previous.caption) === JSON.stringify(caption)) continue;
+    steps.push({ frame, time, card, caption });
   }
   const total_ = total;
   const keyframes: string[] = [];
@@ -285,7 +337,7 @@ export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<
   keyframes.push(`100%{transform:translateX(${num(-(steps.length - 1) * g.termW)}px)}`);
 
   const frames = steps
-    .map((s, i) => `<g transform="translate(${num(i * g.termW)} 0)">${frameMarkup(s.frame, config, g)}${s.card ? slideMarkup(s.card, config, g) : ""}</g>`)
+    .map((s, i) => `<g transform="translate(${num(i * g.termW)} 0)">${frameMarkup(s.frame, config, g)}${s.card ? slideMarkup(s.card, config, g) : ""}${captionMarkup(s.caption, g)}</g>`)
     .join("\n");
 
   const style = `.strip{animation:tcut-@@tag@@ ${num(total)}s steps(1,end) infinite}\n@keyframes tcut-@@tag@@{${keyframes.join("")}}\n`;
@@ -315,6 +367,7 @@ export async function writeSvgSnapshots(rec: Recording, config: ResolvedConfig, 
   const replay = await replayFrames(rec, config);
   const g = svgGeometry(config, replay.cols, replay.rows);
   const title = config.title === "auto" ? (replay.title ?? "") : config.title;
+  const captions = captionsOnTimeline(buildTimeline(rec.events, config.playbackSpeed, { maxPause: config.maxPause }).events);
   const written: string[] = [];
   for (const mark of marks) {
     // The raster pass applies output and marks that share a frame tick together; match that: the mark
@@ -322,7 +375,7 @@ export async function writeSvgSnapshots(rec: Recording, config: ResolvedConfig, 
     const tick = Math.ceil(mark.at * config.fps - 1e-6) / config.fps;
     const frame = frameAt(replay.frames, tick);
     if (!frame) continue;
-    const svg = await svgDocument(config, g, title, "", `<g xml:space="preserve">${frameMarkup(frame, config, g)}</g>`);
+    const svg = await svgDocument(config, g, title, "", `<g xml:space="preserve">${frameMarkup(frame, config, g)}${captionMarkup(captionAt(captions, tick), g)}</g>`);
     await mkdir(path.dirname(path.resolve(mark.file)), { recursive: true });
     await Bun.write(mark.file, svg);
     written.push(mark.file);

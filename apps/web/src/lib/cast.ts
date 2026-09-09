@@ -1,3 +1,4 @@
+import { captionsOnTimeline, type CaptionCue } from "termcut/captions";
 import { buildTimeline } from "termcut/timeline";
 
 interface CastEvent {
@@ -17,6 +18,7 @@ export interface LoadedCast {
   theme: Record<string, string> | null;
   events: CastEvent[];
   chapters: Chapter[];
+  captions: CaptionCue[];
   duration: number;
 }
 
@@ -38,5 +40,5 @@ export function parseCast(text: string): LoadedCast {
     if (type === "m" && data.startsWith("chapter:")) chapters.push({ title: data.slice(8), t: vt });
     else if (type === "o" || type === "r") events.push({ t: vt, type, data });
   }
-  return { cols: header.width, rows: header.height, theme: header.bunVideo?.theme ?? null, events, chapters, duration: timeline.duration };
+  return { cols: header.width, rows: header.height, theme: header.bunVideo?.theme ?? null, events, chapters, captions: captionsOnTimeline(timeline.events), duration: timeline.duration };
 }

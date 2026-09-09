@@ -4,6 +4,8 @@ import { PIN_CSS } from "../renderer/pin";
 import path from "node:path";
 import { barHeight, embedImage, shadowCss, watermarkCss } from "../renderer/page";
 import { pageAssets } from "../renderer/bundle";
+import { captionsOnTimeline } from "../captions";
+import { CAPTION_CSS } from "../renderer/caption";
 import { slidesOnTimeline } from "../slides";
 import { buildTimeline } from "../timeline";
 import type { Recording, ResolvedConfig, Theme } from "../types";
@@ -52,6 +54,7 @@ export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise
     autoTitle: config.title === "auto",
     events: events.filter((e) => e.type === "o" || e.type === "r").map(({ vt, type, data }) => ({ vt, type, data })),
     slides: slidesOnTimeline(events),
+    captions: captionsOnTimeline(events),
   };
   // "</script>" inside the JSON would terminate the data block; escape it.
   const json = JSON.stringify(data).replace(/<\//g, "<\\/");
@@ -78,6 +81,8 @@ ${watermarkCss(config)}
 #bar .title { flex: 1; text-align: center; opacity: .7; } #bar.right .title { text-align: left; }
 #term.wterm { ${vars}; --term-font-family: ${fontStack(font.family)}; --term-font-size: ${font.size}px; --term-line-height: ${font.lineHeight}; --term-row-height: ${Math.ceil(font.size * font.lineHeight)}px; letter-spacing: ${font.letterSpacing}px; --vt-letter-spacing: ${font.letterSpacing}px; padding: 0; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
 ${PIN_CSS}
+${CAPTION_CSS}
+#playback { position: relative; overflow: hidden; }
 #slide { position: absolute; left: ${config.padding}px; right: ${config.padding}px; top: ${config.padding + barHeight(config)}px; height: ${slideBox(config, rec).h}px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 8%; box-sizing: border-box; background: ${theme.background}; color: ${theme.foreground}; opacity: 0; pointer-events: none; }
 #slide .eyebrow { font: 500 ${num(slideBox(config, rec).base * 0.26)}px ${fontStack(font.family)}; letter-spacing: .18em; text-transform: uppercase; opacity: .45; margin-bottom: 1.1em; }
 #slide h1 { font: 600 ${num(slideBox(config, rec).base)}px/1.15 ${fontStack(font.family)}; margin: 0; letter-spacing: -.01em; }
@@ -93,7 +98,7 @@ ${PIN_CSS}
 <div id="frame">
   ${windowBar(config)}
   ${watermark}
-  <div id="term"></div>
+  <div id="playback"><div id="term"></div><div id="caption" class="tcut-caption" hidden></div></div>
   <div id="slide"><div class="eyebrow"></div><h1></h1><div class="rule"></div><div class="sub"></div></div>
   <div id="controls">
     <button id="play" title="Play / pause">▶</button>

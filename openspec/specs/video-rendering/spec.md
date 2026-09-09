@@ -128,51 +128,61 @@ When `keys` is enabled, recent key presses SHALL be shown as chips (printable ru
 #### Scenario: x preset
 - **WHEN** `preset: "x"` is set
 - **THEN** the output is 1280×720 at 30 fps unless overridden
+
 ### Requirement: Window shadow
 When `shadow` is set, the compositor SHALL draw a drop shadow under the terminal (and browser) window in raster output and an equivalent `feDropShadow` filter in SVG; `margin` SHALL default to 40 so the shadow has room.
 #### Scenario: shadow in svg
 - **WHEN** `shadow: true` and the output is `.svg`
 - **THEN** the window rect carries `filter="url(#shadow)"`
+
 ### Requirement: Transparent background
 When `marginFill` is `"transparent"`, outputs whose format carries alpha (PNG, WebP, GIF, WebM, SVG, HTML) SHALL have a transparent margin; MP4 and JPEG SHALL use the theme background and the result SHALL say so in `notes`.
 #### Scenario: transparent png
 - **WHEN** a cast renders to `.png` with a transparent margin and a shadow
 - **THEN** margin corners have alpha 0, the window interior alpha 255, and the shadow region an alpha strictly between
+
 ### Requirement: Watermark
 When `watermark` is set, text or an image SHALL be drawn over the picture at the configured corner (or centre) with the configured opacity and size, in raster, SVG and HTML output.
 #### Scenario: text watermark
 - **WHEN** `watermark: "© me"`
 - **THEN** every frame shows "© me" bottom-right
+
 ### Requirement: Text output
 An output ending in `.txt` SHALL contain the final screen as plain text, one row per line, trailing blanks removed.
 #### Scenario: txt
 - **WHEN** the recording ends showing "> one" and "> two"
 - **THEN** the file is "> one\n> two\n"
+
 ### Requirement: Clip selection
 Rendering SHALL accept `from`/`to` (seconds on the visible timeline), `chapters` (titles or 1-based numbers, joined in the order given) and `splitChapters` (one output per chapter, suffixed `-NN-slug`). Selection is performed on the cast, so every output format supports it.
 #### Scenario: split chapters
 - **WHEN** a cast has chapters "Install" and "Run" and renders `demo.mp4` with `splitChapters`
 - **THEN** `demo-01-install.mp4` and `demo-02-run.mp4` are written
+
 ### Requirement: Timelapse segments
 A `speed:N` marker SHALL make the events that follow play N× faster on the visible timeline until the next `speed:` marker; `t.timelapse(fn, { speed })` records such a pair around `fn`.
 #### Scenario: eight times
 - **WHEN** 2 s of output happen inside `timelapse(fn, { speed: 4 })`
 - **THEN** they occupy 0.5 s of video
+
 ### Requirement: Hyperlinks in SVG
 Cells inside an OSC 8 link SHALL be wrapped in `<a href>` in SVG output.
 #### Scenario: printed link
 - **WHEN** output contains an OSC 8 link around "docs"
 - **THEN** the SVG contains `<a href="…"><tspan …>docs</tspan></a>`
+
 ### Requirement: Synchronized output
 While a program is inside a mode-2026 block, rendering SHALL hold the previous complete frame, for at most half a second.
 #### Scenario: TUI repaint
 - **WHEN** a repaint is wrapped in `ESC[?2026h … ESC[?2026l`
 - **THEN** no frame shows the partially drawn state
+
 ### Requirement: Automatic window title
 With `title: "auto"`, the window bar SHALL show the last OSC 0/2 title the program set (per frame in raster and HTML output, the final one in SVG).
 #### Scenario: nvim title
 - **WHEN** nvim sets the title
 - **THEN** the bar shows it
+
 ### Requirement: Transcript output
 An output ending in `.log` SHALL contain every scrollback line followed by the final screen.
 #### Scenario: seq
@@ -185,3 +195,21 @@ Rendering SHALL emit snapshot marks regardless of the configured outputs: `.svg`
 #### Scenario: snapshot without a video
 - **WHEN** a recording contains a `.png` snapshot mark and only text outputs are configured
 - **THEN** the WebView pass runs and the PNG is written and reported
+
+### Requirement: Styled subtitle rendering
+Visual outputs SHALL render subtitle captions with classic, tiktok, pop, or minimal presentation. TikTok SHALL highlight words in sequence and Pop SHALL animate an entrance. Animation SHALL use the visible render clock, and caption expiry SHALL follow speed, hidden intervals and idle compression without extending recording duration.
+
+#### Scenario: seek backwards
+- **WHEN** HTML or website playback seeks backwards into a caption
+- **THEN** the matching text and animation state are recomputed at that instant
+
+#### Scenario: idle terminal
+- **WHEN** a caption animates, replaces another caption, or expires while terminal output is idle
+- **THEN** raster and animated SVG output update the overlay
+
+### Requirement: Subtitle persistence through edits and stills
+Cuts SHALL retain active subtitle text and remaining expiry, restarting entrance/highlighting at the cut. Joins SHALL clear captions at section seams. Raster and SVG snapshots SHALL draw the caption at the capture time. Text SHALL be escaped safely in every visual output.
+
+#### Scenario: cut through a caption
+- **WHEN** a cut starts two seconds into a four-second caption
+- **THEN** the first frame shows the caption and it expires two seconds into the clip

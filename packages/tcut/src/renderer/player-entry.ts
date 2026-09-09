@@ -2,6 +2,8 @@
 import { WasmBridge } from "@wterm/core";
 import { pinGlyphs } from "./pin";
 import { WTerm } from "@wterm/dom";
+import { captionAt, type CaptionCue } from "../captions";
+import { paintCaption } from "./caption";
 import { extractTitle } from "../osc";
 
 interface PlayerData {
@@ -12,6 +14,7 @@ interface PlayerData {
   /** Follow OSC 0/2 titles from the recording in the window bar. */
   autoTitle?: boolean;
   events: Array<{ vt: number; type: "o" | "r"; data: string }>;
+  captions?: CaptionCue[];
   slides?: Array<{ start: number; end: number; heading: string; subtitle?: string; eyebrow?: string; fade: number }>;
 }
 
@@ -95,6 +98,7 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
 
   const updateUi = () => {
     updateSlide(elapsed);
+    paintCaption(document.getElementById("caption")!, captionAt(data.captions ?? [], elapsed));
     progress.value = String(Math.min(1000, Math.round(data.duration > 0 ? (elapsed / data.duration) * 1000 : 0)));
     timeLabel.textContent = `${fmt(elapsed)} / ${fmt(data.duration)}`;
     playBtn.textContent = playing ? "❚❚" : "▶";

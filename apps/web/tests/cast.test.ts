@@ -11,3 +11,13 @@ test("site playback includes speed, hidden setup, idle compression and the final
   expect(cast.chapters).toEqual([{ title: "Next", t: 2 }]);
   expect(cast.duration).toBe(3);
 });
+
+test("site playback retains subtitle cues on the same transformed timeline", () => {
+  const cast = parseCast([
+    { version: 2, width: 80, height: 24, bunVideo: { playbackSpeed: 2 } },
+    [0, "m", 'caption:{"text":"Hello there","style":"tiktok","duration":4000}'],
+    [1, "o", "terminal"], [6, "m", "end"],
+  ].map((line) => JSON.stringify(line)).join("\n"));
+  expect(cast.captions[0]).toMatchObject({ start: 0, end: 2, caption: { text: "Hello there", style: "tiktok" } });
+  expect(cast.events).toEqual([{ t: 0.5, type: "o", data: "terminal" }]);
+});

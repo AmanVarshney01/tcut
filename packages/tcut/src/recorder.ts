@@ -429,6 +429,15 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
       await screen.settle();
       push("m", `${MARKER.zoom}${region ? JSON.stringify({ ...region, duration: region.duration === undefined ? undefined : toMs(region.duration) }) : "null"}`);
     },
+    caption: async (text, opts = {}) => {
+      if (opts.fontSize !== undefined && (!Number.isFinite(opts.fontSize) || opts.fontSize <= 0)) throw new Error("Caption fontSize must be positive and finite");
+      if (opts.style !== undefined && !["classic", "tiktok", "pop", "minimal"].includes(opts.style)) throw new Error(`Unknown caption style: ${opts.style}`);
+      if (opts.position !== undefined && !["top", "bottom"].includes(opts.position)) throw new Error(`Unknown caption position: ${opts.position}`);
+      const { duration, ...style } = opts;
+      const spec = text === null ? null : { ...style, text, duration: duration === undefined ? undefined : toMs(duration) };
+      push("m", `${MARKER.caption}${JSON.stringify(spec)}`);
+    },
+
     slide: async (heading, slideOpts: SlideOptions = {}) => {
       await screen.settle();
       const wanted = toMs(slideOpts.duration, 2000);

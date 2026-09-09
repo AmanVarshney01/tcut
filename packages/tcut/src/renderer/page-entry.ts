@@ -4,6 +4,8 @@ import { WasmBridge, type TerminalCore } from "@wterm/core";
 import { WTerm } from "@wterm/dom";
 import { GhosttyCore } from "@wterm/ghostty";
 import type { CellSize } from "../config";
+import { paintCaption } from "./caption";
+import type { CaptionPresentation } from "../captions";
 import { pinGlyphs } from "./pin";
 
 declare global {
@@ -128,6 +130,16 @@ const api = {
     const el = document.getElementById("keys");
     if (!el) return false;
     el.replaceChildren(...labels.map((l) => Object.assign(document.createElement("span"), { textContent: l })));
+    return true;
+  },
+
+  caption(caption: CaptionPresentation | null): boolean {
+    const el = document.getElementById("caption")!;
+    paintCaption(el, caption);
+    el.dataset.position = caption?.position ?? "bottom";
+    const keys = document.getElementById("keys")!;
+    const side = keys.dataset.position ?? "bottom";
+    keys.style.transform = caption?.position === side ? `translateY(${(el.offsetHeight + 12) * (side === "bottom" ? -1 : 1)}px)` : "";
     return true;
   },
 

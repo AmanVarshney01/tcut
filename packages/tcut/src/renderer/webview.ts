@@ -4,6 +4,7 @@ import path from "node:path";
 import { MARKER } from "../cast";
 import type { Recording, RenderProgress, ResolvedConfig } from "../types";
 import { fitFrame, loopOffsetFrames, rotateFrames } from "../loop";
+import { captionAt, captionsOnTimeline } from "../captions";
 import { slideAt, slidesOnTimeline } from "../slides";
 import { buildTimeline, withReinjection, type TimedEvent } from "../timeline";
 import { pageAssets } from "./bundle";
@@ -195,6 +196,8 @@ export async function render(
     let zoomApplied: string | null = null;
     let lastChips = "";
     /** Transition cards, in order; the clock decides which one (if any) is on screen. */
+    const captions = captionsOnTimeline(events);
+    let captionApplied = "null";
     const slides = slidesOnTimeline(events);
     let slideApplied: string | null = null;
     // loopOffset rotates the frame order for looping outputs; those frames are buffered and flushed at the end.
@@ -274,6 +277,14 @@ export async function render(
       }
 
       // The transition card on screen at this instant, faded in and out on the render clock.
+      const caption = captionAt(captions, time);
+      const captionKey = JSON.stringify(caption);
+      const captionChanged = captionKey !== captionApplied;
+      if (captionChanged) {
+        await view.evaluate(`window.__vt.caption(${captionKey})`);
+        captionApplied = captionKey;
+      }
+
       let slideChanged = false;
       if (slides.length) {
         const shown = slideAt(slides, time);
@@ -306,7 +317,7 @@ export async function render(
         await view.evaluate(`window.__vt.cursor(${blinkOn})`);
         lastBlink = blinkOn;
       }
-      if (zoomChanged || chipsChanged || slideChanged) dirty = true;
+      if (zoomChanged || chipsChanged || slideChanged || captionChanged) dirty = true;
       if (dirty) {
         lastPng = (await view.screenshot({ encoding: "buffer" })) as Uint8Array;
         if (transparent) {

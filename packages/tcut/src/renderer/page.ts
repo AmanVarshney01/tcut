@@ -1,5 +1,6 @@
 import type { ResolvedConfig, Theme } from "../types";
 import { fontStack } from "../config";
+import { CAPTION_CSS } from "./caption";
 import { PIN_CSS } from "./pin";
 
 const BAR_HEIGHT = 36;
@@ -244,6 +245,9 @@ export function renderHtml(config: ResolvedConfig): string {
   }
   #term .term-row { overflow: hidden; }
   ${PIN_CSS}
+  ${CAPTION_CSS}
+  #caption { top: auto; }
+  #caption[data-position="top"] { top: ${barHeight(config) + 16}px !important; }
   /* Key overlay: chips for recent key presses, driven by the renderer on the render clock. */
   #keys {
     position: absolute; left: 0; right: 0; ${config.keys?.position === "top" ? "top" : "bottom"}: ${Math.max(10, config.padding - 6)}px;
@@ -284,7 +288,7 @@ export function renderHtml(config: ResolvedConfig): string {
     margin-top: 1.2em; max-width: 34em; opacity: 0.6;
   }
   #frame { overflow: hidden; }
-  #frame > *:not(#zoom):not(#keys):not(#slide) { position: relative; z-index: 2; }
+  #frame > *:not(#zoom):not(#keys):not(#slide):not(#caption) { position: relative; z-index: 2; }
   /* Shadows are painted outside #frame; keep the shadow of the window, not of the zoomed grid. */
   #zoom { position: relative; }
 </style>
@@ -295,7 +299,8 @@ export function renderHtml(config: ResolvedConfig): string {
 <div id="frame">
   ${windowBarHtml(config)}
   <div id="zoom"><div id="term"></div></div>
-  <div id="keys"></div>
+  <div id="keys" data-position="${config.keys?.position ?? "bottom"}"></div>
+  <div id="caption" class="tcut-caption" hidden></div>
   <div id="slide"><div class="eyebrow"></div><h1></h1><div class="rule"></div><div class="sub"></div></div>
 </div>
 ${

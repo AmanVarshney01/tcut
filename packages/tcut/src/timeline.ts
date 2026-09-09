@@ -1,3 +1,4 @@
+import { expandCaptionEvents } from "./captions";
 import { MARKER } from "./markers";
 import type { CastEvent } from "./types";
 
@@ -41,7 +42,7 @@ export function buildTimeline(events: CastEvent[], playbackSpeed: number, opts: 
     return vt;
   };
 
-  for (const [t, type, data] of events) {
+  for (const [t, type, data] of expandCaptionEvents(events)) {
     if (type === "m" && data === MARKER.hide) {
       if (hiddenSince === null) hiddenSince = t;
       continue;

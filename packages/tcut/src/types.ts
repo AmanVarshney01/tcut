@@ -67,6 +67,20 @@ export interface KeysConfig {
   radius?: number;
 }
 
+/** Subtitle overlay. Returns immediately, so commands continue beneath it. */
+export interface CaptionOptions {
+  /** Omit to keep it until the next caption or caption(null). */
+  duration?: Duration;
+  /** Classic: dark box; TikTok: timed word highlights; Pop: bouncing entrance; Minimal: small shadowed text. */
+  style?: "classic" | "tiktok" | "pop" | "minimal";
+  position?: "bottom" | "top";
+  fontSize?: number;
+  color?: string;
+  background?: string;
+  /** Active-word color for the TikTok preset. */
+  highlightColor?: string;
+}
+
 /** A transition card shown between feature demos. */
 export interface SlideOptions {
   /** Smaller line under the heading. */
@@ -408,6 +422,8 @@ export interface TerminalSession {
    * unless `chapter: false`.
    */
   slide(heading: string, opts?: SlideOptions): Promise<void>;
+  /** Show a subtitle over the video without typing into the shell. null clears it. */
+  caption(text: string | null, opts?: CaptionOptions): Promise<void>;
   /** Magnify a region of the terminal (animated at render time); `zoom(null)` resets. */
   zoom(region: ZoomRegion | null): Promise<void>;
   /** Named chapter: becomes mp4 chapter metadata, shows up in `--json` output, and is a cut point for `--chapters` / `--split-chapters`. */

@@ -108,26 +108,31 @@ When `browser` is configured, recording SHALL capture screenshots of a WebView o
 #### Scenario: caption then command
 - **WHEN** a script calls `t.print("## Step 1")` and then `t.run("ls")`
 - **THEN** the video shows the bold heading above the command, the shell never receives "Step 1", and `ls` runs at a normal prompt
+
 ### Requirement: timelapse
 `t.timelapse(fn, { speed })` SHALL run `fn` while recording a speed segment so that its output plays back `speed`× faster (default 8); segments nest and restore the outer speed.
 #### Scenario: install timelapse
 - **WHEN** `await t.timelapse(() => t.run("bun install"), { speed: 8 })` takes 16 s to record
 - **THEN** it plays in 2 s
+
 ### Requirement: look config
 `defineVideo` config SHALL accept `shadow` (boolean or `{ x, y, blur, color, opacity }`), `watermark` (text or `{ text | image, position, opacity, size, color, margin }`) and `marginFill: "transparent"`.
 #### Scenario: defaults
 - **WHEN** `shadow: true` with no `margin`
 - **THEN** the resolved config has `margin: 40`
+
 ### Requirement: Mode-aware input
 Cursor keys SHALL be sent in the SS3 form while the program has application cursor mode (DECCKM) on, and `paste()` SHALL wrap text in bracketed-paste markers while the program has bracketed paste on.
 #### Scenario: vim arrows
 - **WHEN** nvim is running and the script calls `t.down()`
 - **THEN** the PTY receives `ESC O B`
+
 ### Requirement: Scrollback
 `wait`/`expect` SHALL accept `scope: "scrollback"` (scrolled-off lines plus the screen) and `t.scrollback()` SHALL return that transcript.
 #### Scenario: long output
 - **WHEN** `seq 1 60` scrolled past the grid
 - **THEN** `expect(/^3$/m, { scope: "scrollback" })` passes
+
 ### Requirement: Caption links
 Markdown links in `print()` SHALL be written as OSC 8 hyperlinks.
 #### Scenario: docs link
@@ -144,3 +149,15 @@ Markdown links in `print()` SHALL be written as OSC 8 hyperlinks.
 #### Scenario: capture includes the output that precedes the mark
 - **WHEN** output is recorded immediately before a mark within the same frame tick
 - **THEN** the captured still includes that output (same batch semantics as the raster renderer)
+
+### Requirement: Subtitle overlay authoring
+`t.caption(text, options?)` SHALL record a subtitle without sending it to the PTY or terminal screen and SHALL return immediately. Options SHALL include classic, tiktok, pop and minimal styles, duration, top/bottom position, fontSize, color, background and highlightColor. `t.caption(null)` SHALL clear the overlay. Omitted duration SHALL persist until replacement, clear, or video end.
+
+#### Scenario: command beneath a caption
+- **WHEN** a script awaits a three-second caption and then runs a command
+- **THEN** the command begins immediately and runs beneath the caption
+- **AND** the caption text is absent from terminal screen assertions and transcripts
+
+#### Scenario: replacement with pending expiry
+- **WHEN** a timed caption is replaced before it expires
+- **THEN** its old expiry does not clear the replacement

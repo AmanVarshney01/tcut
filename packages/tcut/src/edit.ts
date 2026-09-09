@@ -3,6 +3,7 @@
 // never goes through ffmpeg — a cut cast is still a cast.
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { captionsOnTimeline } from "./captions";
 import { MARKER } from "./cast";
 import { buildTimeline } from "./timeline";
 import type { CastEvent, Recording, ResolvedConfig } from "./types";
@@ -84,6 +85,9 @@ export function cutRecording(rec: Recording, config: ResolvedConfig, range: Clip
     kept.push([round(t - from), type, data]);
   }
   const events: CastEvent[] = [...preroll];
+  const caption = captionsOnTimeline(flat.events.map(([vt, type, data]) => ({ vt, type, data })))
+    .find((c) => c.start < from && (c.end === undefined || c.end > from));
+  if (caption) events.push([0, "m", `${MARKER.caption}${JSON.stringify(caption.caption)}`]);
   for (const e of [lastBrowser, lastFocus, lastZoom]) if (e) events.push(e);
   events.push(...kept, [round(to - from), "m", MARKER.end]);
   return { ...flat, header: { ...flat.header, duration: round(to - from) }, events };
@@ -147,6 +151,7 @@ export function concatRecordings(parts: Array<{ rec: Recording; config: Resolved
     if (i > 0) {
       events.push([round(offset), "o", "\x1bc"]);
       events.push([round(offset), "m", `${MARKER.zoom}null`]);
+      if (flats[i - 1]!.events.some((e) => e[1] === "m" && e[2].startsWith(MARKER.caption))) events.push([round(offset), "m", `${MARKER.caption}null`]);
       if (flat.events.some((e) => e[1] === "b") || flats[i - 1]!.events.some((e) => e[1] === "b")) events.push([round(offset), "m", `${MARKER.focus}terminal`]);
     }
     for (const [t, type, data] of flat.events) {

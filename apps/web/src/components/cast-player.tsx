@@ -1,3 +1,4 @@
+import { captionAt, CAPTION_CSS, paintCaption } from "termcut/captions";
 import { Terminal, type TerminalHandle } from "@wterm/react";
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { parseCast, type LoadedCast } from "../lib/cast";
@@ -34,6 +35,7 @@ export function CastPlayer({ cast: text }: { cast: string }) {
 
 function Player({ cast }: { cast: LoadedCast }) {
   const term = useRef<TerminalHandle | null>(null);
+  const captionEl = useRef<HTMLDivElement | null>(null);
   const ready = useRef(false);
   const clock = useRef({ elapsed: 0, playing: true, speed: 1, pointer: 0 });
   const [elapsed, setElapsed] = useState(0);
@@ -84,21 +86,29 @@ function Player({ cast }: { cast: LoadedCast }) {
     return () => cancelAnimationFrame(raf);
   }, [cast]);
 
+  useEffect(() => {
+    if (captionEl.current) paintCaption(captionEl.current, captionAt(cast.captions, elapsed));
+  }, [cast, elapsed]);
+
   const vars = themeVars(cast.theme);
   return (
     <div className="overflow-hidden rounded-lg bg-mocha p-3">
-      <Terminal
-        ref={term}
-        cols={cast.cols}
-        rows={cast.rows}
-        cursorBlink={false}
-        style={vars}
-        onReady={() => {
-          ready.current = true;
-          seek(clock.current.elapsed);
-        }}
-        onData={() => {}}
-      />
+      <style>{CAPTION_CSS}</style>
+      <div className="relative overflow-hidden">
+        <Terminal
+          ref={term}
+          cols={cast.cols}
+          rows={cast.rows}
+          cursorBlink={false}
+          style={vars}
+          onReady={() => {
+            ready.current = true;
+            seek(clock.current.elapsed);
+          }}
+          onData={() => {}}
+        />
+        <div ref={captionEl} className="tcut-caption" hidden />
+      </div>
       <div className="mt-3 flex items-center gap-3 font-mono text-xs text-[#a6adc8]">
         <button
           type="button"

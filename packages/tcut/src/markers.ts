@@ -9,5 +9,6 @@ export const MARKER = {
   speed: "speed:",
   /** A full-frame transition card drawn at render time (`slide:{json}`). */
   slide: "slide:",
+  caption: "caption:",
   end: "end",
 } as const;

@@ -57,13 +57,31 @@ What a script can do, one line each:
 | `hide(fn)` | runs setup off-camera; the state stays |
 | `snapshot("x.png" \| "x.svg")` | a pixel or vector still of that exact moment, written on every render |
 | `chapter(name)` | mp4 chapters, and cut points for `--chapters` / `--split-chapters` |
-| `print(markdown)` · `title(text)` | captions rendered into the terminal, nothing typed |
+| `print(markdown)` · `title(text)` | Markdown and headings rendered into the terminal, nothing typed |
+| `caption(text, { style, duration })` | bottom subtitles: `classic`, `tiktok`, `pop`, or `minimal`; commands keep running |
 | `slide("Heading", { during })` | a full-screen transition card between feature demos; `during` does the setup behind it |
 | `zoom({ rows, cols })` | magnifies a region; `keys: true` shows what was pressed |
 | `timelapse(fn, { speed })` | fast-forwards an install or a build, not just the silence |
 | `browser` | a real browser window beside or over the terminal (below) |
 
 The full surface is in the [reference](https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md).
+
+## Subtitle captions
+
+```ts
+await t.caption("Make every word stand out", {
+  style: "tiktok", // classic | tiktok | pop | minimal
+  duration: "3s",
+});
+await t.run("bun --version"); // continues underneath the caption
+await t.caption("A big moment", { style: "pop", color: "#ff91cf" });
+await t.sleep("2s");
+await t.caption(null); // clear; no duration means keep until replaced or cleared
+```
+
+Captions sit at the bottom of the terminal window. Override `position: "top"`, `fontSize` (pixels), `color`, `background`, and `highlightColor`. Classic uses a dark box; TikTok highlights each word in turn; Pop has a bouncing entrance; Minimal is smaller text with a shadow. Caption timing follows playback speed, hidden sections, and idle compression. Word highlighting is evenly timed across the caption, not speech recognition.
+
+Captions render in videos, GIFs, SVG, HTML playback and snapshots. They stay out of the shell, screen assertions, and text transcripts. See the [four-style example](packages/tcut/examples/captions.video.ts).
 
 ## Render again
 
