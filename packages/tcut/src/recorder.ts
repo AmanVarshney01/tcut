@@ -7,6 +7,7 @@ import { ExpectationError, MissingRequirementError, WaitTimeoutError } from "./e
 import { altSequence, ctrlSequence, keySequence, shiftSequence, wheelSequence } from "./keys";
 import { linkifyMarkdown } from "./osc";
 import { Screen } from "./screen";
+import { SLIDE_END } from "./slides";
 import type {
   BrowserSession,
   CastEvent,
@@ -228,8 +229,10 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     return Math.max(0, base * factor);
   };
 
+  /** True while a slide's `during` runs: nobody can see the typing, so it is instant. */
+  let behindCard = false;
   const type = async (text: string, typeOpts: TypeOptions = {}): Promise<void> => {
-    const speed = fast ? 0 : toMs(typeOpts.speed, config.typingSpeed);
+    const speed = fast || behindCard ? 0 : toMs(typeOpts.speed, config.typingSpeed);
     for (const char of text) {
       await raw(char === "\n" ? "\r" : char);
       if (speed > 0) await Bun.sleep(typingDelay(speed));
@@ -438,12 +441,20 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
       const startedAt = marker[0];
       if (slideOpts.during) {
         await sleep(fade); // let the card cover the terminal before anything moves underneath
-        await slideOpts.during();
+        behindCard = true;
+        try {
+          await slideOpts.during();
+        } finally {
+          behindCard = false;
+        }
       }
       const spent = (stamp() - startedAt) * 1000;
       await sleep(Math.max(fade, wanted - spent));
-      // The card must cover exactly the time that passed, however long `during` took.
+      // The end marker rides the same timeline as everything else (speed, timelapse, idle compression), so the
+      // card covers exactly the time that passed, however long `during` took. The duration in the JSON is a
+      // fallback for readers that predate the end marker.
       marker[2] = `${MARKER.slide}${JSON.stringify({ ...card, duration: Math.max(wanted, (stamp() - startedAt) * 1000) })}`;
+      push("m", SLIDE_END);
     },
     chapter: async (name) => {
       await screen.settle();

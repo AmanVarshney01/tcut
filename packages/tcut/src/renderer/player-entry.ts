@@ -12,7 +12,7 @@ interface PlayerData {
   /** Follow OSC 0/2 titles from the recording in the window bar. */
   autoTitle?: boolean;
   events: Array<{ vt: number; type: "o" | "r"; data: string }>;
-  slides?: Array<{ at: number; heading: string; subtitle?: string; eyebrow?: string; duration: number; fade: number }>;
+  slides?: Array<{ start: number; end: number; heading: string; subtitle?: string; eyebrow?: string; fade: number }>;
 }
 
 const dataEl = document.getElementById("tcut-cast");
@@ -69,11 +69,11 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
   /** The transition card at `time`, faded in and out like the raster renderer. */
   const updateSlide = (time: number) => {
     if (!slideEl || !data.slides?.length) return;
-    const card = data.slides.find((s) => time >= s.at && time <= s.at + s.duration);
+    const card = data.slides.find((s) => time >= s.start && time <= s.end);
     let opacity = 0;
     if (card) {
-      const into = time - card.at;
-      const left = card.duration - into;
+      const into = time - card.start;
+      const left = card.end - time;
       opacity = card.fade > 0 ? Math.max(0, Math.min(1, Math.min(into / card.fade, left / card.fade))) : 1;
       const heading = slideEl.querySelector("h1")!;
       if (heading.textContent !== card.heading) {

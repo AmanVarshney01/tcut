@@ -4,7 +4,7 @@ import { PIN_CSS } from "../renderer/pin";
 import path from "node:path";
 import { barHeight, embedImage, shadowCss, watermarkCss } from "../renderer/page";
 import { pageAssets } from "../renderer/bundle";
-import { MARKER } from "../cast";
+import { slidesOnTimeline } from "../slides";
 import { buildTimeline } from "../timeline";
 import type { Recording, ResolvedConfig, Theme } from "../types";
 
@@ -51,12 +51,7 @@ export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise
     speed: 1,
     autoTitle: config.title === "auto",
     events: events.filter((e) => e.type === "o" || e.type === "r").map(({ vt, type, data }) => ({ vt, type, data })),
-    slides: events
-      .filter((e) => e.type === "m" && e.data.startsWith(MARKER.slide))
-      .map((e) => {
-        const spec = JSON.parse(e.data.slice(MARKER.slide.length)) as { heading: string; subtitle?: string; eyebrow?: string; duration: number; fade: number };
-        return { at: e.vt, heading: spec.heading, subtitle: spec.subtitle, eyebrow: spec.eyebrow, duration: spec.duration / 1000, fade: spec.fade / 1000 };
-      }),
+    slides: slidesOnTimeline(events),
   };
   // "</script>" inside the JSON would terminate the data block; escape it.
   const json = JSON.stringify(data).replace(/<\//g, "<\\/");

@@ -4,6 +4,7 @@ import path from "node:path";
 import { MARKER } from "../cast";
 import type { Recording, RenderProgress, ResolvedConfig } from "../types";
 import { fitFrame, loopOffsetFrames, rotateFrames } from "../loop";
+import { slideAt, slidesOnTimeline } from "../slides";
 import { buildTimeline, withReinjection, type TimedEvent } from "../timeline";
 import { pageAssets } from "./bundle";
 import { createSinks, type Chapter } from "./encoder";
@@ -194,13 +195,7 @@ export async function render(
     let zoomApplied: string | null = null;
     let lastChips = "";
     /** Transition cards, in order; the clock decides which one (if any) is on screen. */
-    interface SlideCard { start: number; heading: string; subtitle?: string; eyebrow?: string; duration: number; fade: number }
-    const slides: SlideCard[] = events
-      .filter((e) => e.type === "m" && e.data.startsWith(MARKER.slide))
-      .map((e) => {
-        const spec = JSON.parse(e.data.slice(MARKER.slide.length)) as Omit<SlideCard, "start" | "duration" | "fade"> & { duration: number; fade: number };
-        return { ...spec, start: e.vt, duration: spec.duration / 1000, fade: spec.fade / 1000 };
-      });
+    const slides = slidesOnTimeline(events);
     let slideApplied: string | null = null;
     // loopOffset rotates the frame order for looping outputs; those frames are buffered and flushed at the end.
     const loopSinks = config.loopOffset ? sinks.filter((s) => s.loops) : [];
@@ -281,16 +276,10 @@ export async function render(
       // The transition card on screen at this instant, faded in and out on the render clock.
       let slideChanged = false;
       if (slides.length) {
-        const card = slides.find((s) => time >= s.start && time <= s.start + s.duration);
-        let opacity = 0;
-        if (card) {
-          const into = time - card.start;
-          const left = card.duration - into;
-          opacity = card.fade > 0 ? Math.max(0, Math.min(1, Math.min(into / card.fade, left / card.fade))) : 1;
-        }
-        const key = card && opacity > 0 ? `${card.start}|${opacity.toFixed(3)}` : "";
+        const shown = slideAt(slides, time);
+        const key = shown ? `${shown.card.start}|${shown.opacity.toFixed(3)}` : "";
         if (key !== slideApplied) {
-          const payload = card && opacity > 0 ? { heading: card.heading, subtitle: card.subtitle, eyebrow: card.eyebrow, opacity } : null;
+          const payload = shown ? { heading: shown.card.heading, subtitle: shown.card.subtitle, eyebrow: shown.card.eyebrow, opacity: shown.opacity } : null;
           await view.evaluate(`window.__vt.slide(${JSON.stringify(payload)})`);
           slideApplied = key;
           slideChanged = true;

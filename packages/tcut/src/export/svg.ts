@@ -1,8 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { fontStack } from "../config";
 import path from "node:path";
-import { MARKER } from "../cast";
 import { fitFrame } from "../loop";
+import { slidesOnTimeline, type SlideCard } from "../slides";
 import { buildTimeline } from "../timeline";
 import { barHeight, embedImage } from "../renderer/page";
 import type { Recording, ResolvedConfig } from "../types";
@@ -207,22 +207,9 @@ ${await watermarkMarkup(config, g)}
 }
 
 
-export interface SlideSpec {
-  at: number;
-  heading: string;
-  subtitle?: string;
-  eyebrow?: string;
-  duration: number;
-}
-
 /** Transition cards on the visible timeline. */
-function slidesOf(rec: Recording, config: ResolvedConfig): SlideSpec[] {
-  return buildTimeline(rec.events, config.playbackSpeed)
-    .events.filter((e) => e.type === "m" && e.data.startsWith(MARKER.slide))
-    .map((e) => {
-      const spec = JSON.parse(e.data.slice(MARKER.slide.length)) as { heading: string; subtitle?: string; eyebrow?: string; duration: number };
-      return { at: e.vt, heading: spec.heading, subtitle: spec.subtitle, eyebrow: spec.eyebrow, duration: spec.duration / 1000 };
-    });
+function slidesOf(rec: Recording, config: ResolvedConfig): SlideCard[] {
+  return slidesOnTimeline(buildTimeline(rec.events, config.playbackSpeed).events);
 }
 
 /** Greedy wrap for the subtitle: SVG text does not reflow. */
@@ -240,7 +227,7 @@ function wrap(text: string, max: number): string[] {
 }
 
 /** The transition card, in terminal-local coordinates (the body group is already translated and clipped). */
-function slideMarkup(card: SlideSpec, config: ResolvedConfig, g: Geometry): string {
+function slideMarkup(card: SlideCard, config: ResolvedConfig, g: Geometry): string {
   const { theme } = config;
   const base = Math.min(g.termH * 0.14, g.termW * 0.072);
   const fit = Math.min(1, 22 / Math.max(1, card.heading.length));
@@ -277,14 +264,14 @@ export async function buildSvg(rec: Recording, config: ResolvedConfig): Promise<
 
   // Transition cards need their own steps: the grid does not change while a card is up.
   const slides = slidesOf(rec, config);
-  const cuts = [...new Set([...replay.frames.map((f) => f.time), ...slides.flatMap((s) => [s.at, s.at + s.duration])])]
+  const cuts = [...new Set([...replay.frames.map((f) => f.time), ...slides.flatMap((s) => [s.start, s.end])])]
     .filter((time) => time < total + 1e-9)
     .sort((a, b) => a - b);
-  const steps: Array<{ frame: GridFrame; time: number; card?: SlideSpec }> = [];
+  const steps: Array<{ frame: GridFrame; time: number; card?: SlideCard }> = [];
   for (const time of cuts) {
     const frame = frameAt(replay.frames, time);
     if (!frame) continue;
-    const card = slides.find((s) => time >= s.at - 1e-9 && time < s.at + s.duration - 1e-9);
+    const card = slides.find((s) => time >= s.start - 1e-9 && time < s.end - 1e-9);
     const previous = steps[steps.length - 1];
     if (previous && previous.frame === frame && previous.card === card) continue;
     steps.push({ frame, time, card });

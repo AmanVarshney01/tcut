@@ -65,11 +65,14 @@ export function buildTimeline(events: CastEvent[], playbackSpeed: number, opts: 
 
   if (opts.maxPause !== undefined && opts.maxPause >= 0) {
     // Walk forward; whenever the next event is further away than maxPause, pull everything after it closer.
+    // The hold of a transition card is deliberate, so gaps inside `slide:{…}` … `slide:end` are kept.
     let shift = 0;
     let prev: number | null = null;
+    let onCard = false;
     for (const e of out) {
       const original = e.vt;
-      if (prev !== null && original - prev > opts.maxPause) shift += original - prev - opts.maxPause;
+      if (prev !== null && !onCard && original - prev > opts.maxPause) shift += original - prev - opts.maxPause;
+      if (e.type === "m" && e.data.startsWith(MARKER.slide)) onCard = e.data !== `${MARKER.slide}end`;
       prev = original;
       e.vt = original - shift;
     }
