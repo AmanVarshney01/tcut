@@ -28,6 +28,7 @@ export interface RunResult extends RenderResult {
 const RECORD_KEYS: (keyof ResolvedConfig)[] = [
   "shell", "prompt", "promptPattern", "cwd", "env", "cols", "rows", "fps",
   "typingSpeed", "typingJitter", "seed", "waitTimeout", "endPause", "quantize", "core",
+  "browser", "requires",
 ];
 
 /**

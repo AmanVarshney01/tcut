@@ -12,18 +12,23 @@ const UMAMI = "https://umami.amanv.cloud";
 
 const wantsMarkdown = (request: Request): boolean => {
   const accept = request.headers.get("accept") ?? "";
-  // text/markdown listed, and ranked above text/html when both are present
-  const md = accept.indexOf("text/markdown");
-  if (md < 0) return false;
-  const html = accept.indexOf("text/html");
-  return html < 0 || md < html;
+  const ranges = accept.toLowerCase().split(",").map((part) => {
+    const [type = "", ...parameters] = part.trim().split(";");
+    const q = parameters.find((p) => p.trim().startsWith("q="));
+    const quality = q === undefined ? 1 : Number(q.trim().slice(2));
+    return { type: type.trim(), quality: Number.isFinite(quality) && quality >= 0 && quality <= 1 ? quality : 0 };
+  });
+  const md = ranges.findIndex((r) => r.type === "text/markdown");
+  if (md < 0 || ranges[md]!.quality === 0) return false;
+  const html = ["text/html", "text/*", "*/*"].map((type) => ranges.findIndex((r) => r.type === type)).find((i) => i >= 0);
+  return html === undefined || ranges[md]!.quality > ranges[html]!.quality || (ranges[md]!.quality === ranges[html]!.quality && md < html);
 };
 
 const withVary = (response: Response): Response => {
   const out = new Response(response.body, response);
   const vary = out.headers.get("vary");
   if (!vary) out.headers.set("vary", "Accept");
-  else if (!/\baccept\b/i.test(vary)) out.headers.set("vary", `${vary}, Accept`);
+  else if (!vary.split(",").some((field) => ["accept", "*"].includes(field.trim().toLowerCase()))) out.headers.set("vary", `${vary}, Accept`);
   return out;
 };
 
@@ -66,14 +71,20 @@ export default {
     }
 
     // 2. markdown twin of a page
-    const md = wantsMarkdown(request);
+    const md = (request.method === "GET" || request.method === "HEAD") && wantsMarkdown(request);
     if (md && (pathname === "/" || pathname === "/index.html")) {
       const twin = await env.ASSETS.fetch(new Request(`${url.origin}/index.md`, { method: "GET" }));
-      if (twin.ok) return markdown(await twin.text());
+      if (twin.ok) {
+        const response = markdown(await twin.text());
+        return request.method === "HEAD" ? new Response(null, response) : response;
+      }
     }
 
     const response = await env.ASSETS.fetch(request);
-    if (response.status === 404 && md) return markdown(notFoundMarkdown(url.origin), 404);
+    if (response.status === 404 && md) {
+      const missing = markdown(notFoundMarkdown(url.origin), 404);
+      return request.method === "HEAD" ? new Response(null, missing) : missing;
+    }
     const type = response.headers.get("content-type") ?? "";
     return type.includes("text/html") ? withVary(response) : response;
   },

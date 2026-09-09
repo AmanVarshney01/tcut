@@ -209,7 +209,7 @@ ${await watermarkMarkup(config, g)}
 
 /** Transition cards on the visible timeline. */
 function slidesOf(rec: Recording, config: ResolvedConfig): SlideCard[] {
-  return slidesOnTimeline(buildTimeline(rec.events, config.playbackSpeed).events);
+  return slidesOnTimeline(buildTimeline(rec.events, config.playbackSpeed, { maxPause: config.maxPause }).events);
 }
 
 /** Greedy wrap for the subtitle: SVG text does not reflow. */

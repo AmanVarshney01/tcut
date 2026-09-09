@@ -1,63 +1,11 @@
 import { Terminal, type TerminalHandle } from "@wterm/react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { parseCast, type LoadedCast } from "../lib/cast";
 import "@wterm/react/css";
 
 // A real terminal emulator (Ghostty's core in WASM) playing a tcut recording in the page: the text is
 // selectable at every moment, the chapters the script marked are buttons, and the recording's own theme
 // is applied. The emulator is browser-only, so the prerendered page shows the frame's box until it mounts.
-
-interface CastEvent {
-  t: number;
-  type: string;
-  data: string;
-}
-
-interface Chapter {
-  title: string;
-  t: number;
-}
-
-interface LoadedCast {
-  cols: number;
-  rows: number;
-  theme: Record<string, string> | null;
-  events: CastEvent[];
-  chapters: Chapter[];
-  duration: number;
-}
-
-interface CastHeader {
-  width: number;
-  height: number;
-  bunVideo?: { theme?: Record<string, string> };
-}
-
-/** asciicast v2 → the visible timeline: `t.hide()` sections collapsed, chapters lifted out, like tcut's renderer. */
-export function parseCast(text: string): LoadedCast {
-  const lines = text.split("\n").filter((l) => l.trim());
-  const header = JSON.parse(lines[0] ?? "{}") as CastHeader;
-  let hiddenSince: number | null = null;
-  let removed = 0;
-  const events: CastEvent[] = [];
-  const chapters: Chapter[] = [];
-  for (const line of lines.slice(1)) {
-    const [t, type, data] = JSON.parse(line) as [number, string, string];
-    if (type === "m" && data === "hide") {
-      hiddenSince ??= t;
-      continue;
-    }
-    if (type === "m" && data === "show") {
-      if (hiddenSince !== null) removed += t - hiddenSince;
-      hiddenSince = null;
-      continue;
-    }
-    const vt = (hiddenSince === null ? t : hiddenSince) - removed;
-    if (type === "m" && data.startsWith("chapter:")) chapters.push({ title: data.slice(8), t: vt });
-    else if (type === "o" || type === "r") events.push({ t: vt, type, data });
-  }
-  const last = events[events.length - 1];
-  return { cols: header.width, rows: header.height, theme: header.bunVideo?.theme ?? null, events, chapters, duration: last ? last.t : 0 };
-}
 
 const ANSI = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white", "brightBlack", "brightRed", "brightGreen", "brightYellow", "brightBlue", "brightMagenta", "brightCyan", "brightWhite"];
 
@@ -77,14 +25,16 @@ function themeVars(theme: Record<string, string> | null): CSSProperties {
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 export function CastPlayer({ cast: text }: { cast: string }) {
-  const [cast, setCast] = useState<LoadedCast | null>(null);
-  useEffect(() => setCast(parseCast(text)), [text]); // browser only: the emulator needs the DOM and WASM
-  if (!cast) return <div className="aspect-[16/9] w-full rounded-lg bg-mocha" aria-hidden="true" />;
-  return <Player cast={cast} />;
+  const cast = useMemo(() => parseCast(text), [text]);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []); // browser only: the emulator needs the DOM and WASM
+  if (!mounted) return <div className="aspect-[16/9] w-full rounded-lg bg-mocha" aria-hidden="true" />;
+  return <Player key={text} cast={cast} />;
 }
 
 function Player({ cast }: { cast: LoadedCast }) {
   const term = useRef<TerminalHandle | null>(null);
+  const ready = useRef(false);
   const clock = useRef({ elapsed: 0, playing: true, speed: 1, pointer: 0 });
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -104,6 +54,7 @@ function Player({ cast }: { cast: LoadedCast }) {
   };
   const seek = (time: number) => {
     term.current?.write("\x1bc");
+    term.current?.resize(cast.cols, cast.rows);
     clock.current.pointer = 0;
     applyUntil(time);
     clock.current.elapsed = time;
@@ -119,7 +70,7 @@ function Player({ cast }: { cast: LoadedCast }) {
     let last = performance.now();
     const tick = (now: number) => {
       const c = clock.current;
-      if (c.playing) {
+      if (c.playing && ready.current) {
         // clamp the frame delta: a backgrounded tab pauses rAF and must not skip to the end on resume
         c.elapsed = Math.min(cast.duration, c.elapsed + Math.min(0.1, (now - last) / 1000) * c.speed);
         applyUntil(c.elapsed);
@@ -136,7 +87,18 @@ function Player({ cast }: { cast: LoadedCast }) {
   const vars = themeVars(cast.theme);
   return (
     <div className="overflow-hidden rounded-lg bg-mocha p-3">
-      <Terminal ref={term} cols={cast.cols} rows={cast.rows} cursorBlink={false} style={vars} onData={() => {}} />
+      <Terminal
+        ref={term}
+        cols={cast.cols}
+        rows={cast.rows}
+        cursorBlink={false}
+        style={vars}
+        onReady={() => {
+          ready.current = true;
+          seek(clock.current.elapsed);
+        }}
+        onData={() => {}}
+      />
       <div className="mt-3 flex items-center gap-3 font-mono text-xs text-[#a6adc8]">
         <button
           type="button"
@@ -179,9 +141,9 @@ function Player({ cast }: { cast: LoadedCast }) {
       </div>
       {cast.chapters.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
-          {cast.chapters.map((ch) => (
+          {cast.chapters.map((ch, i) => (
             <button
-              key={ch.title}
+              key={i}
               type="button"
               onClick={() => {
                 setPlayingBoth(true);

@@ -13,11 +13,11 @@ jobs:
       run:
         working-directory: packages/tcut
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: latest
+          bun-version: "1.4.2"
 
       - name: Install ffmpeg
         run: brew install ffmpeg
@@ -44,7 +44,7 @@ jobs:
           cd /tmp/empty && "$GITHUB_WORKSPACE/packages/tcut/dist/tcut" render demo.cast -o demo.svg -o demo.mp4
           ls -la /tmp/empty
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: demo-outputs
           path: |
@@ -61,10 +61,10 @@ jobs:
       run:
         working-directory: packages/tcut
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: latest
+          bun-version: "1.4.2"
       - name: Install ffmpeg
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Install dependencies
@@ -86,14 +86,14 @@ jobs:
         shell: bash
         working-directory: packages/tcut
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: latest
-      - uses: FedericoCarboni/setup-ffmpeg@v3 # cached static build; Chocolatey took ~45 s every run
+          bun-version: "1.4.2"
+      - uses: FedericoCarboni/setup-ffmpeg@v3.1 # cached static build; Chocolatey took ~45 s every run
         with:
           ffmpeg-version: release
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6.1.0
         with:
           path: |
             node_modules
@@ -129,21 +129,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: latest
+          bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
       - run: bun run lint
+      - run: bun run typecheck
+      - name: Check the published README is synchronized
+        run: diff -u README.md packages/tcut/README.md
 
   web:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: latest
+          bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
-      - run: bun run --cwd apps/web typecheck
+      - run: bun run --cwd apps/web test
       - run: bun run --cwd apps/web build

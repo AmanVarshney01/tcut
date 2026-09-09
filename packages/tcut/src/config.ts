@@ -61,8 +61,28 @@ export function estimateCell(font: { size: number; lineHeight: number; letterSpa
 
 export const WINDOW_BAR_HEIGHT = 36;
 
+function positive(name: string, value: number | undefined, integer = false): void {
+  if (value === undefined) return;
+  if (!Number.isFinite(value) || value <= 0 || (integer && !Number.isInteger(value))) {
+    throw new Error(`${name} must be a finite positive ${integer ? "integer" : "number"}`);
+  }
+}
+
 export function resolveConfig(input: VideoConfig): ResolvedConfig {
   const config = applyPreset(input);
+  positive("fps", config.fps);
+  positive("playbackSpeed", config.playbackSpeed);
+  for (const key of ["cols", "rows", "width", "height"] as const) positive(key, config[key], true);
+  if (config.font !== "auto") {
+    positive("font.size", config.font?.size);
+    positive("font.lineHeight", config.font?.lineHeight);
+  }
+  positive("cursor.period", config.cursor?.period);
+  if (config.browser) {
+    positive("browser.width", config.browser.width, true);
+    if (config.browser.height !== 0) positive("browser.height", config.browser.height, true);
+    positive("browser.fps", config.browser.fps);
+  }
   const outputs = Array.isArray(config.output) ? config.output : [config.output];
   if (outputs.length === 0) throw new Error("config.output must name at least one output");
 

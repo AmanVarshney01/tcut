@@ -5,17 +5,19 @@
   "scripts": {
     "studio": "remotion studio src/index.ts",
     "still": "remotion still src/index.ts Promo",
-    "render": "remotion render src/index.ts Promo out/promo.mp4 --crf 15 --image-format png"
+    "render": "remotion render src/index.ts Promo out/promo.mp4 --crf 15 --image-format png",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "remotion": "^4.0.518"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "remotion": "4.0.523"
   },
   "devDependencies": {
-    "@remotion/cli": "^4.0.518",
-    "@types/react": "^19.2.0",
-    "typescript": "catalog:"
+    "@remotion/cli": "4.0.523",
+    "@types/react": "^19.2.18",
+    "typescript": "catalog:",
+    "@tcut/config": "workspace:*"
   }
 }

@@ -78,7 +78,7 @@ let wasmUrl: Promise<string> | null = null;
  */
 export function ghosttyWasmUrl(): Promise<string> {
   wasmUrl ??= (async () => {
-    const embedded = await embeddedAssets();
+    const embedded = isCompiled ? await embeddedAssets() : null;
     const file = embedded?.wasmPath ?? path.join(packageRoot("@wterm/ghostty"), "wasm", "ghostty-vt.wasm");
     const bytes = await Bun.file(file).arrayBuffer();
     return `data:application/wasm;base64,${Buffer.from(bytes).toString("base64")}`;

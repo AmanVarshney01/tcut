@@ -1,4 +1,4 @@
-import { MARKER } from "./cast";
+import { MARKER } from "./markers";
 import type { CastEvent } from "./types";
 
 export interface TimedEvent {
@@ -59,7 +59,6 @@ export function buildTimeline(events: CastEvent[], playbackSpeed: number, opts: 
       segmentSpeed = Number.isFinite(speed) && speed > 0 ? speed : 1;
       continue;
     }
-    if (type === "i" && !opts.keepInput) continue;
     out.push({ vt: advance(t), type, data });
   }
 
@@ -80,7 +79,7 @@ export function buildTimeline(events: CastEvent[], playbackSpeed: number, opts: 
 
   let duration = 0;
   for (const e of out) if (e.vt > duration) duration = e.vt;
-  return { events: out, duration };
+  return { events: opts.keepInput ? out : out.filter((e) => e.type !== "i"), duration };
 }
 
 const FULL_RESET = "\x1bc";

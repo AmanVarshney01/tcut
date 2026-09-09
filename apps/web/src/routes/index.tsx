@@ -92,7 +92,7 @@ function Page() {
           <h1 className="text-[2rem] leading-[1.15] sm:text-[2.5rem]">Terminal videos,<br />written in TypeScript</h1>
           <p className="prose-measure mt-5 text-[1.05rem] text-ink-2">Record a session live, or script it. Render it to MP4, GIF, WebM, SVG or HTML. Same recording, same pixels, every time.</p>
           <div className="mt-7 max-w-[28rem]"><CopyCommand command="bun add -g termcut" /></div>
-          <p className="mt-2.5 text-sm text-ink-3">Bun ≥ 1.4. ffmpeg for MP4/GIF; SVG and HTML need nothing else. Or a <a href={`${GITHUB}/releases`}>standalone binary</a>.</p>
+          <p className="mt-2.5 text-sm text-ink-3">Bun ≥ 1.4.1. ffmpeg for MP4/GIF; SVG and HTML need nothing else. Or a <a href={`${GITHUB}/releases`}>standalone binary</a>.</p>
         </section>
 
         <figure className="mt-10">

@@ -335,7 +335,7 @@ export async function render(
       for (const pair of rotated) for (const sink of loopSinks) await sink.frame(sink.alpha ? pair.alpha : pair.opaque);
     }
     for (const sink of sinks) await sink.finish();
-    return { outputs: sinks.map((s) => s.target), frames: totalFrames, screenshots, durationSeconds: timeline.duration, chapters, ...(notes.length && { notes }) };
+    return { outputs: sinks.map((s) => s.target), frames: totalFrames, screenshots, durationSeconds: totalFrames / fps, chapters, ...(notes.length && { notes }) };
   } finally {
     view.close();
     server.stop(true);

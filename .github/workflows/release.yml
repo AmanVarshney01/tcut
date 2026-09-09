@@ -16,16 +16,16 @@ jobs:
       run:
         working-directory: packages/tcut
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: latest
+          bun-version: "1.4.2"
 
       # npm ≥ 11.5 is needed for trusted publishing (OIDC); Node 24 ships it.
       # No registry-url here on purpose: it would write an .npmrc with a placeholder token that npm then
       # sends instead of performing the OIDC exchange (the registry answers 404 on PUT).
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
 

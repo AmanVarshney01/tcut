@@ -75,9 +75,10 @@ export function resolveColor(index: number, rgb: number | undefined, theme: Them
   if (index < 16) return theme[ANSI[index]!] as string;
   if (index < 232) {
     const n = index - 16;
-    const r = Math.floor(n / 36) * 51;
-    const g = (Math.floor(n / 6) % 6) * 51;
-    const b = (n % 6) * 51;
+    const level = (v: number) => v === 0 ? 0 : 55 + v * 40;
+    const r = level(Math.floor(n / 36));
+    const g = level(Math.floor(n / 6) % 6);
+    const b = level(n % 6);
     return hex((r << 16) | (g << 8) | b);
   }
   const level = (index - 232) * 10 + 8;
@@ -130,7 +131,7 @@ export async function replayFrames(rec: Recording, config: ResolvedConfig): Prom
   const core = await loadCore(config.core);
   core.init(rec.header.width, rec.header.height);
 
-  const timeline = buildTimeline(rec.events, config.playbackSpeed);
+  const timeline = buildTimeline(rec.events, config.playbackSpeed, { maxPause: config.maxPause });
   const osc = themeOsc(config.theme);
   const events = config.core === "lite" ? timeline.events : withReinjection(timeline.events, osc);
   if (config.core !== "lite") core.writeString(osc);

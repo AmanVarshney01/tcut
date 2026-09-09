@@ -18,7 +18,7 @@ export function normalizeUrl(url: string): string {
 }
 
 const toRegExp = (pattern: RegExp | string): RegExp =>
-  pattern instanceof RegExp ? pattern : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  pattern instanceof RegExp ? new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "")) : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
 /**
  * A Bun.WebView sampled on the recording clock, shared by scripted and live recording. Only changed frames are

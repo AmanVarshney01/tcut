@@ -4,8 +4,16 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "$TURBO_ROOT$/README.md",
+        "$TURBO_ROOT$/packages/tcut/docs/llms.txt"
+      ],
+      "outputs": [
+        "dist/**",
+        "dist-ssr/**"
+      ]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]

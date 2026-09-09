@@ -40,7 +40,7 @@ function slideBox(config: ResolvedConfig, rec: Recording) {
 /** Single-file HTML player: cast + theme + lite core + controls. Works from file://. */
 export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise<string> {
   const assets = await pageAssets();
-  const { events, duration } = buildTimeline(rec.events, config.playbackSpeed);
+  const { events, duration } = buildTimeline(rec.events, config.playbackSpeed, { maxPause: config.maxPause });
   const { theme, font } = config;
   const wm = config.watermark;
   const watermark = wm ? `<div id="watermark">${wm.image ? `<img src="${(await embedImage(wm.image)).dataUri}" alt="">` : escapeHtml(wm.text ?? "")}</div>` : "";

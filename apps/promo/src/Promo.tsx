@@ -360,7 +360,7 @@ const CodeToVideo: React.FC = () => {
   );
 };
 
-const THEMES: Array<[string, string]> = [
+const THEMES = [
   ["catppuccin-mocha", "hero.mp4"],
   ["dracula", "themes/dracula.mp4"],
   ["nord", "themes/nord.mp4"],
@@ -370,14 +370,14 @@ const THEMES: Array<[string, string]> = [
   ["github-light-default", "themes/github-light-default.mp4"],
   ["synthwave-everything", "themes/synthwave-everything.mp4"],
   ["kanagawa-wave", "themes/kanagawa-wave.mp4"],
-];
+] as const;
 const THEME_EVERY = 22;
 
 const Themes: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const idx = Math.min(THEMES.length - 1, Math.floor(frame / THEME_EVERY));
-  const [name, src] = THEMES[idx];
+  const [name, src] = THEMES[idx] ?? THEMES[0];
   const pop = spring({ frame: frame - idx * THEME_EVERY, fps, config: { damping: 12, stiffness: 200 }, durationInFrames: 20 });
   return (
     <Scene>

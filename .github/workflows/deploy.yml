@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
     paths:
+      - "README.md"
+      - "packages/tcut/docs/llms.txt"
+      - "packages/tcut/src/timeline.ts"
+      - "packages/tcut/src/markers.ts"
+      - "packages/tcut/package.json"
       - "apps/web/**"
       - "packages/infra/**"
       - "packages/config/**"
@@ -21,10 +26,10 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: latest
+          bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
       - name: Deploy with Alchemy (production stage)
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}

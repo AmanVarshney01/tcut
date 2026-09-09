@@ -4,21 +4,18 @@
  * This example demonstrates tcut's support for Kitty terminal images with the Ghostty core.
  * It sends a tiny inline image using the Kitty graphics protocol and takes a snapshot.
  *
- * The image is a 16x16 red square PNG, generated inline (no external binary needed).
+ * The image is a 32x32 gradient PNG, generated inline (no external binary needed).
  * This works in terminals that support Kitty graphics (Ghostty, kitty, WezTerm, etc.).
  */
 import { defineVideo } from "tcut";
 
-// A minimal 16x16 red square PNG (79 bytes), base64 encoded
-// This is the smallest valid PNG that displays a visible colored square.
-const TINY_RED_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAADklEQVQoz2P4z8DAwMAAAAQJAQA1MAwzAAAAAElFTkSuQmCC";
+import { encodePng } from "../src/renderer/png";
 
-// Alternative: A 32x32 gradient PNG for more visual interest
-const GRADIENT_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAQklEQVRIx2P4z8DAQBJg" +
-  "Ykglw6gBowYMZgOY/jMwMDAw/P/PwED0C1gY/v+HcP7/Z/hPmhd+M/z/z8BA4tsHowYA" +
-  "AAf/BQHkHW3TAAAAAElFTkSuQmCC";
+const pixels = new Uint8Array(32 * 32 * 4);
+for (let y = 0; y < 32; y++) {
+  for (let x = 0; x < 32; x++) pixels.set([x * 8, y * 8, 180, 255], (y * 32 + x) * 4);
+}
+const GRADIENT_PNG_BASE64 = Buffer.from(encodePng({ width: 32, height: 32, data: pixels })).toString("base64");
 
 export default defineVideo(
   {
@@ -50,7 +47,6 @@ export default defineVideo(
     // a=T: transmit and display
     // f=100: format is PNG
     // The image appears inline at the cursor position.
-    const ESC = "\x1b";
 
     await t.type("# Sending image via Kitty graphics protocol...");
     await t.enter();
@@ -59,8 +55,8 @@ export default defineVideo(
 
     // Send the Kitty graphics escape sequence with the PNG
     // Format: ESC _G <parameters>; <base64 payload> ESC \
-    const kittyGraphics = `${ESC}_Ga=T,f=100;${GRADIENT_PNG_BASE64}${ESC}\\`;
-    await t.raw(kittyGraphics);
+    // Print from the shell: raw() sends input to the program, it does not produce terminal output.
+    await t.run(`printf '\\033_Ga=T,f=100,q=2;${GRADIENT_PNG_BASE64}\\033\\\\'`);
 
     await t.sleep("500ms");
 

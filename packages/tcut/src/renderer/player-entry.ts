@@ -78,6 +78,7 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
       const heading = slideEl.querySelector("h1")!;
       if (heading.textContent !== card.heading) {
         heading.textContent = card.heading;
+        heading.style.fontSize = "";
         const fit = Math.min(1, 22 / Math.max(1, card.heading.length));
         heading.style.fontSize = fit < 1 ? `calc(${getComputedStyle(heading).fontSize} * ${fit.toFixed(3)})` : "";
         const eyebrow = slideEl.querySelector(".eyebrow") as HTMLElement;
@@ -94,7 +95,7 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
 
   const updateUi = () => {
     updateSlide(elapsed);
-    progress.value = String(Math.min(1000, Math.round((elapsed / data.duration) * 1000)));
+    progress.value = String(Math.min(1000, Math.round(data.duration > 0 ? (elapsed / data.duration) * 1000 : 0)));
     timeLabel.textContent = `${fmt(elapsed)} / ${fmt(data.duration)}`;
     playBtn.textContent = playing ? "❚❚" : "▶";
   };

@@ -271,7 +271,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     pattern.test(scope === "scrollback" ? screen.transcript() : scope === "screen" ? screen.screen() : screen.line());
 
   const toRegExp = (pattern: RegExp | string): RegExp =>
-    pattern instanceof RegExp ? pattern : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    pattern instanceof RegExp ? new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "")) : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
   const waitFor = async (
     description: string,
@@ -354,7 +354,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
   const speedStack: number[] = [];
   const timelapse = async <T>(fn: () => Promise<T>, tlOpts: { speed?: number } = {}): Promise<T> => {
     const speed = tlOpts.speed ?? 8;
-    if (!(speed > 0)) throw new Error(`timelapse speed must be greater than 0, got ${speed}`);
+    if (!Number.isFinite(speed) || !(speed > 0)) throw new Error(`timelapse speed must be greater than 0, got ${speed}`);
     await screen.settle();
     speedStack.push(speed);
     push("m", `${MARKER.speed}${speed}`);

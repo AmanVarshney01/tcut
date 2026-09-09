@@ -24,7 +24,7 @@ interface SnapshotMarks {
 function snapshotMarks(rec: Recording, config: ResolvedConfig): SnapshotMarks {
   const vector: SnapshotMark[] = [];
   let raster = 0;
-  for (const e of buildTimeline(rec.events, config.playbackSpeed).events) {
+  for (const e of buildTimeline(rec.events, config.playbackSpeed, { maxPause: config.maxPause }).events) {
     if (e.type !== "m" || !e.data.startsWith(MARKER.screenshot)) continue;
     const file = e.data.slice(MARKER.screenshot.length);
     if (file.toLowerCase().endsWith(".svg")) vector.push({ file, at: e.vt });
@@ -73,7 +73,9 @@ export async function renderOutputs(
   const logs = config.output.filter((o) => kind(o) === "log");
   const raster = config.output.filter((o) => kind(o) === "raster");
 
-  const result: RenderResult = { outputs: [], frames: 0, screenshots: [], durationSeconds: 0 };
+  const timeline = buildTimeline(rec.events, config.playbackSpeed, { maxPause: config.maxPause });
+  const frames = Math.max(1, Math.ceil(timeline.duration * config.fps) + 1);
+  const result: RenderResult = { outputs: [], frames, screenshots: [], durationSeconds: frames / config.fps };
   const marks = snapshotMarks(rec, config);
 
   for (const file of txt) {

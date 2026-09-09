@@ -1,6 +1,6 @@
 {
   "name": "termcut",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Script terminal sessions in TypeScript, render them to reproducible MP4/GIF/WebM/SVG/HTML with Bun.",
   "license": "MIT",
   "author": "Aman Varshney",
@@ -30,7 +30,8 @@
   "type": "module",
   "module": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./timeline": "./src/timeline.ts"
   },
   "bin": {
     "tcut": "bin/tcut.mjs"
@@ -54,15 +55,16 @@
     "build:all": "bun run build:assets && bun scripts/build-binaries.ts"
   },
   "dependencies": {
-    "@wterm/core": "^0.4.1",
-    "@wterm/dom": "^0.4.1",
-    "@wterm/ghostty": "^0.4.1",
-    "@wterm/markdown": "^0.4.1"
+    "@wterm/core": "^0.5.0",
+    "@wterm/dom": "^0.5.0",
+    "@wterm/ghostty": "^0.5.0",
+    "@wterm/markdown": "^0.5.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5 || ^6 || ^7"
   }
 }

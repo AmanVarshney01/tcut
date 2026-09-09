@@ -136,7 +136,7 @@ await renderCast("old.cast", { output: ["old.webm"], width: 1280, height: 720 })
 
 | To… | You need |
 |---|---|
-| run tcut | Bun ≥ 1.4, or the standalone binary |
+| run tcut | Bun ≥ 1.4.1, or the standalone binary |
 | record (`rec`, scripts, `test`) | a shell — nothing else |
 | render `.svg` / `.html` | nothing else |
 | render `.png` / `frames/` | macOS: nothing (built-in WebKit) · Linux / Windows: Chrome, Chromium, Edge or Brave |

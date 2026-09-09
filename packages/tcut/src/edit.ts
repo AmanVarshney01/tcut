@@ -23,7 +23,8 @@ const round = (t: number): number => Number(t.toFixed(6));
 
 /** Config a flattened recording should be rendered with: the timing it was flattened on is now baked in. */
 export function flattenedConfig(config: ResolvedConfig): ResolvedConfig {
-  return { ...config, playbackSpeed: 1 };
+  const { maxPause: _maxPause, ...flat } = config;
+  return { ...flat, playbackSpeed: 1 };
 }
 
 /**
