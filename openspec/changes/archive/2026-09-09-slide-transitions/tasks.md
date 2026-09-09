@@ -4,4 +4,4 @@
 - [x] HTML player: cards shipped in the data and faded on the player clock
 - [x] Tests: markers, chapter opt-out, `during` stretching the card, SVG + HTML output
 - [x] Docs: reference, llms.txt, tcut skill, README, site API list
-- [ ] Release and reply to Sam
+- [x] Release and reply to Sam (termcut 1.3.0)
