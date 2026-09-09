@@ -139,7 +139,13 @@ const api = {
     el.dataset.position = caption?.position ?? "bottom";
     const keys = document.getElementById("keys")!;
     const side = keys.dataset.position ?? "bottom";
-    keys.style.transform = caption?.position === side ? `translateY(${(el.offsetHeight + 12) * (side === "bottom" ? -1 : 1)}px)` : "";
+    keys.style.transform = "";
+    if (caption?.position === side) {
+      const captionBox = el.getBoundingClientRect();
+      const keysBox = keys.getBoundingClientRect();
+      const distance = side === "bottom" ? Math.min(0, captionBox.top - 12 - keysBox.bottom) : Math.max(0, captionBox.bottom + 12 - keysBox.top);
+      keys.style.transform = `translateY(${distance}px)`;
+    }
     return true;
   },
 

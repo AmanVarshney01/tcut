@@ -10,8 +10,8 @@ export const CAPTION_CSS = `
 export function paintCaption(el: HTMLElement, caption: CaptionPresentation | null): void {
   el.hidden = caption === null;
   if (!caption) return;
-  el.style.top = caption.position === "top" ? "16px" : "auto";
-  el.style.bottom = caption.position === "bottom" ? "16px" : "auto";
+  el.style.top = caption.position === "top" ? `calc(var(--caption-top-inset, 0px) + ${caption.offset}px)` : "auto";
+  el.style.bottom = caption.position === "bottom" ? `${caption.offset}px` : "auto";
   const box = document.createElement("span");
   Object.assign(box.style, {
     fontSize: `${caption.fontSize}px`, fontWeight: String(caption.weight), color: caption.color,

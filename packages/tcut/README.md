@@ -79,7 +79,15 @@ await t.sleep("2s");
 await t.caption(null); // clear; no duration means keep until replaced or cleared
 ```
 
-Captions sit at the bottom of the terminal window. Override `position: "top"`, `fontSize` (pixels), `color`, `background`, and `highlightColor`. Classic uses a dark box; TikTok highlights each word in turn; Pop has a bouncing entrance; Minimal is smaller text with a shadow. Caption timing follows playback speed, hidden sections, and idle compression. Word highlighting is evenly timed across the caption, not speech recognition.
+Captions sit at the bottom of the terminal window. Set `offset: 64` to move them above player controls: the offset is the distance in pixels from the selected edge (default 16). Use `position: "top"` to place them at the top; a larger offset moves top captions downward. Override `fontSize` (pixels), `color`, `background`, and `highlightColor`. Classic uses a dark box; TikTok highlights each word in turn; Pop has a bouncing entrance; Minimal is smaller text with a shadow. Caption timing follows playback speed, hidden sections, and idle compression. Word highlighting is evenly timed across the caption, not speech recognition.
+
+```ts
+await t.caption("Keep this above the player controls", {
+  style: "tiktok", position: "bottom", offset: 64,
+});
+```
+
+Custom caption offsets are under local development and are not included in the published 1.4.0 package yet.
 
 Captions render in videos, GIFs, SVG, HTML playback and snapshots. They stay out of the shell, screen assertions, and text transcripts. See the [four-style example](packages/tcut/examples/captions.video.ts).
 

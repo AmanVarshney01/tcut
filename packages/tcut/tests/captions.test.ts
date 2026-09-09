@@ -69,17 +69,18 @@ describe("caption timing", () => {
 
 test("t.caption is nonblocking and never writes text into the terminal", async () => {
   const rec = await record(resolveConfig({ output: "x.svg", typingSpeed: 0, endPause: 0 }), async (t) => {
-    await t.caption("Only in subtitles", { duration: "10s", style: "tiktok", position: "top", fontSize: 36 });
+    await t.caption("Only in subtitles", { duration: "10s", style: "tiktok", position: "top", offset: 64, fontSize: 36 });
     await t.run("echo terminal-only");
     await t.caption(null);
     await expect(t.caption("bad", { fontSize: NaN })).rejects.toThrow("fontSize");
     await expect(t.caption("bad", { duration: -1 })).rejects.toThrow("duration");
+    for (const offset of [-1, NaN, Infinity]) await expect(t.caption("bad", { offset })).rejects.toThrow("offset");
   });
   const caption = rec.events.find((e) => e[2].startsWith("caption:{"))!;
   const clear = rec.events.find((e) => e[2] === "caption:null")!;
   expect(clear[0] - caption[0]).toBeLessThan(5);
   expect(rec.events.filter((e) => e[1] === "o").map((e) => e[2]).join("")).not.toContain("Only in subtitles");
-  expect(JSON.parse(caption[2].slice(8))).toMatchObject({ duration: 10000, style: "tiktok", position: "top", fontSize: 36 });
+  expect(JSON.parse(caption[2].slice(8))).toMatchObject({ duration: 10000, style: "tiktok", position: "top", offset: 64, fontSize: 36 });
 }, 30_000);
 
 test("HTML, animated SVG and SVG snapshots contain styled, escaped captions", async () => {
@@ -119,11 +120,11 @@ test("raster captions repaint over an idle terminal and clear at expiry", async 
   }
 }, 60_000);
 
-test("HTML player seeks captions backwards, clears expiry, and wraps literal text safely", async () => {
+test("HTML player seeks captions backwards, preserves offsets, clears expiry, and wraps literal text safely", async () => {
   const { createWebView } = await import("../src/renderer/view");
   const config = resolveConfig({ output: "x.html", cols: 30, rows: 12 });
   const text = "<script>" + "a".repeat(90) + "\nsecond line";
-  const rec = recording([[0, "o", "screen"], marker(0, { text, duration: 2000, style: "tiktok", position: "top", fontSize: 32, highlightColor: "#ff00ff" }), [4, "m", "end"]]);
+  const rec = recording([[0, "o", "screen"], marker(0, { text, duration: 2000, style: "tiktok", position: "top", offset: 48, fontSize: 32, highlightColor: "#ff00ff" }), [4, "m", "end"]]);
   const html = await buildHtml(rec, config);
   const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response(html, { headers: { "content-type": "text/html" } }) });
   const view = createWebView({ width: 1100, height: 700 });
@@ -141,7 +142,7 @@ test("HTML player seeks captions backwards, clears expiry, and wraps literal tex
     expect(await view.evaluate<string>('document.getElementById("caption").textContent')).toBe(text);
     expect(await view.evaluate<number>('document.querySelectorAll("#caption script").length')).toBe(0);
     expect(await view.evaluate<boolean>('document.querySelector("#caption > span").scrollWidth <= document.getElementById("caption").clientWidth')).toBe(true);
-    expect(await view.evaluate<string>('getComputedStyle(document.getElementById("caption")).top')).toBe("16px");
+    expect(await view.evaluate<string>('getComputedStyle(document.getElementById("caption")).top')).toBe("48px");
     expect(await view.evaluate<string>('getComputedStyle(document.querySelector("#caption > span > span")).color')).toBe("rgb(255, 0, 255)");
   } finally {
     view.close();
@@ -154,7 +155,7 @@ test("key chips move above bottom captions and return after clearing", async () 
   const { renderHtml } = await import("../src/renderer/page");
   const { pageAssets } = await import("../src/renderer/bundle");
   const assets = await pageAssets();
-  const html = renderHtml(resolveConfig({ output: "x.png", keys: true }));
+  const html = renderHtml(resolveConfig({ output: "x.png", keys: true, windowBar: "colorful" }));
   const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(req) {
     const url = new URL(req.url);
     if (url.pathname === "/app.js") return new Response(assets.js, { headers: { "content-type": "text/javascript" } });
@@ -169,9 +170,12 @@ test("key chips move above bottom captions and return after clearing", async () 
       await Bun.sleep(20);
     }
     await view.evaluate('(() => { window.__vt.layout(800, 500, 720, 400); return window.__vt.keys(["Enter"]); })()');
-    const caption = captionAt(cues([marker(0, { text: "Subtitles stay readable" }), [1, "m", "end"]]), 0);
+    const caption = captionAt(cues([marker(0, { text: "Subtitles stay readable", offset: 64 }), [1, "m", "end"]]), 0);
     await view.evaluate(`window.__vt.caption(${JSON.stringify(caption)})`);
     expect(await view.evaluate<boolean>('document.getElementById("keys").getBoundingClientRect().bottom < document.getElementById("caption").getBoundingClientRect().top')).toBe(true);
+    expect(await view.evaluate<string>('getComputedStyle(document.getElementById("caption")).bottom')).toBe("64px");
+    await view.evaluate(`window.__vt.caption(${JSON.stringify({ ...caption, position: "top", offset: 48 })})`);
+    expect(await view.evaluate<number>('document.getElementById("caption").getBoundingClientRect().top - document.getElementById("bar").getBoundingClientRect().bottom')).toBe(48);
     await view.evaluate('window.__vt.caption(null)');
     expect(await view.evaluate<string>('document.getElementById("keys").style.transform')).toBe("");
   } finally {
@@ -179,3 +183,21 @@ test("key chips move above bottom captions and return after clearing", async () 
     await server.stop(true);
   }
 }, 30_000);
+
+test("caption offsets preserve defaults and move SVG subtitles from either edge", async () => {
+  const config = resolveConfig({ output: "x.svg" });
+  const position = async (spec: CaptionSpec) => {
+    const rec = recording([marker(0, spec), [1, "m", "end"]]);
+    const svg = (await buildSvg(rec, config)).svg;
+    const match = /<g class="caption"[\s\S]*?<rect[^>]* y="([^"]+)"/.exec(svg);
+    expect(match).not.toBeNull();
+    return Number(match![1]);
+  };
+  expect(captionAt(cues([marker(0, { text: "Hello" }), [1, "m", "end"]]), 0)?.offset).toBe(16);
+  for (const style of ["classic", "tiktok", "pop", "minimal"] as const) {
+    const baseline = await position({ text: "Hello", style });
+    expect(baseline - await position({ text: "Hello", style, offset: 64 })).toBeCloseTo(48);
+    expect(await position({ text: "Hello", style, position: "top", offset: 0 })).toBe(0);
+    expect(await position({ text: "Hello", style, position: "top", offset: 48 })).toBe(48);
+  }
+});
