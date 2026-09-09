@@ -287,7 +287,7 @@ function captionMarkup(c: CaptionPresentation | null, g: Geometry): string {
   const height = lines.length * size * 1.25 + size * 0.4;
   const width = Math.min(g.termW * 0.9, Math.max(0, ...lines.map((line) => Array.from(line.map((part) => part.text).join("")).length)) * size * 0.62 + size);
   const x = g.termW / 2;
-  const y = c.position === "top" ? 16 : Math.max(0, g.termH - 16 - height);
+  const y = c.position === "top" ? c.offset : Math.max(0, g.termH - c.offset - height);
   const cy = y + height / 2;
   const text = lines.map((line, i) => {
     const parts = line.map((part) => `<tspan fill="${esc(part.word === c.activeWord ? c.highlightColor : c.color)}">${esc(part.text)}</tspan>`).join("");

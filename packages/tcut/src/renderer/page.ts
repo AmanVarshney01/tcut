@@ -246,8 +246,7 @@ export function renderHtml(config: ResolvedConfig): string {
   #term .term-row { overflow: hidden; }
   ${PIN_CSS}
   ${CAPTION_CSS}
-  #caption { top: auto; }
-  #caption[data-position="top"] { top: ${barHeight(config) + 16}px !important; }
+  #caption { --caption-top-inset: ${barHeight(config)}px; }
   /* Key overlay: chips for recent key presses, driven by the renderer on the render clock. */
   #keys {
     position: absolute; left: 0; right: 0; ${config.keys?.position === "top" ? "top" : "bottom"}: ${Math.max(10, config.padding - 6)}px;

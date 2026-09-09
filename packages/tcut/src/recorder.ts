@@ -449,6 +449,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     },
 
     caption: async (text, opts = {}) => {
+      if (opts.offset !== undefined && (!Number.isFinite(opts.offset) || opts.offset < 0)) throw new Error("Caption offset must be non-negative and finite");
       if (opts.fontSize !== undefined && (!Number.isFinite(opts.fontSize) || opts.fontSize <= 0)) throw new Error("Caption fontSize must be positive and finite");
       if (opts.style !== undefined && !["classic", "tiktok", "pop", "minimal"].includes(opts.style)) throw new Error(`Unknown caption style: ${opts.style}`);
       if (opts.position !== undefined && !["top", "bottom"].includes(opts.position)) throw new Error(`Unknown caption position: ${opts.position}`);

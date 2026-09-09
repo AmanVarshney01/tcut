@@ -213,3 +213,11 @@ Cuts SHALL retain active subtitle text and remaining expiry, restarting entrance
 #### Scenario: cut through a caption
 - **WHEN** a cut starts two seconds into a four-second caption
 - **THEN** the first frame shows the caption and it expires two seconds into the clip
+
+### Requirement: Preserve subtitle offsets in output
+Raster video, SVG, HTML/site playback, and snapshots SHALL honor authored caption offsets. Key chips sharing the caption edge SHALL remain clear of captions.
+
+#### Scenario: render a raised subtitle
+- **WHEN** a caption uses a custom offset and the recording is rendered or sought
+- **THEN** the renderer applies that offset on the visible timeline
+- **AND** old captions without offsets retain their existing placement

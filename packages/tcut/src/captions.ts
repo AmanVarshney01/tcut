@@ -61,6 +61,7 @@ export function captionsOnTimeline(events: ReadonlyArray<{ vt: number; type: str
 export interface CaptionPresentation {
   text: string;
   position: "top" | "bottom";
+  offset: number;
   fontSize: number;
   weight: number;
   color: string;
@@ -84,6 +85,7 @@ export function captionAt(cues: CaptionCue[], time: number): CaptionPresentation
   return {
     text: c.text,
     position: c.position ?? "bottom",
+    offset: c.offset ?? 16,
     fontSize: c.fontSize ?? (bold ? 40 : style === "minimal" ? 24 : 28),
     weight: bold ? 900 : 600,
     color: c.color ?? (style === "pop" ? "#ffe14a" : "#ffffff"),

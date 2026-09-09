@@ -79,6 +79,8 @@ export interface CaptionOptions {
   /** Classic: dark box; TikTok: timed word highlights; Pop: bouncing entrance; Minimal: small shadowed text. */
   style?: "classic" | "tiktok" | "pop" | "minimal";
   position?: "bottom" | "top";
+  /** Distance in pixels from the selected edge, inside the terminal window. Default 16. */
+  offset?: number;
   fontSize?: number;
   color?: string;
   background?: string;
