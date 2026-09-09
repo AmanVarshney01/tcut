@@ -12,6 +12,7 @@ interface PlayerData {
   /** Follow OSC 0/2 titles from the recording in the window bar. */
   autoTitle?: boolean;
   events: Array<{ vt: number; type: "o" | "r"; data: string }>;
+  slides?: Array<{ at: number; heading: string; subtitle?: string; eyebrow?: string; duration: number; fade: number }>;
 }
 
 const dataEl = document.getElementById("tcut-cast");
@@ -64,7 +65,35 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
     }
   };
 
+  const slideEl = document.getElementById("slide");
+  /** The transition card at `time`, faded in and out like the raster renderer. */
+  const updateSlide = (time: number) => {
+    if (!slideEl || !data.slides?.length) return;
+    const card = data.slides.find((s) => time >= s.at && time <= s.at + s.duration);
+    let opacity = 0;
+    if (card) {
+      const into = time - card.at;
+      const left = card.duration - into;
+      opacity = card.fade > 0 ? Math.max(0, Math.min(1, Math.min(into / card.fade, left / card.fade))) : 1;
+      const heading = slideEl.querySelector("h1")!;
+      if (heading.textContent !== card.heading) {
+        heading.textContent = card.heading;
+        const fit = Math.min(1, 22 / Math.max(1, card.heading.length));
+        heading.style.fontSize = fit < 1 ? `calc(${getComputedStyle(heading).fontSize} * ${fit.toFixed(3)})` : "";
+        const eyebrow = slideEl.querySelector(".eyebrow") as HTMLElement;
+        eyebrow.textContent = card.eyebrow ?? "";
+        eyebrow.style.display = card.eyebrow ? "" : "none";
+        const sub = slideEl.querySelector(".sub") as HTMLElement;
+        sub.textContent = card.subtitle ?? "";
+        sub.style.display = card.subtitle ? "" : "none";
+      }
+    }
+    slideEl.style.opacity = String(opacity);
+    slideEl.style.transform = `translateY(${((1 - opacity) * 14).toFixed(2)}px)`;
+  };
+
   const updateUi = () => {
+    updateSlide(elapsed);
     progress.value = String(Math.min(1000, Math.round((elapsed / data.duration) * 1000)));
     timeLabel.textContent = `${fmt(elapsed)} / ${fmt(data.duration)}`;
     playBtn.textContent = playing ? "❚❚" : "▶";

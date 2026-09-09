@@ -193,6 +193,15 @@ export async function render(
     let zoomDuration = 0;
     let zoomApplied: string | null = null;
     let lastChips = "";
+    /** Transition cards, in order; the clock decides which one (if any) is on screen. */
+    interface SlideCard { start: number; heading: string; subtitle?: string; eyebrow?: string; duration: number; fade: number }
+    const slides: SlideCard[] = events
+      .filter((e) => e.type === "m" && e.data.startsWith(MARKER.slide))
+      .map((e) => {
+        const spec = JSON.parse(e.data.slice(MARKER.slide.length)) as Omit<SlideCard, "start" | "duration" | "fade"> & { duration: number; fade: number };
+        return { ...spec, start: e.vt, duration: spec.duration / 1000, fade: spec.fade / 1000 };
+      });
+    let slideApplied: string | null = null;
     // loopOffset rotates the frame order for looping outputs; those frames are buffered and flushed at the end.
     const loopSinks = config.loopOffset ? sinks.filter((s) => s.loops) : [];
     const streamSinks = sinks.filter((s) => !loopSinks.includes(s));
@@ -269,6 +278,25 @@ export async function render(
         zoomChanged = true;
       }
 
+      // The transition card on screen at this instant, faded in and out on the render clock.
+      let slideChanged = false;
+      if (slides.length) {
+        const card = slides.find((s) => time >= s.start && time <= s.start + s.duration);
+        let opacity = 0;
+        if (card) {
+          const into = time - card.start;
+          const left = card.duration - into;
+          opacity = card.fade > 0 ? Math.max(0, Math.min(1, Math.min(into / card.fade, left / card.fade))) : 1;
+        }
+        const key = card && opacity > 0 ? `${card.start}|${opacity.toFixed(3)}` : "";
+        if (key !== slideApplied) {
+          const payload = card && opacity > 0 ? { heading: card.heading, subtitle: card.subtitle, eyebrow: card.eyebrow, opacity } : null;
+          await view.evaluate(`window.__vt.slide(${JSON.stringify(payload)})`);
+          slideApplied = key;
+          slideChanged = true;
+        }
+      }
+
       // Key chips visible at this instant.
       let chipsChanged = false;
       if (config.keys) {
@@ -289,7 +317,7 @@ export async function render(
         await view.evaluate(`window.__vt.cursor(${blinkOn})`);
         lastBlink = blinkOn;
       }
-      if (zoomChanged || chipsChanged) dirty = true;
+      if (zoomChanged || chipsChanged || slideChanged) dirty = true;
       if (dirty) {
         lastPng = (await view.screenshot({ encoding: "buffer" })) as Uint8Array;
         if (transparent) {

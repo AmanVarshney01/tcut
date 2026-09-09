@@ -259,8 +259,32 @@ export function renderHtml(config: ResolvedConfig): string {
   /* Zoom: the terminal grid is scaled inside its frame; the renderer sets the transform per frame.
      The frame clips it so magnified content never spills over the bar or the rounded corners. */
   #zoom { transform-origin: 0 0; will-change: transform; }
+  /* Transition card: a full-bleed heading over the terminal, under the window bar. */
+  #slide {
+    position: absolute; left: 0; right: 0; bottom: 0; top: ${barHeight(config)}px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 0 8%; box-sizing: border-box;
+    background: ${theme.background}; color: ${theme.foreground};
+    opacity: 0; pointer-events: none; z-index: 6;
+  }
+  #slide .eyebrow {
+    font: 500 var(--slide-eyebrow) ${fontStack(font.family)};
+    letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.45; margin-bottom: 1.1em;
+  }
+  #slide h1 {
+    font: 600 var(--slide-heading)/1.15 ${fontStack(font.family)};
+    margin: 0; letter-spacing: -0.01em;
+  }
+  #slide .rule {
+    width: var(--slide-rule); height: 2px; margin-top: 1.1em;
+    background: ${theme.cursor ?? theme.foreground}; opacity: 0.55;
+  }
+  #slide .sub {
+    font: 400 var(--slide-sub)/1.5 ${fontStack(font.family)};
+    margin-top: 1.2em; max-width: 34em; opacity: 0.6;
+  }
   #frame { overflow: hidden; }
-  #frame > *:not(#zoom):not(#keys) { position: relative; z-index: 2; }
+  #frame > *:not(#zoom):not(#keys):not(#slide) { position: relative; z-index: 2; }
   /* Shadows are painted outside #frame; keep the shadow of the window, not of the zoomed grid. */
   #zoom { position: relative; }
 </style>
@@ -272,6 +296,7 @@ export function renderHtml(config: ResolvedConfig): string {
   ${windowBarHtml(config)}
   <div id="zoom"><div id="term"></div></div>
   <div id="keys"></div>
+  <div id="slide"><div class="eyebrow"></div><h1></h1><div class="rule"></div><div class="sub"></div></div>
 </div>
 ${
   config.browser

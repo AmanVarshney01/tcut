@@ -1,0 +1,7 @@
+- [x] `MARKER.slide`, `SlideOptions`, `t.slide()` in the recorder (chapter + clock hold + `during`)
+- [x] Raster renderer: `#slide` overlay, type scale from the window, per-frame fade
+- [x] SVG exporter: cards drawn as steps cut at each card's start and end
+- [x] HTML player: cards shipped in the data and faded on the player clock
+- [x] Tests: markers, chapter opt-out, `during` stretching the card, SVG + HTML output
+- [x] Docs: reference, llms.txt, tcut skill, README, site API list
+- [ ] Release and reply to Sam

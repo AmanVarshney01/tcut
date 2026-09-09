@@ -10,6 +10,7 @@ import { Screen } from "./screen";
 import type {
   BrowserSession,
   CastEvent,
+  SlideOptions,
   Duration,
   KeyName,
   RecordOptions,
@@ -424,6 +425,25 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     zoom: async (region) => {
       await screen.settle();
       push("m", `${MARKER.zoom}${region ? JSON.stringify({ ...region, duration: region.duration === undefined ? undefined : toMs(region.duration) }) : "null"}`);
+    },
+    slide: async (heading, slideOpts: SlideOptions = {}) => {
+      await screen.settle();
+      const wanted = toMs(slideOpts.duration, 2000);
+      const fade = Math.min(toMs(slideOpts.fade, 400), wanted / 2);
+      // The chapter starts with its own title card, so `--split-chapters` gives self-contained clips.
+      if (slideOpts.chapter !== false) push("m", `${MARKER.chapter}${heading}`);
+      const card = { heading, subtitle: slideOpts.subtitle, eyebrow: slideOpts.eyebrow, duration: wanted, fade };
+      push("m", `${MARKER.slide}${JSON.stringify(card)}`);
+      const marker = events[events.length - 1]!;
+      const startedAt = marker[0];
+      if (slideOpts.during) {
+        await sleep(fade); // let the card cover the terminal before anything moves underneath
+        await slideOpts.during();
+      }
+      const spent = (stamp() - startedAt) * 1000;
+      await sleep(Math.max(fade, wanted - spent));
+      // The card must cover exactly the time that passed, however long `during` took.
+      marker[2] = `${MARKER.slide}${JSON.stringify({ ...card, duration: Math.max(wanted, (stamp() - startedAt) * 1000) })}`;
     },
     chapter: async (name) => {
       await screen.settle();

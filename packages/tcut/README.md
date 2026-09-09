@@ -58,6 +58,7 @@ What a script can do, one line each:
 | `snapshot("x.png" \| "x.svg")` | a pixel or vector still of that exact moment, written on every render |
 | `chapter(name)` | mp4 chapters, and cut points for `--chapters` / `--split-chapters` |
 | `print(markdown)` · `title(text)` | captions rendered into the terminal, nothing typed |
+| `slide("Heading", { during })` | a full-screen transition card between feature demos; `during` does the setup behind it |
 | `zoom({ rows, cols })` | magnifies a region; `keys: true` shows what was pressed |
 | `timelapse(fn, { speed })` | fast-forwards an install or a build, not just the silence |
 | `browser` | a real browser window beside or over the terminal (below) |

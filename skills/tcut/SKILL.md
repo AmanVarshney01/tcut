@@ -44,6 +44,7 @@ export default defineVideo(
 - `t.hide(async () => { ... })` — run setup off-camera (state persists; don't kill background jobs here)
 - `t.print(markdown)` / `t.title(text)` — render Markdown captions into the video without typing
 - `t.zoom({ rows: [0, 5], cols: [0, 60], duration: "500ms" })` — magnify a region; `t.zoom(null)` resets
+- `t.slide("Deploy to the cloud", { eyebrow: "3", subtitle: "…", during })` — full-frame transition card between feature demos: big centred heading in real typography, faded in and out, records a chapter of the same name; `during: async () => …` runs `cd`/`clear`/server setup invisibly behind it
 - `t.chapter("Install")` — real MP4 chapter metadata, and a cut point: `--chapters Install` / `--split-chapters` at render time
 - `t.expect(/…/, { scope: "scrollback" })` sees output that scrolled off; `t.scrollback()` returns the whole transcript; `-o demo.log` writes it
 - Arrows are sent as SS3 when the program enabled application cursor mode, `t.paste()` is bracketed when the program asked — editors behave like with a real terminal; `print("[text](url)")` makes a clickable link in SVG/HTML

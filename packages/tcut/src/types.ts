@@ -67,6 +67,25 @@ export interface KeysConfig {
   radius?: number;
 }
 
+/** A transition card shown between feature demos. */
+export interface SlideOptions {
+  /** Smaller line under the heading. */
+  subtitle?: string;
+  /** Small mark above the heading: a step number, a section name. */
+  eyebrow?: string;
+  /** How long the card stays up, fades included. Default "2s". */
+  duration?: Duration;
+  /** Fade in / fade out time. Default "400ms". */
+  fade?: Duration;
+  /** Also record a chapter with the heading's text. Default true. */
+  chapter?: boolean;
+  /**
+   * Work to do while the card is up: `cd`, `clear`, start a server. It happens on the terminal
+   * underneath, so it is invisible, and the card holds until it finishes.
+   */
+  during?: () => Promise<void>;
+}
+
 /** A region of the terminal grid to magnify. */
 export interface ZoomRegion {
   /** Inclusive row range, 0-based. Default: all rows. */
@@ -383,6 +402,12 @@ export interface TerminalSession {
   print(markdown: string): Promise<void>;
   /** A title card: big heading + rule, then a pause (default "1.5s"). */
   title(text: string, opts?: { pause?: Duration }): Promise<void>;
+  /**
+   * A full-frame transition card between demos: large heading over the terminal, drawn at render time
+   * (real typography, not terminal cells) and faded in and out. Records a chapter of the same name
+   * unless `chapter: false`.
+   */
+  slide(heading: string, opts?: SlideOptions): Promise<void>;
   /** Magnify a region of the terminal (animated at render time); `zoom(null)` resets. */
   zoom(region: ZoomRegion | null): Promise<void>;
   /** Named chapter: becomes mp4 chapter metadata, shows up in `--json` output, and is a cut point for `--chapters` / `--split-chapters`. */

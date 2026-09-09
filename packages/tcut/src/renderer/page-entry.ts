@@ -103,6 +103,12 @@ const api = {
     const el = document.getElementById("term")!;
     el.style.width = `${termW}px`;
     el.style.height = `${termH}px`;
+    // Transition-card typography scales with the window, not with the terminal font.
+    const base = Math.min(frameH * 0.14, frameW * 0.072);
+    frame.style.setProperty("--slide-heading", `${base}px`);
+    frame.style.setProperty("--slide-eyebrow", `${base * 0.26}px`);
+    frame.style.setProperty("--slide-sub", `${base * 0.34}px`);
+    frame.style.setProperty("--slide-rule", `${base * 1.6}px`);
     return true;
   },
 
@@ -122,6 +128,33 @@ const api = {
     const el = document.getElementById("keys");
     if (!el) return false;
     el.replaceChildren(...labels.map((l) => Object.assign(document.createElement("span"), { textContent: l })));
+    return true;
+  },
+
+  /** Transition card. `null` hides it; `opacity` drives the fade, computed on the render clock. */
+  slide(card: { heading: string; subtitle?: string; eyebrow?: string; opacity: number } | null): boolean {
+    const el = document.getElementById("slide");
+    if (!el) return false;
+    if (!card) {
+      el.style.opacity = "0";
+      return true;
+    }
+    const heading = el.querySelector("h1") as HTMLElement;
+    if (heading.textContent !== card.heading) {
+      heading.textContent = card.heading;
+      // Long headings shrink so they stay on one or two lines.
+      const fit = Math.min(1, 22 / Math.max(1, card.heading.length));
+      heading.style.fontSize = fit < 1 ? `calc(var(--slide-heading) * ${fit.toFixed(3)})` : "";
+      const eyebrow = el.querySelector(".eyebrow") as HTMLElement;
+      eyebrow.textContent = card.eyebrow ?? "";
+      eyebrow.style.display = card.eyebrow ? "" : "none";
+      const sub = el.querySelector(".sub") as HTMLElement;
+      sub.textContent = card.subtitle ?? "";
+      sub.style.display = card.subtitle ? "" : "none";
+    }
+    el.style.opacity = String(card.opacity);
+    // The text rises as it fades in; it is the only motion on the card.
+    el.style.transform = `translateY(${((1 - card.opacity) * 14).toFixed(2)}px)`;
     return true;
   },
 

@@ -44,6 +44,7 @@ const api = [
   ["snapshot()", "a PNG or SVG still of that exact moment, on every render"],
   ["chapter()", "mp4 chapters, and cut points for --chapters / --split-chapters"],
   ["print()", "Markdown captions rendered into the terminal, nothing typed"],
+  ["slide()", "a full-screen heading between feature demos; setup happens behind it"],
   ["zoom()", "magnifies a region; keys: true shows what was pressed"],
   ["timelapse()", "fast-forwards an install or a build, not just the silence"],
   ["browser", "a real browser window beside or over the terminal"],

@@ -1,9 +1,10 @@
 import { mkdir } from "node:fs/promises";
-import { fontStack } from "../config";
+import { estimateCell, fontStack } from "../config";
 import { PIN_CSS } from "../renderer/pin";
 import path from "node:path";
 import { barHeight, embedImage, shadowCss, watermarkCss } from "../renderer/page";
 import { pageAssets } from "../renderer/bundle";
+import { MARKER } from "../cast";
 import { buildTimeline } from "../timeline";
 import type { Recording, ResolvedConfig, Theme } from "../types";
 
@@ -26,6 +27,16 @@ function windowBar(config: ResolvedConfig): string {
   return `<div id="bar" class="${right ? "right" : ""}">${right ? title + dots : dots + title}</div>`;
 }
 
+const num = (n: number): string => (Math.round(n * 100) / 100).toString();
+
+/** The terminal box in px, and the transition card's type scale inside it. */
+function slideBox(config: ResolvedConfig, rec: Recording) {
+  const cell = estimateCell(config.font);
+  const w = rec.header.width * cell.w;
+  const h = rec.header.height * cell.h;
+  return { w, h, base: Math.min(h * 0.14, w * 0.072) };
+}
+
 /** Single-file HTML player: cast + theme + lite core + controls. Works from file://. */
 export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise<string> {
   const assets = await pageAssets();
@@ -40,6 +51,12 @@ export async function buildHtml(rec: Recording, config: ResolvedConfig): Promise
     speed: 1,
     autoTitle: config.title === "auto",
     events: events.filter((e) => e.type === "o" || e.type === "r").map(({ vt, type, data }) => ({ vt, type, data })),
+    slides: events
+      .filter((e) => e.type === "m" && e.data.startsWith(MARKER.slide))
+      .map((e) => {
+        const spec = JSON.parse(e.data.slice(MARKER.slide.length)) as { heading: string; subtitle?: string; eyebrow?: string; duration: number; fade: number };
+        return { at: e.vt, heading: spec.heading, subtitle: spec.subtitle, eyebrow: spec.eyebrow, duration: spec.duration / 1000, fade: spec.fade / 1000 };
+      }),
   };
   // "</script>" inside the JSON would terminate the data block; escape it.
   const json = JSON.stringify(data).replace(/<\//g, "<\\/");
@@ -66,6 +83,11 @@ ${watermarkCss(config)}
 #bar .title { flex: 1; text-align: center; opacity: .7; } #bar.right .title { text-align: left; }
 #term.wterm { ${vars}; --term-font-family: ${fontStack(font.family)}; --term-font-size: ${font.size}px; --term-line-height: ${font.lineHeight}; --term-row-height: ${Math.ceil(font.size * font.lineHeight)}px; letter-spacing: ${font.letterSpacing}px; --vt-letter-spacing: ${font.letterSpacing}px; padding: 0; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
 ${PIN_CSS}
+#slide { position: absolute; left: ${config.padding}px; right: ${config.padding}px; top: ${config.padding + barHeight(config)}px; height: ${slideBox(config, rec).h}px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 8%; box-sizing: border-box; background: ${theme.background}; color: ${theme.foreground}; opacity: 0; pointer-events: none; }
+#slide .eyebrow { font: 500 ${num(slideBox(config, rec).base * 0.26)}px ${fontStack(font.family)}; letter-spacing: .18em; text-transform: uppercase; opacity: .45; margin-bottom: 1.1em; }
+#slide h1 { font: 600 ${num(slideBox(config, rec).base)}px/1.15 ${fontStack(font.family)}; margin: 0; letter-spacing: -.01em; }
+#slide .rule { width: ${num(slideBox(config, rec).base * 1.6)}px; height: 2px; margin-top: 1.1em; background: ${theme.cursor ?? theme.foreground}; opacity: .55; }
+#slide .sub { font: 400 ${num(slideBox(config, rec).base * 0.34)}px/1.5 ${fontStack(font.family)}; margin-top: 1.2em; max-width: 34em; opacity: .6; }
 #controls { display: flex; gap: 12px; align-items: center; margin-top: 12px; font: 12px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: ${theme.foreground}; opacity: .85; }
 #controls button { background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 6px; width: 34px; height: 26px; cursor: pointer; }
 #controls input[type=range] { flex: 1; accent-color: ${theme.cursor ?? theme.foreground}; }
@@ -77,6 +99,7 @@ ${PIN_CSS}
   ${windowBar(config)}
   ${watermark}
   <div id="term"></div>
+  <div id="slide"><div class="eyebrow"></div><h1></h1><div class="rule"></div><div class="sub"></div></div>
   <div id="controls">
     <button id="play" title="Play / pause">▶</button>
     <input id="progress" type="range" min="0" max="1000" value="0">
