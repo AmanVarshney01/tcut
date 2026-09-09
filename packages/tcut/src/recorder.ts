@@ -367,6 +367,8 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     }
   };
 
+  let stepIndex = 0;
+  let insideStep = false;
   const session: TerminalSession = {
     type,
     run,
@@ -429,6 +431,23 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
       await screen.settle();
       push("m", `${MARKER.zoom}${region ? JSON.stringify({ ...region, duration: region.duration === undefined ? undefined : toMs(region.duration) }) : "null"}`);
     },
+    step: async (title, fn, stepOpts = {}) => {
+      if (insideStep) throw new Error("Presentation steps cannot be nested");
+      if (!title.trim()) throw new Error("Presentation step title cannot be empty");
+      insideStep = true;
+      const id = `step-${++stepIndex}`;
+      try {
+        await screen.settle();
+        push("m", `${MARKER.chapter}${title}`);
+        push("m", `${MARKER.step}${JSON.stringify({ id, title, notes: stepOpts.notes ?? "" })}`);
+        return await fn();
+      } finally {
+        await screen.settle();
+        push("m", `${MARKER.stepEnd}${id}`);
+        insideStep = false;
+      }
+    },
+
     caption: async (text, opts = {}) => {
       if (opts.fontSize !== undefined && (!Number.isFinite(opts.fontSize) || opts.fontSize <= 0)) throw new Error("Caption fontSize must be positive and finite");
       if (opts.style !== undefined && !["classic", "tiktok", "pop", "minimal"].includes(opts.style)) throw new Error(`Unknown caption style: ${opts.style}`);

@@ -5,6 +5,7 @@ export interface PageAssets {
   js: string;
   /** Self-contained player bundle (ESM, lite core with inline WASM). */
   playerJs: string;
+  presenterJs: string;
   css: string;
   wasmPath: string;
   /** Symbols Nerd Font Mono: the glyph fallback a terminal has and a browser does not (see fonts/README.md). */
@@ -55,10 +56,11 @@ const isCompiled = Bun.isStandaloneExecutable;
 async function loadAssets(): Promise<PageAssets> {
   const embedded = isCompiled ? await embeddedAssets() : null;
   if (embedded) return embedded;
-  const [js, playerJs] = await Promise.all([bundle("page-entry.ts"), bundle("player-entry.ts")]);
+  const [js, playerJs, presenterJs] = await Promise.all([bundle("page-entry.ts"), bundle("player-entry.ts"), bundle("../presentation/entry.ts")]);
   return {
     js,
     playerJs,
+    presenterJs,
     css: await Bun.file(path.join(packageRoot("@wterm/dom"), "src", "terminal.css")).text(),
     wasmPath: path.join(packageRoot("@wterm/ghostty"), "wasm", "ghostty-vt.wasm"),
     symbolsFontPath: path.join(import.meta.dir, "fonts", "SymbolsNerdFontMono-Regular.ttf"),

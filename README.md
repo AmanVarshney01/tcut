@@ -66,6 +66,29 @@ What a script can do, one line each:
 
 The full surface is in the [reference](https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md).
 
+## Presentation mode
+
+Prepare the demo once, then walk through it at your own pace. Each step plays its recorded clip and holds on the result until you advance. Go back, replay, seek, or change playback speed without running commands again.
+
+```ts
+await t.step("Show the result", async () => {
+  await t.run("bun run demo");
+  await t.caption("Here is the result", { style: "tiktok", duration: "2s" });
+  await t.sleep("2s");
+}, { notes: "Explain the output before moving on." });
+```
+
+```sh
+tcut present demo.video.ts --open
+tcut present demo.video.ts --typing-speed 0ms --open
+```
+
+The full-width local presenter includes speaker notes, keyboard controls, a separate audience window, and multiple takes with optional microphone audio. Each take captures your pauses, replays and pacing; review it and export MP4, WebM or silent GIF. Notes and takes persist in `out/<name>.presentation/`. Older recordings use chapters as steps, or one step for the whole recording.
+
+Space plays, pauses or advances; arrow keys change steps; R replays; F opens fullscreen. Notes, take options and saved takes stay behind compact controls. Captions and slides retain their recorded animation; pausing also freezes them. Set `typingSpeed: "0ms"` for instant typing, or `typingSpeed: "40ms", typingJitter: 0.5` for variation before preparing the source. Use `--force` only when you want to rerun the script and record a new source. Starting another take never reruns it.
+
+See the [complete example](packages/tcut/examples/presentation.video.ts) and [presentation reference](packages/tcut/docs/REFERENCE.md#presentation-mode). This feature is under local development and is not included in the published 1.4.0 package yet.
+
 ## Subtitle captions
 
 ```ts

@@ -10,5 +10,7 @@ export const MARKER = {
   /** A full-frame transition card drawn at render time (`slide:{json}`). */
   slide: "slide:",
   caption: "caption:",
+  step: "step:",
+  stepEnd: "step:end:",
   end: "end",
 } as const;

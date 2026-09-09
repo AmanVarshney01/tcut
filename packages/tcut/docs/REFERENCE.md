@@ -8,6 +8,7 @@ Full options for the CLI and the script API. For getting started see the [README
 tcut <script.ts>                  record + render
 tcut rec [-- command…]            record a live session in the shell you typed it in (your prompt, config, aliases), then render; `--clean` opens a plain `>` shell instead; `-- command` runs through your shell (aliases, functions, fish abbreviations), `--raw` runs the binary bare
 tcut record <script.ts>           record only (.cast)
+tcut present <script.ts|file.cast> prepare a reusable demo and serve the local presenter
 tcut render <file.cast>           render a cast (tcut's or asciinema's)
 tcut test <paths…>                run scripts as tests
 tcut diff <a.cast> <b.cast> [--at s] [--images dir]   compare screen text of two recordings; exit 1 if different
@@ -30,6 +31,35 @@ tcut themes
 --browser <url> --browser-position <pos>   (rec: record a browser pane in a live session)  --record-only  --no-script  --force  -q
 --open  --name <file>  --endpoint --bucket --access-key --secret-key --public-url --region   (publish)
 ```
+
+## Presentation mode
+
+`tcut present demo.video.ts --open` records (or reuses the recording), renders a reusable source and step clips, then serves the presenter on `127.0.0.1`. Keep the process running while presenting, recording takes or exporting. No account, upload or deployment is involved. Currently under local development; not yet published in 1.4.0.
+
+| Flag | Behavior |
+|---|---|
+| `--directory <path>` | Local workspace; default `out/<script-name>.presentation` |
+| `--port <n>` | Local port; default an available port |
+| `--open` | Open the presenter in the default browser |
+| `--prepare-only` | Prepare assets and exit; supports `--json` |
+| `--title <text>` | Presentation title; also applies the usual terminal title override |
+| `--typing-speed <duration>` | Recording delay per character; `0ms` is instant |
+| `--typing-jitter <n>` | Seeded typing variation from 0 to 1 |
+| `--force` | Rerun a script and replace its source recording; not required for another take |
+
+Typing overrides apply to scripts; `.cast` inputs already contain their recorded typing. Normal render flags (theme, dimensions, speed, etc.) apply during preparation. Editing render settings prepares a new visual revision while keeping takes tied to the source they used. Opening a cached presentation and starting, replaying, reviewing or exporting takes never executes its original commands.
+
+Author steps with `await t.step(title, async () => { … }, { notes? })`. The callback executes during initial recording, returns its result and emits frame-aligned boundaries. Steps cannot nest. With explicit steps, setup outside callbacks is excluded from the walkthrough. Without steps, chapter markers define the boundaries; recordings without chapters become one step. Notes can be edited in the presenter and autosave locally. Changing the source creates a new revision with its authored notes.
+
+The stage fills the available width while preserving the recording's aspect ratio. Each clip stops at its end and holds; advance manually. Space plays/pauses/advances, ←/→ changes steps, R replays, F toggles fullscreen. Scrub and speed controls work within each step. Notes, saved takes and settings are collapsed initially. View offers an audience preview and a separate synchronized window on the same computer/browser; speaker notes stay in the presenter. Use the audience window for screen sharing. The server is local, not a remote audience streaming service.
+
+Start a take to capture pacing from the current frame, navigate naturally, then Stop take to save. Take options enables the microphone (browser permission required; Chrome or Edge recommended). Without it, the take is silent. Multiple takes survive server restarts and source revisions. Failed uploads retain the draft for Retry saving take while the page remains open. MP4 and WebM include microphone audio; GIF is silent. Review prepares an MP4 and opens it in the page. Exports show progress, can be retried and are reused once finished. The maximum take length is two hours; audio uploads are limited to 512 MiB. Original application audio is not captured.
+
+Captions, slides, browser panes and terminal effects are baked into the source pixels. Their animations follow step playback and freeze when held. Microphone narration is continuous over pauses; automatic speech transcription and narration-driven captions are not included.
+
+Workspace layout: `presentation.json` stores the active steps and notes, `sources/<fingerprint>/` stores reusable video/clips/posters, and `takes/<id>/` stores pacing, optional microphone audio and exports. Keep the workspace to retain and export old takes.
+
+Library entry points: `preparePresentation(recording, resolvedConfig, { directory, title?, force?, onProgress? })`, `servePresentation(prepared, { port? })` returning `{ url, close() }`, and `exportPresentationTake(directory, take, { format?, onProgress?, signal? })`. Library preparation's `force` rebuilds visual assets from the supplied recording; `video.record({ force: true })` rebuilds the recorded source.
 
 ## Script reference
 

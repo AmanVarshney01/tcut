@@ -3,6 +3,7 @@
 // are built, and bundle.ts falls back to building them at runtime.
 import pageJs from "./generated/page.js" with { type: "file" };
 import playerJs from "./generated/player.js" with { type: "file" };
+import presenterJs from "./generated/presenter.js" with { type: "file" };
 import css from "./generated/terminal.css" with { type: "file" };
 import wasm from "./generated/ghostty-vt.wasm" with { type: "file" };
 import symbols from "./fonts/SymbolsNerdFontMono-Regular.ttf" with { type: "file" };
@@ -12,6 +13,7 @@ export async function load(): Promise<PageAssets> {
   return {
     js: await Bun.file(pageJs).text(),
     playerJs: await Bun.file(playerJs).text(),
+    presenterJs: await Bun.file(presenterJs).text(),
     css: await Bun.file(css).text(),
     wasmPath: wasm,
     symbolsFontPath: symbols,

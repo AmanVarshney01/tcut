@@ -19,12 +19,14 @@ defineVideo(config, script) → Video: await video.run({ force, log }) → { out
 
 ## Non-interactive contract
 - Every command exits 0 on success, 1 on failure. No prompts except `tcut publish --setup` without flags.
+- `tcut present` serves until stopped; use `--prepare-only` for a command that prepares assets and exits. Browser microphone permission is requested only when enabled for a take.
 - Add `--json` to get exactly one JSON document on stdout (results, or `{ "error": "...", "type": "WaitTimeoutError" | "ExpectationError" | ... }`). Progress/status lines are suppressed.
 - `-q` silences status lines without JSON. Status goes to stdout, errors to stderr (unless --json).
 - Recording is cached: re-running an unchanged script reuses its .cast; `--force` re-records.
 - `tcut rec` needs a TTY to pass keystrokes through; agents should prefer scripts or `tcut rec -- <command>` for non-interactive commands. `tcut rec` opens the user's own shell (parent process, else $SHELL) with its config; `--clean` gives a plain `>` prompt shell. `-- <command>` runs through that shell (aliases, functions, fish abbreviations, colours); `--raw` runs the binary directly.
 
 ## Commands
+tcut present <script.ts|file.cast> [--open] [--directory path] [--port n] [--prepare-only] [--json]   local presenter, prepared once; interactive server stays running unless --prepare-only (under development, not published in 1.4.0)
 tcut <script.ts> [-o out…] [--theme t] [--width px --height px] [--json]   record + render
 tcut record <script.ts>                                                  cast only
 tcut render <file.cast> [-o out…] [--theme t] [--speed x] [--json]       re-render (no shell is run)
@@ -40,6 +42,7 @@ Outputs by extension: .mp4 .webm .gif .webp (ffmpeg) · .svg .html (no deps) · 
 Render flags: --from/--to (seconds or "1.5s"), --chapters a,b, --split-chapters, --shadow, --watermark "text", --watermark-image logo.png, --margin-fill transparent (alpha in png/webp/gif/webm/svg/html; mp4 falls back)
 
 ## Script shape
+Presentation: `await t.step("Result", async () => { await t.run("bun run demo"); }, {notes:"Explain the output"})` defines a recorded step; returns callback result, no nesting. Explicit steps exclude setup outside callbacks; otherwise chapters become steps, or the full recording is one step. Presenter has manual advancement, hold/pause/replay/seek/speed, editable notes, separate same-browser audience window, multiple local takes and optional microphone. Space play/pause/advance; arrows change steps; R replay; F fullscreen. Export paced takes as MP4/WebM with microphone audio or silent GIF. Captions freeze with the recorded video; no speech transcription. Keep the workspace for saved takes and immutable source revisions. `--typing-speed 0ms` gives instant typing; `--typing-jitter 0.5` adds seeded variation, script input only. `--force` reruns the script to rebuild the source; another take never reruns commands. Library: preparePresentation, servePresentation, exportPresentationTake.
 import { defineVideo } from "tcut";
 export default defineVideo(
   { output: ["demo.mp4", "demo.gif"], cols: 80, rows: 24, theme: "catppuccin-mocha", typingSpeed: "40ms" },

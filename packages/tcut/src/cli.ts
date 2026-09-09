@@ -5,6 +5,8 @@ import { parseArgs } from "node:util";
 import { readCast, writeCast } from "./cast";
 import { applyOverrides, resolveConfig } from "./config";
 import * as api from "./index";
+import { preparePresentation } from "./presentation/media";
+import { servePresentation } from "./presentation/server";
 import { recordLive } from "./live";
 import { detectPromptPattern } from "./promptguess";
 import { applyTerminalLook } from "./terminallook";
@@ -41,6 +43,7 @@ Usage:
   tcut rec [options] [-- command…]    record a LIVE session you drive yourself (no script), then render
   tcut record <script.ts> [options]   record only (writes the .cast)
   tcut render <file.cast> [options]   render an existing .cast (tcut or asciinema)
+  tcut present <script.ts|file.cast> prepare a recorded demo and serve the local presenter workspace
   tcut test <path...>                 run scripts in fast mode as tests (no video)
   tcut diff <a.cast> <b.cast>         compare what two recordings show on screen (exit 1 if different)
   tcut doctor <file.cast>             what the program used (Kitty graphics with Ghostty core), and what tcut cannot show (Sixel, iTerm2 images, unknown sequences)
@@ -55,6 +58,10 @@ Options (override the script's config):
   -o, --output <path>      .mp4 .webm .gif .webp .svg .html .png .jpg or dir/ for PNG frames — repeatable
       --theme <name>       ${themeNames.join(" | ")}
       --font <family>      --font-size <px>  --line-height <x>  --letter-spacing <px>  (--theme auto / --font auto: this terminal's)
+      --directory <path>  present: local workspace (default out/<name>.presentation)
+      --port <n>          present: local server port (default automatic)
+      --prepare-only      present: prepare reusable media and exit
+      --typing-speed <dur> --typing-jitter <0..1>  script typing (0 = instant)
       --fps <n>            --speed <x>       playback speed multiplier
       --padding <px>       --margin <px>     --margin-fill <css-color>   --radius <px>
       --window-bar <type>  none | colorful | colorfulRight | rings | ringsRight
@@ -81,7 +88,7 @@ Options (override the script's config):
       --record-only        stop after writing the cast
       --no-script          rec: don't write the editable <name>.video.ts next to the cast
       --force              ignore the cast cache and re-record
-      --open               publish: open the first link in the browser
+      --open               publish/present: open the result in your browser
       --name <file>        publish: object name (default: the file's basename)
       --endpoint --bucket --access-key --secret-key --public-url --region   publish --setup values
       --template <name>    for init: basic | tour | test
@@ -103,6 +110,11 @@ const { values, positionals } = parseArgs({
     "line-height": { type: "string" },
     "letter-spacing": { type: "string" },
     fps: { type: "string" },
+    directory: { type: "string" },
+    port: { type: "string" },
+    "prepare-only": { type: "boolean" },
+    "typing-speed": { type: "string" },
+    "typing-jitter": { type: "string" },
     speed: { type: "string" },
     padding: { type: "string" },
     margin: { type: "string" },
@@ -163,6 +175,7 @@ interface OutputFile {
 
 /** Every shape `--json` can print (one document on stdout; failures print `{ error, type }` instead). */
 type CliReport =
+  | { presentation: string; steps: number; cached: boolean; url?: string }
   | { published: Published[] }
   | { cast: string; script: string | null; events: number; durationSeconds: number }
   | { cast: string; script: string | null; outputs: OutputFile[]; frames: number; durationSeconds: number }
@@ -215,6 +228,8 @@ function overridesFromFlags(): Partial<VideoConfig> {
   if (values["letter-spacing"] !== undefined) font.letterSpacing = num("letter-spacing");
   if (Object.keys(font).length && o.font !== "auto") o.font = font;
   if (values.fps !== undefined) o.fps = num("fps");
+  if (values["typing-speed"] !== undefined) o.typingSpeed = values["typing-speed"];
+  if (values["typing-jitter"] !== undefined) o.typingJitter = num("typing-jitter");
   if (values.speed !== undefined) o.playbackSpeed = num("speed");
   if (values.padding !== undefined) o.padding = num("padding");
   if (values.margin !== undefined) o.margin = num("margin");
@@ -416,6 +431,41 @@ async function main(): Promise<void> {
   const elapsed = () => `${((performance.now() - started) / 1000).toFixed(1)}s`;
 
   switch (first) {
+    case "present": {
+      const file = rest[0];
+      if (!file || rest.length !== 1) fail("present needs one script or .cast file");
+      const port = num("port");
+      if (port !== undefined && (!Number.isInteger(port) || port < 0 || port > 65535)) fail("--port must be between 0 and 65535");
+      let rec: Recording;
+      let config: ResolvedConfig;
+      if (file.endsWith(".cast")) {
+        if (values["typing-speed"] !== undefined || values["typing-jitter"] !== undefined) fail("Typing options apply when recording a script. A .cast already contains recorded typing.");
+        rec = await readCast(file);
+        config = await applyTerminalLook(applyOverrides(castConfig(rec, file), overridesFromFlags()));
+      } else {
+        const video = await loadVideo(file);
+        rec = await video.record({ force: values.force, log });
+        config = video.config;
+      }
+      const name = path.basename(file).replace(/\.(video|tcut)\.ts$|\.ts$|\.cast$/, "");
+      const prepared = await preparePresentation(rec, config, { directory: values.directory ?? path.join("out", `${name}.presentation`), title: values.title ?? name, onProgress: log });
+      ok(prepared.cached ? "reused presentation" : "prepared presentation", prepared.directory);
+      if (values["prepare-only"]) {
+        emit({ presentation: prepared.directory, steps: prepared.manifest.steps.length, cached: prepared.cached });
+        return;
+      }
+      const server = await servePresentation(prepared, { port });
+      log(`Presenter: ${server.url}`);
+      log("All playback, takes, and exports stay local. Press Ctrl+C to stop.");
+      emit({ presentation: prepared.directory, steps: prepared.manifest.steps.length, cached: prepared.cached, url: server.url });
+      if (values.open) {
+        const command = process.platform === "darwin" ? ["open", server.url] : process.platform === "win32" ? ["cmd", "/c", "start", "", server.url] : ["xdg-open", server.url];
+        Bun.spawn(command, { stdout: "ignore", stderr: "ignore" });
+      }
+      const shutdown = () => { void server.close().finally(() => process.exit(0)); };
+      process.once("SIGINT", shutdown); process.once("SIGTERM", shutdown);
+      return;
+    }
     case "themes": {
       const names = rest[0] ? findThemes(rest[0]) : themeNames;
       if (names.length === 0) fail(`No theme matches "${rest[0]}"`);
