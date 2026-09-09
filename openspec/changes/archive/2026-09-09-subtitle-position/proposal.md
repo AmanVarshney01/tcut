@@ -5,9 +5,9 @@ Video-player controls can cover subtitles close to the bottom edge. Authors need
 ## What Changes
 
 - Add a pixel `offset` to `t.caption()` measured inward from the selected top/bottom edge, default 16.
-- Preserve placement across raster, SVG, HTML and site playback, snapshots and prepared presentations.
+- Preserve placement across raster, SVG, HTML and site playback, and snapshots.
 - Keep key chips clear of positioned captions.
-- Add an example, documentation and regression checks. Remain local; no release or push.
+- Add an example, documentation and regression checks. Release the subtitle change as 1.4.1; keep presentation mode local.
 
 ## Capabilities
 

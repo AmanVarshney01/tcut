@@ -87,8 +87,6 @@ await t.caption("Keep this above the player controls", {
 });
 ```
 
-Custom caption offsets are under local development and are not included in the published 1.4.0 package yet.
-
 Captions render in videos, GIFs, SVG, HTML playback and snapshots. They stay out of the shell, screen assertions, and text transcripts. See the [four-style example](packages/tcut/examples/captions.video.ts).
 
 ## Render again
