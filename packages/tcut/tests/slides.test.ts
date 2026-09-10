@@ -66,6 +66,18 @@ describe("t.slide", () => {
     expect(card.duration).toBeLessThan(1500); // not 300 ms + 2.8 s of invisible typing
   }, 60_000);
 
+  test("clear behind a card on an already-empty screen still completes", async () => {
+    await mkdir(dir, { recursive: true });
+    // Regression: instant typing outran the echo, so `clear` on a bare prompt looked like nothing happened.
+    const rec = await record(resolveConfig({ output: `${dir}/v.mp4`, endPause: 0, typingSpeed: 0, cols: 60, rows: 12, waitTimeout: "6s" }), async (t) => {
+      await t.hide(async () => { await t.clear(); });
+      await t.slide("Two", { duration: "300ms", fade: "50ms", during: async () => { await t.run("clear"); } });
+      await t.run("echo ok");
+      await t.expect(/ok/);
+    });
+    expect(rec.events.some((e) => e[1] === "m" && e[2].startsWith("slide:{"))).toBe(true);
+  }, 60_000);
+
   test("cards are drawn in svg and shipped to the html player", async () => {
     await mkdir(dir, { recursive: true });
     const config = resolveConfig({ output: `${dir}/z.svg`, endPause: 0, typingSpeed: 0, cols: 60, rows: 12 });

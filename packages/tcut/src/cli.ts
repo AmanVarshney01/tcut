@@ -55,6 +55,7 @@ Options (override the script's config):
   -o, --output <path>      .mp4 .webm .gif .webp .svg .html .png .jpg or dir/ for PNG frames — repeatable
       --theme <name>       ${themeNames.join(" | ")}
       --font <family>      --font-size <px>  --line-height <x>  --letter-spacing <px>  (--theme auto / --font auto: this terminal's)
+      --scale <n>          pixel density: 2 renders 2× the pixels of the same layout (crisp on HiDPI)
       --fps <n>            --speed <x>       playback speed multiplier
       --padding <px>       --margin <px>     --margin-fill <css-color>   --radius <px>
       --window-bar <type>  none | colorful | colorfulRight | rings | ringsRight
@@ -103,6 +104,7 @@ const { values, positionals } = parseArgs({
     "line-height": { type: "string" },
     "letter-spacing": { type: "string" },
     fps: { type: "string" },
+    scale: { type: "string" },
     speed: { type: "string" },
     padding: { type: "string" },
     margin: { type: "string" },
@@ -215,6 +217,7 @@ function overridesFromFlags(): Partial<VideoConfig> {
   if (values["letter-spacing"] !== undefined) font.letterSpacing = num("letter-spacing");
   if (Object.keys(font).length && o.font !== "auto") o.font = font;
   if (values.fps !== undefined) o.fps = num("fps");
+  if (values.scale !== undefined) o.scale = num("scale");
   if (values.speed !== undefined) o.playbackSpeed = num("speed");
   if (values.padding !== undefined) o.padding = num("padding");
   if (values.margin !== undefined) o.margin = num("margin");

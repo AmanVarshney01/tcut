@@ -317,6 +317,17 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
 
   const run = async (command: string, runOpts: RunOptions = {}): Promise<void> => {
     await type(command, runOpts);
+    // Instant typing (fast mode, behind a slide) can outrun the shell's echo. Without the echoed command on the
+    // cursor line, a command that leaves the screen looking exactly as before (`clear` on an empty screen) would
+    // never register as finished. Short, single-line commands are checked; anything else falls through.
+    const tail = command.includes("\n") || command.length > cols - 8 ? "" : command.slice(-24);
+    if (tail) {
+      try {
+        await waitFor("command echo", () => screen.lineToCursor().endsWith(tail), 2000);
+      } catch {
+        /* an editor or a program that echoes differently: carry on with what is on screen */
+      }
+    }
     await screen.settle();
     const beforeLine = screen.absoluteCursorLine();
     const echoLine = screen.lineToCursor();

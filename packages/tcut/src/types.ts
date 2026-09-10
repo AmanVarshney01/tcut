@@ -223,6 +223,11 @@ export interface VideoConfig {
 
   /** Frames per second of the output. Default 60. */
   fps?: number;
+  /**
+   * Pixel density. `2` renders every pixel of the layout as 2×2 output pixels — same composition, crisp text
+   * on Retina/HiDPI screens and when a player scales the video up. 1–3, default 1.
+   */
+  scale?: number;
   /** Delay between typed characters. Default "50ms". */
   typingSpeed?: Duration;
   /** 0–1, randomises typing delay by ±jitter using a seeded PRNG (reproducible). Default 0. */
@@ -288,6 +293,7 @@ export interface ResolvedConfig {
   maxPause?: number;
   keys?: Required<KeysConfig> & { ttl: number; merge: number };
   fps: number;
+  scale: number;
   typingSpeed: number;
   typingJitter: number;
   seed: number;

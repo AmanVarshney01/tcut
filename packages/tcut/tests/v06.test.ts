@@ -84,6 +84,25 @@ describe("browser urls", () => {
   });
 });
 
+describe("scale", () => {
+  test("renders the same layout at 2× the pixels", async () => {
+    await rm(dir, { recursive: true, force: true });
+    await mkdir(dir, { recursive: true });
+    const rec = await record(resolveConfig({ output: `${dir}/s.png`, endPause: 0, typingSpeed: 0, cols: 40, rows: 8 }), async (t) => {
+      await t.run("echo scale");
+    });
+    const one = await render(rec, resolveConfig({ output: `${dir}/one.png`, cols: 40, rows: 8 }));
+    const two = await render(rec, resolveConfig({ output: `${dir}/two.png`, cols: 40, rows: 8, scale: 2 }));
+    const a = await new Bun.Image(await Bun.file(one.outputs[0]!).bytes()).metadata();
+    const b = await new Bun.Image(await Bun.file(two.outputs[0]!).bytes()).metadata();
+    expect(b.width).toBe(a.width * 2);
+    expect(b.height).toBe(a.height * 2);
+    // Not just bigger: the same picture. A blank render was once "correct" by dimensions alone.
+    expect(Bun.file(two.outputs[0]!).size).toBeGreaterThan(Bun.file(one.outputs[0]!).size);
+    expect(resolveConfig({ output: "x.mp4", scale: 9 }).scale).toBe(3); // clamped
+  }, 60_000);
+});
+
 describe("presets", () => {
   test("apply under explicit config", () => {
     const c = applyPreset({ output: "x.mp4", preset: "x", fps: 24 });
