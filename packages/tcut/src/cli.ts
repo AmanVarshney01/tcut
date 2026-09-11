@@ -459,7 +459,7 @@ async function main(): Promise<void> {
       }
       const server = await servePresentation(prepared, { port });
       log(`Presenter: ${server.url}`);
-      log("All playback, takes, and exports stay local. Press Ctrl+C to stop.");
+      log("Prepared scenes only. Record your narration with your screen recorder. Press Ctrl+C to stop.");
       emit({ presentation: prepared.directory, steps: prepared.manifest.steps.length, cached: prepared.cached, url: server.url });
       if (values.open) {
         const command = process.platform === "darwin" ? ["open", server.url] : process.platform === "win32" ? ["cmd", "/c", "start", "", server.url] : ["xdg-open", server.url];

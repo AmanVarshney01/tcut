@@ -23,3 +23,8 @@ declare module "*/generated/presenter.js" {
   const file: string;
   export default file;
 }
+
+declare module "*/generated/presenter.css" {
+  const file: string;
+  export default file;
+}

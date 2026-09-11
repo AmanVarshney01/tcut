@@ -4,7 +4,7 @@ import { MARKER } from "../markers";
 import { buildTimeline } from "../timeline";
 import { render } from "../renderer/webview";
 import { findEncoder } from "../renderer/encoder";
-import { presentationSteps, takeSegments, validateTake, type PresentationManifest, type PresentationTake } from "./model";
+import { presentationSteps, type PresentationManifest } from "./model";
 import type { Recording, ResolvedConfig } from "../types";
 
 export interface PrepareOptions {
@@ -28,14 +28,14 @@ async function encoder(name: string): Promise<string> {
   return found.binary;
 }
 
-export async function writeJson(file: string, value: PresentationManifest | PresentationTake): Promise<void> {
+export async function writeJson(file: string, value: PresentationManifest): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   const temp = `${file}.${crypto.randomUUID()}.tmp`;
   await Bun.write(temp, JSON.stringify(value, null, 2) + "\n");
   await rename(temp, file);
 }
 
-/** One immutable rendered source per fingerprint. Existing takes keep their original source revision. */
+/** Prepare immutable clips once; presenting never executes the source script. */
 export async function preparePresentation(rec: Recording, config: ResolvedConfig, opts: PrepareOptions): Promise<PreparedPresentation> {
   const directory = path.resolve(opts.directory);
   const hash = new Bun.CryptoHasher("sha256");
@@ -81,53 +81,6 @@ export async function preparePresentation(rec: Recording, config: ResolvedConfig
     await rename(stage, sourceDir);
     await writeJson(currentFile, manifest);
     return { directory, manifest, cached: false };
-  } finally {
-    await rm(stage, { recursive: true, force: true });
-  }
-}
-
-export type TakeFormat = "mp4" | "webm" | "gif";
-export interface ExportTakeOptions { format?: TakeFormat; onProgress?: (progress: number) => void; signal?: AbortSignal }
-
-/** Compose recorded pacing from immutable pixels. No shell commands from the original demo are executed. */
-export async function exportPresentationTake(directory: string, take: PresentationTake, opts: ExportTakeOptions = {}): Promise<string> {
-  if (!/^[a-f0-9]{64}$/.test(take.presentationId) || !/^[a-f0-9-]{36}$/.test(take.id)) throw new Error("Invalid take identifier");
-  const format = opts.format ?? "mp4";
-  if (!["mp4", "webm", "gif"].includes(format)) throw new Error("Export format must be mp4, webm or gif");
-  const sourceDir = path.join(directory, "sources", take.presentationId);
-  const manifest = await Bun.file(path.join(sourceDir, "presentation.json")).json() as PresentationManifest;
-  validateTake(take, manifest);
-  const takeDir = path.join(directory, "takes", take.id);
-  await mkdir(takeDir, { recursive: true });
-  const stage = await mkdtemp(path.join(takeDir, ".export-"));
-  const target = path.join(takeDir, `video.${format}`);
-  try {
-    const binary = await encoder("libx264");
-    const segments = takeSegments(take, manifest.fps);
-    if (!segments.length) throw new Error("The take is shorter than one video frame");
-    for (const [i, s] of segments.entries()) {
-      const filter = s.rate === 0
-        ? `trim=end_frame=1,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${s.duration}`
-        : `trim=duration=${s.duration * s.rate},setpts=(PTS-STARTPTS)/${s.rate},tpad=stop_mode=clone:stop_duration=${s.duration}`;
-      await runFfmpeg(binary, ["-ss", String(s.source), "-i", path.join(sourceDir, "source.mp4"), "-vf", `${filter},fps=${manifest.fps}`, "-frames:v", String(s.frames), "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18", "-pix_fmt", "yuv420p", path.join(stage, `${i}.mp4`)], opts.signal);
-      opts.onProgress?.((i + 1) / (segments.length + 1));
-    }
-    await Bun.write(path.join(stage, "concat.txt"), segments.map((_, i) => `file '${i}.mp4'`).join("\n"));
-    const duration = segments.reduce((sum, s) => sum + s.frames, 0) / manifest.fps;
-    const args = ["-f", "concat", "-safe", "0", "-i", path.join(stage, "concat.txt")];
-    if (take.audio && format !== "gif") {
-      if (!/^microphone\.(webm|ogg|mp4)$/.test(take.audio)) throw new Error("Invalid microphone filename");
-      args.push("-i", path.join(takeDir, take.audio), "-map", "0:v:0", "-map", "1:a:0", "-af", "apad", "-c:a", format === "webm" ? "libopus" : "aac");
-    } else args.push("-an");
-    const finalBinary = format === "webm" ? await encoder("libvpx-vp9") : binary;
-    if (format === "mp4") args.push("-c:v", "copy", "-movflags", "+faststart");
-    else if (format === "webm") args.push("-c:v", "libvpx-vp9", "-crf", "28", "-b:v", "0", "-row-mt", "1");
-    else args.push("-filter_complex", "fps=15,split[a][b];[a]palettegen[p];[b][p]paletteuse", "-loop", "0");
-    args.push("-t", String(duration), path.join(stage, `video.${format}`));
-    await runFfmpeg(finalBinary, args, opts.signal);
-    await rename(path.join(stage, `video.${format}`), target);
-    opts.onProgress?.(1);
-    return target;
   } finally {
     await rm(stage, { recursive: true, force: true });
   }

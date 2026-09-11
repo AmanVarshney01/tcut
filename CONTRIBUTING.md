@@ -6,6 +6,7 @@ Bun workspace + Turborepo.
 |---|---|
 | `packages/tcut` | the CLI + library, published to npm as `termcut` (bin `tcut`) |
 | `apps/web` | the website (React + Vite, prerendered) — https://tcut.amanv.dev |
+| `apps/presenter` | local React/Vite player for prerecorded scenes |
 | `apps/promo` | the Remotion promo video |
 | `packages/infra` | Alchemy stack deploying the website to Cloudflare |
 | `packages/config` | shared TypeScript config |

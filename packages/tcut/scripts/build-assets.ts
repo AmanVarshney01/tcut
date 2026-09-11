@@ -22,7 +22,6 @@ await mkdir(outDir, { recursive: true });
 for (const [entry, out] of [
   ["page-entry.ts", "page.js"],
   ["player-entry.ts", "player.js"],
-  ["../presentation/entry.ts", "presenter.js"],
 ] as const) {
   const result = await Bun.build({
     entrypoints: [path.join(rendererDir, entry)],
@@ -37,10 +36,12 @@ for (const [entry, out] of [
   await Bun.write(path.join(outDir, out), await result.outputs[0]!.text());
 }
 
+await (await import("../src/presentation/assets")).buildPresenter();
+
 await Bun.write(path.join(outDir, "terminal.css"), Bun.file(path.join(packageRoot("@wterm/dom"), "src", "terminal.css")));
 await Bun.write(path.join(outDir, "ghostty-vt.wasm"), Bun.file(path.join(packageRoot("@wterm/ghostty"), "wasm", "ghostty-vt.wasm")));
 
 const sizes = await Promise.all(
-  ["page.js", "player.js", "presenter.js", "terminal.css", "ghostty-vt.wasm"].map(async (f) => `${f} ${(Bun.file(path.join(outDir, f)).size / 1024).toFixed(0)} KB`),
+  ["page.js", "player.js", "presenter.js", "presenter.css", "terminal.css", "ghostty-vt.wasm"].map(async (f) => `${f} ${(Bun.file(path.join(outDir, f)).size / 1024).toFixed(0)} KB`),
 );
 console.log(`built src/renderer/generated/: ${sizes.join(", ")}`);

@@ -34,7 +34,7 @@ tcut themes
 
 ## Presentation mode
 
-`tcut present demo.video.ts --open` records (or reuses the recording), renders a reusable source and step clips, then serves the presenter on `127.0.0.1`. Keep the process running while presenting, recording takes or exporting. No account, upload or deployment is involved. Currently under local development; not yet published in 1.4.0.
+`tcut present demo.video.ts --open` records (or reuses the recording), renders a reusable source and step clips, then serves the presenter on `127.0.0.1`. Keep the process running while presenting. No account, upload or deployment is involved. Local and unreleased.
 
 | Flag | Behavior |
 |---|---|
@@ -47,19 +47,17 @@ tcut themes
 | `--typing-jitter <n>` | Seeded typing variation from 0 to 1 |
 | `--force` | Rerun a script and replace its source recording; not required for another take |
 
-Typing overrides apply to scripts; `.cast` inputs already contain their recorded typing. Normal render flags (theme, dimensions, speed, etc.) apply during preparation. Editing render settings prepares a new visual revision while keeping takes tied to the source they used. Opening a cached presentation and starting, replaying, reviewing or exporting takes never executes its original commands.
+Typing overrides apply to scripts; `.cast` inputs already contain their recorded typing. Normal render flags (theme, dimensions, speed, etc.) apply during preparation. Editing render settings prepares a new visual revision. Opening or replaying a cached presentation never executes its original commands.
 
 Author steps with `await t.step(title, async () => { … }, { notes? })`. The callback executes during initial recording, returns its result and emits frame-aligned boundaries. Steps cannot nest. With explicit steps, setup outside callbacks is excluded from the walkthrough. Without steps, chapter markers define the boundaries; recordings without chapters become one step. Notes can be edited in the presenter and autosave locally. Changing the source creates a new revision with its authored notes.
 
-The stage fills the available width while preserving the recording's aspect ratio. Each clip stops at its end and holds; advance manually. Space plays/pauses/advances, ←/→ changes steps, R replays, F toggles fullscreen. Scrub and speed controls work within each step. Notes, saved takes and settings are collapsed initially. View offers an audience preview and a separate synchronized window on the same computer/browser; speaker notes stay in the presenter. Use the audience window for screen sharing. The server is local, not a remote audience streaming service.
+The player fills the viewport without document scrolling. Each clip stops at its end and holds until advanced. Space plays/pauses/advances, ←/→ changes scenes, R replays, F toggles fullscreen, N toggles the right notes panel, and Home/End select the first/last scene. Click a scene to cue it paused. Next plays the following scene; Back cues the previous scene. Playback speed persists across scenes. In fullscreen, moving the pointer reveals controls; they disappear after inactivity. Speaker notes stay outside the fullscreen stage.
 
-Start a take to capture pacing from the current frame, navigate naturally, then Stop take to save. Take options enables the microphone (browser permission required; Chrome or Edge recommended). Without it, the take is silent. Multiple takes survive server restarts and source revisions. Failed uploads retain the draft for Retry saving take while the page remains open. MP4 and WebM include microphone audio; GIF is silent. Review prepares an MP4 and opens it in the page. Exports show progress, can be retried and are reused once finished. The maximum take length is two hours; audio uploads are limited to 512 MiB. Original application audio is not captured.
+Use your screen recorder for video, webcam and microphone. This player has no capture permissions, take uploads, export jobs, live shell or project-execution endpoints. All source commands execute during preparation only. Captions and slides follow clip playback and freeze during holds.
 
-Captions, slides, browser panes and terminal effects are baked into the source pixels. Their animations follow step playback and freeze when held. Microphone narration is continuous over pauses; automatic speech transcription and narration-driven captions are not included.
+The example adds rate limiting to a small Bun API: it opens the file in Neovim, types the limiter and wires it into the handler, runs `bun test` against the live server, shows the sixth request getting a 429 with curl, then loads the route in a recorded browser pane. Browser and editor visuals are prepared before opening the player; this is not desktop IDE automation. Neovim and curl are needed for that example (`requires` fails fast if either is missing).
 
-Workspace layout: `presentation.json` stores the active steps and notes, `sources/<fingerprint>/` stores reusable video/clips/posters, and `takes/<id>/` stores pacing, optional microphone audio and exports. Keep the workspace to retain and export old takes.
-
-Library entry points: `preparePresentation(recording, resolvedConfig, { directory, title?, force?, onProgress? })`, `servePresentation(prepared, { port? })` returning `{ url, close() }`, and `exportPresentationTake(directory, take, { format?, onProgress?, signal? })`. Library preparation's `force` rebuilds visual assets from the supplied recording; `video.record({ force: true })` rebuilds the recorded source.
+Workspace layout: `presentation.json` stores current scenes and notes; `sources/<fingerprint>/` stores the prepared source, clips and posters. Library entry points: `preparePresentation(recording, resolvedConfig, { directory, title?, force?, onProgress? })` and `servePresentation(prepared, { port? })`. Library preparation's `force` rebuilds visual assets from the supplied recording; `video.record({ force: true })` rebuilds the original recording.
 
 ## Script reference
 

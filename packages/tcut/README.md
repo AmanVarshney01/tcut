@@ -83,11 +83,13 @@ tcut present demo.video.ts --open
 tcut present demo.video.ts --typing-speed 0ms --open
 ```
 
-The full-width local presenter includes speaker notes, keyboard controls, a separate audience window, and multiple takes with optional microphone audio. Each take captures your pauses, replays and pacing; review it and export MP4, WebM or silent GIF. Notes and takes persist in `out/<name>.presentation/`. Older recordings use chapters as steps, or one step for the whole recording.
+The local player fills the viewport and plays prepared scenes. Click a scene to cue it; Space plays, pauses or advances after the scene finishes. Arrow keys change scenes, R replays, and F enters fullscreen. In fullscreen, the controls fade away while you explain. Notes are available in a collapsible right panel. Use your screen recorder for video, webcam and microphone narration.
 
-Space plays, pauses or advances; arrow keys change steps; R replays; F opens fullscreen. Notes, take options and saved takes stay behind compact controls. Captions and slides retain their recorded animation; pausing also freezes them. Set `typingSpeed: "0ms"` for instant typing, or `typingSpeed: "40ms", typingJitter: 0.5` for variation before preparing the source. Use `--force` only when you want to rerun the script and record a new source. Starting another take never reruns it.
+Terminal output, browser panes, slides and captions are captured during preparation. Script code edits in a terminal editor such as Vim, then present the recorded result without typing live. The example walks from code to a scripted edit, CLI output and the browser. Desktop IDE automation is not part of this player.
 
-See the [complete example](packages/tcut/examples/presentation.video.ts) and [presentation reference](packages/tcut/docs/REFERENCE.md#presentation-mode). This feature is under local development and is not included in the published 1.4.0 package yet.
+Set `typingSpeed: "0ms"` for instant typing, or `typingSpeed: "40ms", typingJitter: 0.5` for variation. Another walkthrough reuses the prepared source. `--force` explicitly reruns the script. Older casts use chapters as scenes, or one scene for the whole recording.
+
+See the [complete code/editor/browser example](packages/tcut/examples/presentation.video.ts) and [presentation reference](packages/tcut/docs/REFERENCE.md#presentation-mode). This feature is local and unreleased.
 
 ## Subtitle captions
 

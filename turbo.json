@@ -3,7 +3,9 @@
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "inputs": [
         "$TURBO_DEFAULT$",
         ".env*",
@@ -16,10 +18,14 @@
       ]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": [
+        "^typecheck"
+      ]
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "cache": false
     },
     "dev": {
@@ -37,6 +43,25 @@
     "destroy": {
       "cache": false,
       "interactive": true
+    },
+    "termcut#build": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/presenter/src/**",
+        "$TURBO_ROOT$/apps/presenter/vite.config.ts",
+        "$TURBO_ROOT$/apps/presenter/package.json"
+      ],
+      "outputs": [
+        "dist/**",
+        "src/renderer/generated/**"
+      ]
+    },
+    "@tcut/presenter#build": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/tcut/src/presentation/model.ts",
+        "$TURBO_ROOT$/packages/tcut/src/presentation/capture.ts"
+      ]
     }
   }
 }
