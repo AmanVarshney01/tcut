@@ -8,6 +8,7 @@ Full options for the CLI and the script API. For getting started see the [README
 tcut <script.ts>                  record + render
 tcut rec [-- command…]            record a live session in the shell you typed it in (your prompt, config, aliases), then render; `--clean` opens a plain `>` shell instead; `-- command` runs through your shell (aliases, functions, fish abbreviations), `--raw` runs the binary bare
 tcut record <script.ts>           record only (.cast)
+tcut present <script.ts|file.cast> prepare a reusable demo and serve the local presenter
 tcut render <file.cast>           render a cast (tcut's or asciinema's)
 tcut test <paths…>                run scripts as tests
 tcut diff <a.cast> <b.cast> [--at s] [--images dir]   compare screen text of two recordings; exit 1 if different
@@ -30,6 +31,33 @@ tcut themes
 --browser <url> --browser-position <pos>   (rec: record a browser pane in a live session)  --record-only  --no-script  --force  -q
 --open  --name <file>  --endpoint --bucket --access-key --secret-key --public-url --region   (publish)
 ```
+
+## Presentation mode
+
+`tcut present demo.video.ts --open` records (or reuses the recording), renders a reusable source and step clips, then serves the presenter on `127.0.0.1`. Keep the process running while presenting. No account, upload or deployment is involved.
+
+| Flag | Behavior |
+|---|---|
+| `--directory <path>` | Local workspace; default `out/<script-name>.presentation` |
+| `--port <n>` | Local port; default an available port |
+| `--open` | Open the presenter in the default browser |
+| `--prepare-only` | Prepare assets and exit; supports `--json` |
+| `--title <text>` | Presentation title; also applies the usual terminal title override |
+| `--typing-speed <duration>` | Recording delay per character; `0ms` is instant |
+| `--typing-jitter <n>` | Seeded typing variation from 0 to 1 |
+| `--force` | Rerun a script and replace its source recording; not required for another take |
+
+Typing overrides apply to scripts; `.cast` inputs already contain their recorded typing. Normal render flags (theme, dimensions, speed, etc.) apply during preparation. Editing render settings prepares a new visual revision. Opening or replaying a cached presentation never executes its original commands.
+
+Author steps with `await t.step(title, async () => { … }, { notes? })`. The callback executes during initial recording, returns its result and emits frame-aligned boundaries. Steps cannot nest. With explicit steps, setup outside callbacks is excluded from the walkthrough. Without steps, chapter markers define the boundaries; recordings without chapters become one step. Notes can be edited in the presenter and autosave locally. Changing the source creates a new revision with its authored notes.
+
+The player fills the viewport without document scrolling. Each clip stops at its end and holds until advanced. Space plays/pauses/advances, ←/→ changes scenes, R replays, F toggles fullscreen, N toggles the right notes panel, and Home/End select the first/last scene. Click a scene to cue it paused. Next plays the following scene; Back cues the previous scene. Playback speed persists across scenes. In fullscreen, moving the pointer reveals controls; they disappear after inactivity. Speaker notes stay outside the fullscreen stage.
+
+Use your screen recorder for video, webcam and microphone. This player has no capture permissions, take uploads, export jobs, live shell or project-execution endpoints. All source commands execute during preparation only. Captions and slides follow clip playback and freeze during holds.
+
+The example adds rate limiting to a small Bun API: it opens the file in Neovim, types the limiter and wires it into the handler, runs `bun test` against the live server, shows the sixth request getting a 429 with curl, then loads the route in a recorded browser pane. Browser and editor visuals are prepared before opening the player; this is not desktop IDE automation. Neovim and curl are needed for that example (`requires` fails fast if either is missing).
+
+Workspace layout: `presentation.json` stores current scenes and notes; `sources/<fingerprint>/` stores the prepared source, clips and posters. Library entry points: `preparePresentation(recording, resolvedConfig, { directory, title?, force?, onProgress? })` and `servePresentation(prepared, { port? })`. Library preparation's `force` rebuilds visual assets from the supplied recording; `video.record({ force: true })` rebuilds the original recording.
 
 ## Script reference
 

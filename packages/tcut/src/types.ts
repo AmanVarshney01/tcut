@@ -67,6 +67,11 @@ export interface KeysConfig {
   radius?: number;
 }
 
+/** Presenter-only notes attached to a prerecorded demo step. */
+export interface StepOptions {
+  notes?: string;
+}
+
 /** Subtitle overlay. Returns immediately, so commands continue beneath it. */
 export interface CaptionOptions {
   /** Omit to keep it until the next caption or caption(null). */
@@ -436,6 +441,8 @@ export interface TerminalSession {
   zoom(region: ZoomRegion | null): Promise<void>;
   /** Named chapter: becomes mp4 chapter metadata, shows up in `--json` output, and is a cut point for `--chapters` / `--split-chapters`. */
   chapter(name: string): Promise<void>;
+  /** Record one presentation step. Playback pauses at its end; recording never waits for a presenter. */
+  step<T>(title: string, fn: () => Promise<T>, opts?: StepOptions): Promise<T>;
   /**
    * Everything inside `fn` plays back `speed`× faster (default 8). Unlike `maxPause`, which only squeezes silence,
    * this squeezes active output too — installs, builds, test runs.

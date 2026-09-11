@@ -42,7 +42,9 @@
     "src",
     "scripts",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "src/renderer/generated/presenter.js",
+    "src/renderer/generated/presenter.css"
   ],
   "engines": {
     "bun": ">=1.4.1"

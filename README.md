@@ -70,6 +70,31 @@ The full surface is in the [reference](https://github.com/AmanVarshney01/tcut/bl
 
 Use `scale: 2` in your video config, or `tcut render demo.cast --scale 2 -o demo.mp4`, to render twice the pixels while keeping the same layout. The default is `1`; SVG and HTML retain their existing behavior.
 
+## Presentation mode
+
+Prepare the demo once, then walk through it at your own pace. Each step plays its recorded clip and holds on the result until you advance. Go back, replay, seek, or change playback speed without running commands again.
+
+```ts
+await t.step("Show the result", async () => {
+  await t.run("bun run demo");
+  await t.caption("Here is the result", { style: "tiktok", duration: "2s" });
+  await t.sleep("2s");
+}, { notes: "Explain the output before moving on." });
+```
+
+```sh
+tcut present demo.video.ts --open
+tcut present demo.video.ts --typing-speed 0ms --open
+```
+
+The local player fills the viewport and plays prepared scenes. Click a scene to cue it; Space plays, pauses or advances after the scene finishes. Arrow keys change scenes, R replays, and F enters fullscreen. In fullscreen, the controls fade away while you explain. Notes are available in a collapsible right panel. Use your screen recorder for video, webcam and microphone narration.
+
+Terminal output, browser panes, slides and captions are captured during preparation. Script code edits in a terminal editor such as Vim, then present the recorded result without typing live. The example walks from code to a scripted edit, CLI output and the browser. Desktop IDE automation is not part of this player.
+
+Set `typingSpeed: "0ms"` for instant typing, or `typingSpeed: "40ms", typingJitter: 0.5` for variation. Another walkthrough reuses the prepared source. `--force` explicitly reruns the script. Older casts use chapters as scenes, or one scene for the whole recording.
+
+See the [complete code/editor/browser example](packages/tcut/examples/presentation.video.ts) and [presentation reference](packages/tcut/docs/REFERENCE.md#presentation-mode).
+
 ## Subtitle captions
 
 ```ts

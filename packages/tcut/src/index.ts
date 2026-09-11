@@ -32,3 +32,8 @@ export { startBrowserCapture } from "./browser";
 export { resolveConfig } from "./config";
 export { WaitTimeoutError, ExpectationError, MissingRequirementError } from "./recorder";
 export type * from "./types";
+
+export { preparePresentation } from "./presentation/media";
+export { servePresentation } from "./presentation/server";
+export type { PrepareOptions, PreparedPresentation } from "./presentation/media";
+export type { PresentationManifest, PresentationStep } from "./presentation/model";
