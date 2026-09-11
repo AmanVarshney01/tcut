@@ -66,6 +66,10 @@ What a script can do, one line each:
 
 The full surface is in the [reference](https://github.com/AmanVarshney01/tcut/blob/main/packages/tcut/docs/REFERENCE.md).
 
+## Crisp output on HiDPI displays
+
+Use `scale: 2` in your video config, or `tcut render demo.cast --scale 2 -o demo.mp4`, to render twice the pixels while keeping the same layout. The default is `1`; SVG and HTML retain their existing behavior.
+
 ## Subtitle captions
 
 ```ts
