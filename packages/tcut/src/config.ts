@@ -161,6 +161,7 @@ export function resolveConfig(input: VideoConfig): ResolvedConfig {
       },
     }),
     fps: config.fps ?? 60,
+    scale: Math.min(3, Math.max(1, Number.isFinite(config.scale) ? Number(config.scale) : 1)),
     typingSpeed: toMs(config.typingSpeed, 50),
     typingJitter: Math.min(1, Math.max(0, config.typingJitter ?? 0)),
     seed: config.seed ?? 1,

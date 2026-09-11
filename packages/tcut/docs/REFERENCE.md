@@ -76,6 +76,7 @@ Library entry points: `preparePresentation(recording, resolvedConfig, { director
 | `cols` · `rows` · `fps` | 80 · 24 · 60 | |
 | `width` · `height` | — | video size in px; grid is derived and centred inside |
 | `loopOffset` | — | where GIF/WebP loops start: frames or `"50%"` |
+| `scale` | 1 | pixel density: `2` renders the same layout at 2× the pixels — crisp on HiDPI screens and when a player scales the video up |
 | `maxPause` | — | idle compression at render time: gaps between events longer than this are shortened to this (`"800ms"`) |
 | `keys` | — | `true` or `{ position: "bottom" \| "top", ttl: "1.2s", merge: "350ms", limit: 1, font: px, color, background, radius }`: key presses as chips; one at a time by default (`limit: 3` keeps a short history), style is yours to override |
 | `preset` | — | `readme` (80×20, gif-friendly) · `x` (1280×720) · `youtube` (1920×1080, 60 fps) · `square` (1080×1080); explicit settings win |

@@ -62,6 +62,7 @@ Options (override the script's config):
       --port <n>          present: local server port (default automatic)
       --prepare-only      present: prepare reusable media and exit
       --typing-speed <dur> --typing-jitter <0..1>  script typing (0 = instant)
+      --scale <n>          pixel density: 2 renders 2× the pixels of the same layout (crisp on HiDPI)
       --fps <n>            --speed <x>       playback speed multiplier
       --padding <px>       --margin <px>     --margin-fill <css-color>   --radius <px>
       --window-bar <type>  none | colorful | colorfulRight | rings | ringsRight
@@ -115,6 +116,7 @@ const { values, positionals } = parseArgs({
     "prepare-only": { type: "boolean" },
     "typing-speed": { type: "string" },
     "typing-jitter": { type: "string" },
+    scale: { type: "string" },
     speed: { type: "string" },
     padding: { type: "string" },
     margin: { type: "string" },
@@ -230,6 +232,7 @@ function overridesFromFlags(): Partial<VideoConfig> {
   if (values.fps !== undefined) o.fps = num("fps");
   if (values["typing-speed"] !== undefined) o.typingSpeed = values["typing-speed"];
   if (values["typing-jitter"] !== undefined) o.typingJitter = num("typing-jitter");
+  if (values.scale !== undefined) o.scale = num("scale");
   if (values.speed !== undefined) o.playbackSpeed = num("speed");
   if (values.padding !== undefined) o.padding = num("padding");
   if (values.margin !== undefined) o.margin = num("margin");

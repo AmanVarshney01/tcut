@@ -179,6 +179,15 @@ export async function render(
       }
     }
     await view.evaluate(`window.__vt.layout(${frameW}, ${frameH}, ${termW}, ${termH}, ${padX}, ${padY})`);
+    // Pixel density: the layout stays in CSS px; the page is scaled up as a whole and the view enlarged to
+    // match, so every measurement, zoom rect and overlay position keeps working while text rasterizes at N×.
+    // The transform goes on <html>: body has overflow:hidden and no height of its own, so a transformed body
+    // clips everything away.
+    if (config.scale !== 1) {
+      await view.evaluate(`(() => { const s = document.documentElement.style; s.transformOrigin = "0 0"; s.transform = "scale(${config.scale})"; return true; })()`);
+      width = Math.round(width * config.scale);
+      height = Math.round(height * config.scale);
+    }
     await view.resize(width, height);
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
 
