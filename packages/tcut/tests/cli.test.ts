@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { runScriptTests } from "../src/testing";
 import { Video, defineVideo } from "../src/video";
@@ -76,6 +77,49 @@ describe("cast cache", () => {
     });
     expect(await v.cachedRecording()).toBeUndefined();
   });
+
+  test("changes to a local imported helper invalidate the cast", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "tcut-import-cache-"));
+    try {
+      const helper = path.join(dir, "helper.ts");
+      const script = path.join(dir, "imported.video.ts");
+      await Bun.write(helper, 'export const greeting = "first";\n');
+      await Bun.write(script, `import { defineVideo } from ${JSON.stringify(path.join(import.meta.dir, "..", "src", "index.ts"))};
+import { greeting } from "./helper";
+export default defineVideo({ output: ${JSON.stringify(path.join(dir, "out.mp4"))}, cast: ${JSON.stringify(path.join(dir, "imported.cast"))}, endPause: 0, typingSpeed: 0 }, async t => { await t.run("echo " + greeting); });
+`);
+      const first = await run([script, "--record-only", "--json"]);
+      expect(first.code).toBe(0);
+      expect(JSON.parse(first.out).cached).toBe(false);
+      await Bun.write(helper, 'export const greeting = "second";\n');
+      const second = await run([script, "--record-only", "--json"]);
+      expect(second.code).toBe(0);
+      expect(JSON.parse(second.out).cached).toBe(false);
+      expect((await Bun.file(path.join(dir, "imported.cast")).text())).toContain("second");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  test("cached recordings still resolve the current terminal look", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "tcut-auto-cache-"));
+    try {
+      const source = path.join(dir, "auto.video.ts");
+      await Bun.write(source, "export default 1;\n");
+      const config = { output: path.join(dir, "out.mp4"), font: "auto" as const, endPause: 0, typingSpeed: 0 };
+      const makeVideo = () => defineVideo(config, async (t) => { await t.run("echo auto"); });
+      const first = makeVideo();
+      first.source = source;
+      await first.record();
+      const second = makeVideo();
+      second.source = source;
+      expect(second.config.auto.font).toBe(true);
+      expect((await second.record()).cached).toBe(true);
+      expect(second.config.auto.font).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
 });
 
 describe("init", () => {

@@ -15,19 +15,19 @@ const routes: Record<string, (req: Request) => Response> = {
 };
 
 Bun.serve({
-  port: 3210,
+  port: Number(process.env.PORT),
   fetch(req) {
     const path = new URL(req.url).pathname;
     const route = routes[path];
     return route ? route(req) : new Response("not found", { status: 404 });
   },
 });
-console.log("listening on :3210");
+console.log("listening on :" + process.env.PORT);
 `;
 
 const TEST = `import { expect, test } from "bun:test";
 
-const url = "http://localhost:3210";
+const url = "http://localhost:" + process.env.PORT;
 
 test("serves notes", async () => {
   const res = await fetch(url + "/notes");
@@ -49,10 +49,13 @@ export default defineVideo(
     font: { family: "JetBrains Mono", size: 15, lineHeight: 1.35 },
     margin: 24, padding: 20, borderRadius: 12, marginFill: "#0a0a0a",
     cursor: { blink: false }, typingSpeed: "28ms", typingJitter: 0.2, endPause: 0, requires: ["nvim", "curl"],
-    browser: { width: 720, height: 460, fps: 10, position: "overlay", offset: { x: 480, y: 260 }, title: "localhost:3210" },
+    browser: { width: 720, height: 460, fps: 10, position: "overlay", offset: { x: 480, y: 260 }, title: "localhost" },
   },
   async (t) => {
     const dir = await mkdtemp(path.join(tmpdir(), "tcut-notes-api-"));
+    const probe = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response() });
+    const port = probe.port;
+    await probe.stop(true);
     await Bun.write(path.join(dir, "server.ts"), SERVER);
     await Bun.write(path.join(dir, "server.test.ts"), TEST);
     try {
@@ -102,14 +105,14 @@ export default defineVideo(
       }, { notes: "One early return before routing. 429 is the right status. Save, quit, and the file is real on disk." });
 
       await t.step("Test it", async () => {
-        await t.run("bun server.ts </dev/null >/tmp/notes-api.log 2>&1 & sleep 0.5");
+        await t.run(`PORT=${port} bun server.ts </dev/null >server.log 2>&1 & sleep 0.5`);
         await t.type("nvim server.test.ts");
         await t.key("enter");
         await t.wait(/rate limits/, { scope: "screen" });
         await t.sleep("1.6s");
         await t.type(":q\n");
         await t.wait();
-        await t.run("bun test");
+        await t.run(`PORT=${port} bun test`);
         await t.expect(/2 pass/);
         await t.sleep("1.6s");
       }, { notes: "Same runtime, same fetch. The second test hammers the root route until it gets a 429. Two passes; that is the whole suite." });
@@ -117,13 +120,13 @@ export default defineVideo(
       await t.step("Watch it happen", async () => {
         await t.run("clear");
         // A fresh client: the tests already spent this window's budget for the local address.
-        await t.run(`for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -H "x-forwarded-for: 10.0.0.7" localhost:3210/; done; echo`);
+        await t.run(`for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -H "x-forwarded-for: 10.0.0.7" localhost:${port}/; done; echo`);
         await t.expect(/200 200 200 200 200 429/);
         await t.sleep("1.4s");
       }, { notes: "Six requests from one address, the sixth gets turned away. Pause here and let the room read the numbers." });
 
       await t.step("In the browser", async () => {
-        await t.browser.goto("http://localhost:3210/notes");
+        await t.browser.goto(`http://localhost:${port}/notes`);
         await t.browser.waitFor(/ship it/);
         await t.focus("browser");
         await t.sleep("1.8s");

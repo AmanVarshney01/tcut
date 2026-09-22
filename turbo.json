@@ -59,8 +59,7 @@
     "@tcut/presenter#build": {
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/packages/tcut/src/presentation/model.ts",
-        "$TURBO_ROOT$/packages/tcut/src/presentation/capture.ts"
+        "$TURBO_ROOT$/packages/tcut/src/presentation/model.ts"
       ]
     }
   }

@@ -64,13 +64,20 @@ export class Video {
     this.script = script;
   }
 
-  /** SHA-256 of the script source + record-relevant config. Undefined when the source path is unknown. */
+  /** SHA-256 of the script and its local imports + record-relevant config. */
   async scriptHash(): Promise<string | undefined> {
     if (!this.source) return undefined;
     const file = Bun.file(this.source);
     if (!(await file.exists())) return undefined;
+    // The script can import the commands it records from another local file. Hashing only the entry file
+    // would replay an obsolete cast after that dependency changed. A failed bundle disables caching safely.
+    const bundle = await Bun.build({ entrypoints: [this.source], target: "bun", packages: "external" });
+    if (!bundle.success) return undefined;
     const hasher = new Bun.CryptoHasher("sha256");
-    hasher.update(await file.arrayBuffer());
+    for (const output of bundle.outputs.sort((a, b) => a.path.localeCompare(b.path))) {
+      hasher.update(output.path);
+      hasher.update(await output.arrayBuffer());
+    }
     const subset = Object.fromEntries(RECORD_KEYS.map((key) => [key, this.config[key]]));
     hasher.update(JSON.stringify(subset));
     return hasher.digest("hex");
@@ -93,6 +100,8 @@ export class Video {
 
   /** Drive the PTY and return the recording (also saved to `config.cast`). Uses the cache unless `force`. */
   async record(opts: VideoRecordOptions = {}): Promise<Recording & { cached?: boolean }> {
+    // Auto look affects rendering, so resolve it even when the recorded terminal events are reused.
+    this.config = await applyTerminalLook(this.config, opts.log);
     if (!opts.force) {
       const cached = await this.cachedRecording();
       if (cached) {
@@ -100,7 +109,6 @@ export class Video {
         return { ...cached, cached: true };
       }
     }
-    this.config = await applyTerminalLook(this.config, opts.log);
     const recording = await record(this.config, this.script, opts);
     recording.header.scriptHash = await this.scriptHash();
     const castPath = path.resolve(this.config.cast);
