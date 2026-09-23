@@ -79,14 +79,14 @@ describe("cast cache", () => {
   });
 
   test("changes to a local imported helper invalidate the cast", async () => {
-    const output = path.resolve(import.meta.dir, "../../../out");
+    const output = path.resolve(import.meta.dir, "../out");
     await mkdir(output, { recursive: true });
     const dir = await mkdtemp(path.join(output, "tcut-import-cache-"));
     try {
       const helper = path.join(dir, "helper.ts");
       const script = path.join(dir, "imported.video.ts");
       await Bun.write(helper, 'export const greeting = "first";\n');
-      await Bun.write(script, `import { defineVideo } from "termcut";
+      await Bun.write(script, `import { defineVideo } from "tcut";
 import { greeting } from "./helper";
 export default defineVideo({ output: ${JSON.stringify(path.join(dir, "out.mp4"))}, cast: ${JSON.stringify(path.join(dir, "imported.cast"))}, endPause: 0, typingSpeed: 0 }, async t => { await t.run("echo " + greeting); });
 `);

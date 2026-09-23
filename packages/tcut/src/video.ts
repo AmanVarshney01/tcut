@@ -67,21 +67,41 @@ export class Video {
   /** SHA-256 of the script and its local imports + record-relevant config. */
   async scriptHash(): Promise<string | undefined> {
     if (!this.source) return undefined;
-    const file = Bun.file(this.source);
-    if (!(await file.exists())) return undefined;
-    // The script can import the commands it records from another local file. Hashing only the entry file
-    // would replay an obsolete cast after that dependency changed. A failed bundle disables caching safely.
-    // The library itself is external too. Its source can refer to generated renderer assets that are absent
-    // in a fresh checkout before build:assets; they do not affect the user's scripted terminal commands.
-    const bundle = await Bun.build({
-      entrypoints: [this.source], target: "bun", packages: "external",
-      external: [path.resolve(import.meta.dir, "index.ts")],
-    });
-    if (!bundle.success) return undefined;
+    // Walk user-owned imports without bundling them. Bun.build follows tcut's registered runtime module
+    // into embedded renderer assets, which do not exist yet in a fresh source checkout.
+    const sources = new Map<string, ArrayBuffer>();
+    const visit = async (filename: string): Promise<boolean> => {
+      filename = path.resolve(filename);
+      if (sources.has(filename)) return true;
+      const file = Bun.file(filename);
+      if (!(await file.exists())) return false;
+      const bytes = await file.arrayBuffer();
+      sources.set(filename, bytes);
+      const ext = path.extname(filename);
+      const loader = ext === ".ts" || ext === ".mts" || ext === ".cts" ? "ts"
+        : ext === ".tsx" ? "tsx" : ext === ".jsx" ? "jsx" : "js";
+      if (![".ts", ".mts", ".cts", ".tsx", ".js", ".mjs", ".cjs", ".jsx"].includes(ext)) return true;
+      let imports: ReturnType<Bun.Transpiler["scanImports"]>;
+      try { imports = new Bun.Transpiler({ loader }).scanImports(new TextDecoder().decode(bytes)); }
+      catch { return false; }
+      for (const item of imports) {
+        const specifier = item.path;
+        if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) continue;
+        let resolved: string;
+        try { resolved = Bun.resolveSync(specifier, path.dirname(filename)); }
+        catch { return false; }
+        // The library's own implementation is versioned separately from the user's script and helpers.
+        if (resolved.startsWith(`${import.meta.dir}${path.sep}`)) continue;
+        if (!(await visit(resolved))) return false;
+      }
+      return true;
+    };
+    try { if (!(await visit(this.source))) return undefined; }
+    catch { return undefined; }
     const hasher = new Bun.CryptoHasher("sha256");
-    for (const output of bundle.outputs.sort((a, b) => a.path.localeCompare(b.path))) {
-      hasher.update(output.path);
-      hasher.update(await output.arrayBuffer());
+    for (const [filename, bytes] of [...sources].sort(([a], [b]) => a.localeCompare(b))) {
+      hasher.update(filename);
+      hasher.update(bytes);
     }
     const subset = Object.fromEntries(RECORD_KEYS.map((key) => [key, this.config[key]]));
     hasher.update(JSON.stringify(subset));
