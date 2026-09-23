@@ -71,7 +71,12 @@ export class Video {
     if (!(await file.exists())) return undefined;
     // The script can import the commands it records from another local file. Hashing only the entry file
     // would replay an obsolete cast after that dependency changed. A failed bundle disables caching safely.
-    const bundle = await Bun.build({ entrypoints: [this.source], target: "bun", packages: "external" });
+    // The library itself is external too. Its source can refer to generated renderer assets that are absent
+    // in a fresh checkout before build:assets; they do not affect the user's scripted terminal commands.
+    const bundle = await Bun.build({
+      entrypoints: [this.source], target: "bun", packages: "external",
+      external: [path.resolve(import.meta.dir, "index.ts")],
+    });
     if (!bundle.success) return undefined;
     const hasher = new Bun.CryptoHasher("sha256");
     for (const output of bundle.outputs.sort((a, b) => a.path.localeCompare(b.path))) {

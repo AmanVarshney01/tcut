@@ -111,11 +111,18 @@ test("screen assertions can reuse global and sticky regular expressions", async 
 });
 
 test("record cache includes browser settings", async () => {
-  const video = defineVideo({ output: "x.mp4", browser: { url: "https://example.com" } }, async () => {});
-  video.source = import.meta.filename;
-  const initial = await video.scriptHash();
-  video.config.browser!.url = "https://example.org";
-  expect(await video.scriptHash()).not.toBe(initial);
+  const dir = await mkdtemp(path.join(os.tmpdir(), "tcut-browser-cache-"));
+  try {
+    const source = path.join(dir, "demo.video.ts");
+    await Bun.write(source, "export default 1;\n");
+    const video = defineVideo({ output: "x.mp4", browser: { url: "https://example.com" } }, async () => {});
+    video.source = source;
+    const initial = await video.scriptHash();
+    video.config.browser!.url = "https://example.org";
+    expect(await video.scriptHash()).not.toBe(initial);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("raster duration matches the encoded frames, including the final tick", async () => {

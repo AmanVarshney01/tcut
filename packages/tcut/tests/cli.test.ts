@@ -35,7 +35,7 @@ describe("tcut test", () => {
 });
 
 describe("cast cache", () => {
-  const dir = "/tmp/tcut-cache-test";
+  const dir = path.join(tmpdir(), "tcut-cache-test");
 
   test("hit when unchanged, miss after edit, bypass with force", async () => {
     await rm(dir, { recursive: true, force: true });
@@ -79,20 +79,24 @@ describe("cast cache", () => {
   });
 
   test("changes to a local imported helper invalidate the cast", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "tcut-import-cache-"));
+    const output = path.resolve(import.meta.dir, "../../../out");
+    await mkdir(output, { recursive: true });
+    const dir = await mkdtemp(path.join(output, "tcut-import-cache-"));
     try {
       const helper = path.join(dir, "helper.ts");
       const script = path.join(dir, "imported.video.ts");
       await Bun.write(helper, 'export const greeting = "first";\n');
-      await Bun.write(script, `import { defineVideo } from ${JSON.stringify(path.join(import.meta.dir, "..", "src", "index.ts"))};
+      await Bun.write(script, `import { defineVideo } from "termcut";
 import { greeting } from "./helper";
 export default defineVideo({ output: ${JSON.stringify(path.join(dir, "out.mp4"))}, cast: ${JSON.stringify(path.join(dir, "imported.cast"))}, endPause: 0, typingSpeed: 0 }, async t => { await t.run("echo " + greeting); });
 `);
       const first = await run([script, "--record-only", "--json"]);
+      if (first.code !== 0) throw new Error(first.err);
       expect(first.code).toBe(0);
       expect(JSON.parse(first.out).cached).toBe(false);
       await Bun.write(helper, 'export const greeting = "second";\n');
       const second = await run([script, "--record-only", "--json"]);
+      if (second.code !== 0) throw new Error(second.err);
       expect(second.code).toBe(0);
       expect(JSON.parse(second.out).cached).toBe(false);
       expect((await Bun.file(path.join(dir, "imported.cast")).text())).toContain("second");
