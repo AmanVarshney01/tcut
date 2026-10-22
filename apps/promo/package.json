@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "remotion": "4.0.523"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "4.0.538"
   },
   "devDependencies": {
-    "@remotion/cli": "4.0.523",
-    "@types/react": "^19.2.18",
+    "@remotion/cli": "4.0.538",
+    "@types/react": "^19.3.0",
     "typescript": "catalog:",
     "@tcut/config": "workspace:*"
   }

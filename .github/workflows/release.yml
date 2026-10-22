@@ -20,7 +20,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
 
       # npm ≥ 11.5 is needed for trusted publishing (OIDC); Node 24 ships it.
       # No registry-url here on purpose: it would write an .npmrc with a placeholder token that npm then

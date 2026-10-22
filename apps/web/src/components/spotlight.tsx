@@ -1,14 +1,19 @@
 import { Block, HighlightedCodeBlock, parseRoot } from "codehike/blocks";
+import type { HighlightedCode } from "codehike/code";
 import { Selectable, Selection, SelectionProvider } from "codehike/utils/selection";
+import type { ReactNode } from "react";
 import { z } from "zod";
 import Content from "@/content/render.md";
 import { Code } from "./code";
 
 const Schema = Block.extend({ steps: z.array(Block.extend({ code: HighlightedCodeBlock })) });
 
+type Spotlight = { steps: Array<{ title?: string; children?: ReactNode; code: HighlightedCode }> };
+
 /** Spotlight: pick a thing you can do to a recording; the command for it is marked on the right. */
 export function RenderSpotlight() {
-  const { steps } = parseRoot(Content, Schema);
+  // codehike's parseRoot types target Zod 3; Zod 4 schemas still parse at runtime.
+  const { steps } = parseRoot(Content, Schema) as Spotlight;
   return (
     <SelectionProvider className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
       <ul className="m-0 list-none space-y-1 p-0">

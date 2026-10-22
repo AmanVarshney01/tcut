@@ -177,8 +177,9 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     if (!exited && !terminal.closed) terminal.write(response);
   };
 
-  // Optional browser pane (shared with live recording): a WebView sampled on the recording clock.
-  const browserSession: BrowserCapture | null = config.browser ? startBrowserCapture(config, stamp, log) : null;
+  // Started after the first prompt so a cold Chrome/WebView launch cannot starve ConPTY
+  // of its initial output (empty-screen WaitTimeoutError on Windows runners).
+  let browserSession: BrowserCapture | null = null;
 
   const sleep = async (duration: Duration): Promise<void> => {
     const ms = toMs(duration);
@@ -520,6 +521,7 @@ export async function record(config: ResolvedConfig, script: Script, opts: Recor
     if (!Array.isArray(config.shell)) {
       await waitFor(`initial prompt ${promptPattern}`, promptVisible, config.waitTimeout);
     }
+    if (config.browser) browserSession = startBrowserCapture(config, stamp, log);
     startedAt = performance.now();
     log("recording");
     await script(session);
