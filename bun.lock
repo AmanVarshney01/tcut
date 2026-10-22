@@ -94,7 +94,7 @@
     },
     "packages/tcut": {
       "name": "termcut",
-      "version": "1.4.4",
+      "version": "1.4.5",
       "bin": {
         "tcut": "bin/tcut.mjs",
       },
