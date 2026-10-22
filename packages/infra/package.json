@@ -10,11 +10,11 @@
     "destroy": "alchemy destroy"
   },
   "devDependencies": {
-    "@effect/platform-bun": "4.0.0-rc.112",
-    "@effect/platform-node": "4.0.0-rc.112",
+    "@effect/platform-bun": "4.0.6",
+    "@effect/platform-node": "4.0.6",
     "@tcut/config": "workspace:*",
-    "alchemy": "2.0.0-beta.76",
-    "effect": "4.0.0-rc.112",
+    "alchemy": "2.0.0-beta.83",
+    "effect": "4.0.6",
     "typescript": "catalog:"
   }
 }

@@ -1,4 +1,5 @@
 import { Block, HighlightedCodeBlock, parseRoot } from "codehike/blocks";
+import type { HighlightedCode } from "codehike/code";
 import { createFileRoute } from "@tanstack/react-router";
 import btsGif from "@/assets/examples/better-t-stack.gif";
 import claudeGif from "@/assets/examples/claude-code.gif";
@@ -36,6 +37,7 @@ function tourVideo(el: HTMLVideoElement | null): void {
 }
 
 const SnippetSchema = Block.extend({ rec: HighlightedCodeBlock, test: HighlightedCodeBlock, browser: HighlightedCodeBlock, vhs: HighlightedCodeBlock, library: HighlightedCodeBlock });
+type SnippetDoc = { rec: HighlightedCode; test: HighlightedCode; browser: HighlightedCode; vhs: HighlightedCode; library: HighlightedCode };
 
 const api = [
   ["run()", "waits for your prompt to come back, not for a timer"],
@@ -74,7 +76,8 @@ const steps = [
 ] as const;
 
 function Page() {
-  const snippets = parseRoot(Snippets, SnippetSchema);
+  // codehike's parseRoot types target Zod 3; Zod 4 schemas still parse at runtime.
+  const snippets = parseRoot(Snippets, SnippetSchema) as SnippetDoc;
   return (
     <div className="mx-auto max-w-[62rem] px-5 py-10 sm:py-14">
       <header className="flex items-center justify-between">

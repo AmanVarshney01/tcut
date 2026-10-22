@@ -1,6 +1,7 @@
 import { Block, HighlightedCodeBlock, parseRoot } from "codehike/blocks";
 import type { HighlightedCode } from "codehike/code";
 import { Selectable, SelectionProvider, useSelectedIndex } from "codehike/utils/selection";
+import type { ReactNode } from "react";
 import { z } from "zod";
 import Content from "@/content/walkthrough.md";
 import step1 from "@/assets/walkthrough/step-1.svg?raw";
@@ -14,12 +15,15 @@ import { Code } from "./code";
 const Schema = Block.extend({ steps: z.array(Block.extend({ code: HighlightedCodeBlock })) });
 const FRAMES = [step1, step2, step3, step4, step5, step6];
 
+type WalkthroughContent = { steps: Array<{ title?: string; children?: ReactNode; code: HighlightedCode }> };
+
 /**
  * Scrollycoding: the script grows step by step on the left; on the right, sticky, the code with the step's
  * lines in focus and — below it — the terminal frame that line produced, rendered by tcut as selectable SVG.
  */
 export function Walkthrough() {
-  const { steps } = parseRoot(Content, Schema);
+  // codehike's parseRoot types target Zod 3; Zod 4 schemas still parse at runtime.
+  const { steps } = parseRoot(Content, Schema) as WalkthroughContent;
   return (
     <SelectionProvider className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:gap-8">
       <div className="min-w-0 lg:mb-[24vh]">
