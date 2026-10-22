@@ -695,9 +695,14 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((cause: unknown) => {
-  const message = cause instanceof Error ? cause.message : String(cause);
-  if (json) process.stdout.write(JSON.stringify({ error: message, type: cause instanceof Error ? cause.name : "Error" }) + "\n");
-  else console.error(`\n${red("error:")} ${message}`);
-  process.exit(1);
-});
+// Bun 1.4.4 exits before a floating `main()` promise settles, and `--compile
+// --bytecode` cannot emit top-level await. Hold the event loop until main() finishes.
+const keepAlive = setInterval(() => {}, 60_000);
+main()
+  .catch((cause: unknown) => {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    if (json) process.stdout.write(JSON.stringify({ error: message, type: cause instanceof Error ? cause.name : "Error" }) + "\n");
+    else console.error(`\n${red("error:")} ${message}`);
+    process.exitCode = 1;
+  })
+  .finally(() => clearInterval(keepAlive));
