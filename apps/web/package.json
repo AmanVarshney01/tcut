@@ -14,28 +14,28 @@
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
-    "@tanstack/react-router": "^1.170.33",
-    "@wterm/core": "^0.5.0",
-    "@wterm/react": "^0.5.0",
+    "@tanstack/react-router": "^1.170.46",
+    "@wterm/core": "^0.5.5",
+    "@wterm/react": "^0.5.5",
     "codehike": "^1.1.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@mdx-js/rollup": "^3.1.1",
-    "@shikijs/themes": "^4.4.3",
+    "@shikijs/themes": "^4.5.0",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/router-plugin": "^1.168.36",
+    "@tanstack/router-plugin": "^1.168.48",
     "@tcut/config": "workspace:*",
     "@types/bun": "catalog:",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "tailwindcss": "^4.3.3",
     "termcut": "workspace:*",
     "typescript": "catalog:",
-    "vite": "^8.2.2"
+    "vite": "^8.3.5"
   }
 }

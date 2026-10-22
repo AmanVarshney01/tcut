@@ -17,7 +17,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
 
       - name: Install ffmpeg
         run: brew install ffmpeg
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - name: Install ffmpeg
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Install dependencies
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - uses: FedericoCarboni/setup-ffmpeg@v3.1 # cached static build; Chocolatey took ~45 s every run
         with:
           ffmpeg-version: release
@@ -125,7 +125,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - run: bun install --frozen-lockfile
       - run: bun run --cwd apps/web test
       - run: bun run --cwd apps/web build
