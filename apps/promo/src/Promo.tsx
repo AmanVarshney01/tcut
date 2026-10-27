@@ -384,7 +384,7 @@ const Themes: React.FC = () => {
       <Index n={2} />
       <div style={{ position: "absolute", left: 90, top: 70, display: "flex", alignItems: "flex-end", gap: 40 }}>
         <Words text="Record once." size={76} />
-        <Words text="605 themes." size={76} color={MAUVE} delay={10} />
+        <Words text="820 themes." size={76} color={MAUVE} delay={10} />
       </div>
       <div style={{ position: "absolute", left: 90, top: 160, width: 1500 }}>
         <Sub delay={12} size={28}>

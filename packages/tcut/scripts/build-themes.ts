@@ -1,10 +1,12 @@
 // Generates src/themes.generated.json from the Ghostty-format themes in mbadolato/iTerm2-Color-Schemes (MIT) —
 // the same collection Ghostty bundles. Run: `bun scripts/build-themes.ts` (network). Output is committed.
+// Pinned to the release Ghostty 1.4.0 bundles, so a name means the same colours in the terminal and the video.
 import path from "node:path";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
-const SOURCE = "https://github.com/mbadolato/iTerm2-Color-Schemes/archive/refs/heads/master.tar.gz";
+const RELEASE = "release-20261019-151001-86a776d";
+const SOURCE = `https://github.com/mbadolato/iTerm2-Color-Schemes/archive/refs/tags/${RELEASE}.tar.gz`;
 const out = path.resolve(import.meta.dir, "..", "src", "themes.generated.json");
 
 const KEYS = [

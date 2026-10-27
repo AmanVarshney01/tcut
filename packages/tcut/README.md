@@ -128,7 +128,7 @@ tcut render demo.cast --width 1280 --height 720 --speed 1.5 -o demo.mp4
 tcut render demo.cast --from 2s --to 10s --shadow --watermark "@you" -o clip.gif
 tcut render demo.cast --split-chapters --margin-fill transparent -o demo.webm
 tcut concat intro.cast demo.cast --gap 500ms -o launch.mp4
-tcut themes                                   # ~600 themes, Ghostty's collection
+tcut themes                                   # ~800 themes, Ghostty's collection
 ```
 
 Outputs by extension: `.mp4` `.gif` `.webm` `.webp` · `.svg` (animated, real text) · `.html` (single-file player) · `.png` `.jpg` (final frame) · `.txt` (final screen) · `.log` (full transcript) · `dir/` (PNG frames).

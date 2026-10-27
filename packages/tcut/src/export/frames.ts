@@ -71,7 +71,8 @@ const hex = (n: number) => `#${(n & 0xffffff).toString(16).padStart(6, "0")}`;
 /** Resolve a wterm colour (palette index 0–255, 256 = default, or packed RGB) to CSS. */
 export function resolveColor(index: number, rgb: number | undefined, theme: Theme): string | null {
   if (rgb !== undefined) return hex(rgb);
-  if (index === 256) return null;
+  // 256 is the default colour; above it is a core's RGB table slot, meaningless without the resolved rgb.
+  if (index >= 256) return null;
   if (index < 16) return theme[ANSI[index]!] as string;
   if (index < 232) {
     const n = index - 16;

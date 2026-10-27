@@ -28,6 +28,7 @@ describe("frames", () => {
     expect(resolveColor(196, undefined, t)).toBe("#ff0000");
     expect(resolveColor(232, undefined, t)).toBe("#080808");
     expect(resolveColor(256, 0x123456, t)).toBe("#123456");
+    expect(resolveColor(257, undefined, t)).toBeNull();
   });
 
   test("replay dedupes identical grids and applies the theme via OSC 4", async () => {
@@ -43,6 +44,15 @@ describe("frames", () => {
     const row1 = replay.frames[1]!.rows_.get(1)!;
     const wide = row1.find((c) => c.text === "日")!;
     expect(wide.width).toBe(2);
+  });
+
+  test("both cores keep truecolor exact", async () => {
+    const rec: Recording = { header: { version: 2, width: 10, height: 2 }, events: [[0, "o", "\x1b[38;2;255;100;0mA\x1b[48;2;1;2;3mB"]] };
+    for (const core of ["ghostty", "lite"] as const) {
+      const replay = await replayFrames(rec, resolveConfig({ output: "x.svg", core }));
+      const [a, b] = replay.frames.at(-1)!.rows_.get(0)!;
+      expect([core, a!.fg, b!.bg]).toEqual([core, "#ff6400", "#010203"]);
+    }
   });
 });
 

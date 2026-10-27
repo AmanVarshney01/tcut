@@ -52,7 +52,7 @@ Usage:
   tcut publish <files...> [--open]    upload to your S3-compatible bucket and print share links
   tcut publish --setup                configure the bucket (RustFS, MinIO, R2, S3 …) — once
   tcut init [name] [--template t]     scaffold a new script (basic | tour | test)
-  tcut themes [query]                 list the ~600 bundled themes (Ghostty collection)
+  tcut themes [query]                 list the ~800 bundled themes (Ghostty collection)
 
 Options (override the script's config):
   -o, --output <path>      .mp4 .webm .gif .webp .svg .html .png .jpg or dir/ for PNG frames — repeatable

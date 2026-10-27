@@ -24,7 +24,7 @@ export interface Theme {
 }
 
 /**
- * A theme name: one of the built-ins (autocompleted) or any of the ~600 Ghostty themes, matched case- and
+ * A theme name: one of the built-ins (autocompleted) or any of the ~800 Ghostty themes, matched case- and
  * punctuation-insensitively ("Catppuccin Mocha", "catppuccin-mocha", "GitHub Dark" …). `tcut themes` lists them.
  */
 export type ThemeName = "catppuccin-mocha" | "dracula" | "github-dark" | "tokyo-night" | "one-dark" | (string & {});

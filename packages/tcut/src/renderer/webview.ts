@@ -183,12 +183,16 @@ export async function render(
     // match, so every measurement, zoom rect and overlay position keeps working while text rasterizes at N×.
     // The transform goes on <html>: body has overflow:hidden and no height of its own, so a transformed body
     // clips everything away.
-    if (config.scale !== 1) {
-      await view.evaluate(`(() => { const s = document.documentElement.style; s.transformOrigin = "0 0"; s.transform = "scale(${config.scale})"; return true; })()`);
-      width = Math.round(width * config.scale);
-      height = Math.round(height * config.scale);
+    // WebKit screenshots at the display's density (2 on a Retina Mac since macOS 27; Chrome is pinned to 1 by
+    // flag), so that factor is taken out of the page scale and the view: the screenshot is exactly width × height × scale.
+    const dpr = Number(await view.evaluate("devicePixelRatio")) || 1;
+    const pageScale = config.scale / dpr;
+    if (pageScale !== 1) {
+      await view.evaluate(`(() => { const s = document.documentElement.style; s.transformOrigin = "0 0"; s.transform = "scale(${pageScale})"; return true; })()`);
     }
-    await view.resize(width, height);
+    width = Math.round(width * config.scale);
+    height = Math.round(height * config.scale);
+    await view.resize(Math.ceil(width / dpr), Math.ceil(height / dpr));
     await view.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
 
     const sinks = await createSinks(config.output, fps, { chapters, durationSeconds: timeline.duration, alpha: transparent });

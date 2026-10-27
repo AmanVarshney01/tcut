@@ -1,6 +1,6 @@
 ## !!steps Change the theme
 
-607 themes, Ghostty's collection. Same recording, new colours.
+820 themes, Ghostty's collection. Same recording, new colours.
 
 ```sh ! render
 # !mark
