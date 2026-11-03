@@ -54,6 +54,25 @@ describe("frames", () => {
       expect([core, a!.fg, b!.bg]).toEqual([core, "#ff6400", "#010203"]);
     }
   });
+
+  test("grapheme clusters stay in one cell; emoji and flags are wide", async () => {
+    const womanTech = "👩\u200D💻";
+    const family = "👨\u200D👩\u200D👧";
+    const india = "🇮🇳";
+    const usa = "🇺🇸";
+    const acute = "e\u0301";
+    const rec: Recording = {
+      header: { version: 2, width: 40, height: 2 },
+      events: [[0, "o", `${womanTech} ${family} ${india}${usa} ${acute}\r\n`]],
+    };
+    for (const core of ["ghostty", "lite"] as const) {
+      const replay = await replayFrames(rec, resolveConfig({ output: "x.svg", core }));
+      const row = replay.frames.at(-1)!.rows_.get(0)!;
+      const glyphs = row.filter((c) => c.text !== " ");
+      expect([core, glyphs.map((c) => c.text)]).toEqual([core, [womanTech, family, india, usa, acute]]);
+      expect([core, glyphs.map((c) => c.width)]).toEqual([core, [2, 2, 2, 2, 1]]);
+    }
+  });
 });
 
 describe("svg export", () => {
